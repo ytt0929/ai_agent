@@ -1,5 +1,10 @@
 <template>
   <div v-if="task" class="due-task">
+    <!-- 企业探查来源提示 -->
+    <div v-if="task.explorationSnapshot" class="due-task__exploration-hint">
+      <el-icon :size="14"><InfoFilled /></el-icon>
+      <span>来自企业探查：综合评分 <strong>{{ task.explorationSnapshot.score }}</strong>，评级 <strong>{{ task.explorationSnapshot.grade }}</strong>，高风险 <strong>{{ task.explorationSnapshot.highRiskCount }}</strong> 项{{ task.explorationSnapshot.missingData?.length ? '，缺少 ' + task.explorationSnapshot.missingData.join('、') : '' }}。</span>
+    </div>
     <div class="due-task__header">
       <div class="due-task__header-left">
         <el-button class="back-btn" @click="goBack" :icon="ArrowLeft" circle size="small" />
@@ -296,7 +301,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { OfficeBuilding, ScaleToOriginal, Tickets, DocumentAdd, Connection, Warning, DocumentChecked, ArrowRight, ArrowLeft, FolderChecked, Download, EditPen, ChatLineRound, List, Files, CircleCheck, Loading, Document, Close, CopyDocument, Link, Upload, Promotion } from '@element-plus/icons-vue'
+import { OfficeBuilding, ScaleToOriginal, Tickets, DocumentAdd, Connection, Warning, DocumentChecked, ArrowRight, ArrowLeft, FolderChecked, Download, EditPen, ChatLineRound, List, Files, CircleCheck, Loading, Document, Close, CopyDocument, Link, Upload, Promotion, InfoFilled } from '@element-plus/icons-vue'
 import { useDueDiligenceStore } from '../stores/dueDiligence.js'
 import DueChatPanel from '../components/DueChatPanel.vue'
 import { ElMessage } from 'element-plus'
@@ -424,6 +429,23 @@ function handleChipAction(chip) {
 
 <style scoped>
 .due-task { max-width: 1200px; margin: 0 auto; padding: var(--space-lg); }
+
+/* ── 企业探查来源提示 ── */
+.due-task__exploration-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+}
+.due-task__exploration-hint strong {
+  color: var(--color-primary);
+}
 
 /* ── Header ── */
 .due-task__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md); padding-bottom: var(--space-md); border-bottom: 1px solid var(--border-default); }

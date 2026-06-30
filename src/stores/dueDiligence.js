@@ -119,6 +119,38 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     uploadedFiles.value[taskId].push(file)
   }
 
+  // 从企业探查结果创建尽调任务
+  function createTaskFromEnterpriseExploration(payload) {
+    const id = 'dd-exp-' + Date.now()
+    const missing = payload.missingData || []
+    const task = {
+      id,
+      name: payload.name,
+      creditCode: payload.creditCode || '',
+      industry: payload.industry || '待确认',
+      region: payload.region || '待确认',
+      amount: payload.amount || '待评估',
+      manager: '张经理',
+      type: '贷前尽调',
+      status: missing.length ? '等待资料上传' : 'AI处理中',
+      progress: missing.length ? 55 : 68,
+      nextAction: missing.length ? '补充流水/资料' : '查看风险诊断',
+      currentStep: missing.length ? 'materials' : 'risk',
+      source: '企业探查',
+      autoCapabilities: ['企业探查导入', '风险指标复用', '证据链复用', '自动生成产物'],
+      explorationSnapshot: {
+        score: payload.score,
+        grade: payload.grade,
+        riskCount: payload.riskCount || 0,
+        highRiskCount: payload.highRiskCount || 0,
+        missingData: missing,
+      },
+    }
+    tasks.value.unshift(task)
+    initTaskSteps(id)
+    return task
+  }
+
   // 从筛客结果创建尽调任务
   function createTaskFromScreening(customer) {
     const id = 'dd' + String(Date.now()).slice(-3)
@@ -187,6 +219,7 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     addChatMessage,
     addFile,
     createTaskFromScreening,
+    createTaskFromEnterpriseExploration,
     handleChipAction,
   }
 })

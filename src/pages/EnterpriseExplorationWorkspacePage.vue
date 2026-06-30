@@ -659,6 +659,9 @@ import { ArrowLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getDiagnosisMock, enterpriseDB, evidenceChain, indicators } from '../data/mockEnterpriseDiagnosis.js'
 import { enterpriseSourceData, findEnterpriseFromText, getEnterpriseSourceData, getDataCoverage, getTaxDeclarationRows, getShareholderRows, calculateVatBurden, getBusinessDetail } from '../data/mockEnterpriseSourceData.js'
+import { useDueDiligenceStore } from '../stores/dueDiligence.js'
+
+const dueStore = useDueDiligenceStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -891,6 +894,7 @@ const chatRef = ref(null)
 const isExploring = ref(false)
 const hasResult = ref(false)
 const workspaceActive = ref(false)
+const lastDueTaskId = ref(null)
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -1227,7 +1231,7 @@ async function runReportGenerationFlow(reportType) {
       ]
       if (!hasTaxData.value) actions.push({ label: '授权税票', action: 'auth', type: 'warning' })
       if (!hasFlowData.value) actions.push({ label: '上传流水', action: 'upload', type: 'warning' })
-      actions.push({ label: '推送尽调', action: 'dd' })
+      actions.push({ label: '加入尽调任务', action: 'dd' })
       return actions
     })(),
   }
@@ -1350,7 +1354,7 @@ function buildMsgActions(view) {
     { label: '生成专项说明', action: 'explain' },
     { label: '加入报告', action: 'report' },
   ]
-  if (view === 'risk') base.push({ label: '推送尽调', action: 'dd' })
+  if (view === 'risk') base.push({ label: '加入尽调任务', action: 'dd' })
   if (!hasTaxData.value) base.push({ label: '授权税票', action: 'auth', type: 'warning' })
   if (!hasFlowData.value) base.push({ label: '上传流水', action: 'upload', type: 'warning' })
   return base
@@ -1363,6 +1367,8 @@ function onMsgAction(a) {
       case 'explain': aiAction('专项说明'); break
       case 'report': aiAction('加入报告'); break
       case 'dd': pushToDD(); break
+      case 'view_due_task': router.push('/due-diligence/' + (a.taskId || lastDueTaskId.value)); break
+      case 'view_due_home': router.push('/due-diligence'); break
       case 'auth': authMissing(); break
       case 'upload': uploadFlow(); break
       case 'report_detail': openReportView('diagnosis'); break
@@ -1383,7 +1389,7 @@ function onMsgAction(a) {
 
 function aiAction(label) {
   if (label === '加入报告') { chatMessages.value.push({ role: 'ai', text: '已加入报告草稿。' }) }
-  else if (label === '推送尽调') { pushToDD() }
+  else if (label === '加入尽调任务') { pushToDD() }
   else { chatMessages.value.push({ role: 'ai', text: '**' + label + '**\n\n基于当前已获取的工商、司法' + (hasTaxData.value ? '、税票' : '') + '数据，已完成基础分析。如需更完整的判断，建议补充缺失数据后再次探查。' }) }
   scrollToBottom()
 }
@@ -1417,7 +1423,41 @@ function openReportView(type) {
   else currentView.value = 'diagnosisReport'
 }
 function goEvidencePage() { openEvidenceView('R1') }
-function pushToDD() { ElMessage.info('Demo: 已将探查结果推送至尽调任务') }
+function pushToDD() {
+  if (!enterprise.value?.name) {
+    ElMessage.warning('企业信息未识别，无法创建尽调任务')
+    return
+  }
+  const missingData = []
+  if (!hasTaxData.value) missingData.push('税票')
+  if (!hasFlowData.value) missingData.push('流水')
+
+  const task = dueStore.createTaskFromEnterpriseExploration({
+    name: enterprise.value.name,
+    creditCode: creditCode.value || '',
+    industry: enterprise.value.industry || '待确认',
+    region: '待确认',
+    amount: '待评估',
+    score: mockData.value?.score,
+    grade: mockData.value?.grade,
+    riskCount: mockData.value?.riskItems?.length || 0,
+    highRiskCount: highRiskCount.value,
+    missingData,
+  })
+  lastDueTaskId.value = task.id
+  ElMessage.success('已加入尽调任务')
+
+  // 在对话中追加 AI 确认消息
+  chatMessages.value.push({
+    role: 'ai',
+    text: '已加入尽调任务：**' + enterprise.value.name + '**。系统已将企业探查结果、风险指标和证据链作为尽调输入，当前任务进入【风险诊断/证据整合】阶段。',
+    actions: [
+      { label: '查看尽调任务', action: 'view_due_task', taskId: task.id },
+      { label: '去尽调首页', action: 'view_due_home' },
+    ],
+  })
+  scrollToBottom()
+}
 function authMissing() { ElMessage.info('Demo: 已发起数据授权请求') }
 function uploadFlow() { ElMessage.info('Demo: 已发起流水上传入口') }
 function renderMd(text) { return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') }

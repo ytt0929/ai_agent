@@ -102,6 +102,7 @@
             <el-option label="全部" value="" />
             <el-option label="手动创建" value="手动" />
             <el-option label="筛客转入" value="筛客" />
+            <el-option label="企业探查" value="企业探查" />
           </el-select>
           <el-select v-model="sortBy" placeholder="排序" size="default" class="task-filter" @change="onSort">
             <el-option label="最近创建" value="newest" />
@@ -174,6 +175,7 @@
               </td>
               <td class="col-source">
                 <span v-if="task.source === '筛客'" class="source-tag source--screening">筛客</span>
+                <span v-else-if="task.source === '企业探查'" class="source-tag source--exploration">企业探查</span>
                 <span v-else class="source-tag source--manual">手动</span>
               </td>
               <td class="col-action">
@@ -731,6 +733,7 @@ function selectTask(taskId) {
   font-weight: var(--font-weight-medium);
 }
 .source--screening { background: var(--color-success-bg); color: var(--color-success); }
+.source--exploration { background: var(--color-primary-bg); color: var(--color-primary); }
 .source--manual { background: var(--surface-page); color: var(--text-tertiary); }
 
 .custom-checkbox {
