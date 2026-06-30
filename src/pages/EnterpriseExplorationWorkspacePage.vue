@@ -734,6 +734,10 @@ const currentViewTitle = computed(() => ({
   overview: '企业概览', ops: '经营分析', tax: '税票/纳税明细',
   risk: '风险诊断', fraud: '欺诈信号识别', evidence: '证据链',
   taxDeclarations: '申报明细', shareholders: '股东明细', socialSecurity: '从业/社保概览',
+  businessReport: '工商分析报告',
+  taxPanoramaReport: '纳税全景报告',
+  diagnosisReport: '企业诊断报告',
+  evidenceDetail: '证据链详情',
 }[currentView.value] || '企业概览'))
 
 const taxDeclarationRows = computed(() => creditCode.value ? getTaxDeclarationRows(creditCode.value) : [])
@@ -745,6 +749,137 @@ const mediumRiskCount = computed(() => (mockData.value?.riskItems || []).filter(
 const lowRiskCount = computed(() => (mockData.value?.riskItems || []).filter(i => i.level === 'low').length)
 const highlightCount = computed(() => (mockData.value?.highlightItems || []).length)
 const highRiskItems = computed(() => (mockData.value?.riskItems || []).filter(i => i.level === 'high'))
+const riskItems = computed(() => mockData.value?.riskItems || [])
+const highlightItems = computed(() => mockData.value?.highlightItems || [])
+
+// ══ diagnosisReport 图表 & 筛选状态 ══
+const reportChartType = ref('radar')
+const activeReportDimension = ref(null)
+const reportIndicatorTab = ref('risk')
+const reportIndicatorLevelFilter = ref('all')
+const reportDimensionFilter = ref('all')
+
+const riskLevels = [
+  { key: 'high', label: '高风险' },
+  { key: 'medium', label: '中风险' },
+  { key: 'low', label: '低风险' },
+]
+const highlightLevels = [
+  { key: 'strong', label: '强亮点' },
+  { key: 'normal', label: '亮点' },
+  { key: 'low', label: '低亮点' },
+]
+
+const radarDims = computed(() => mockData.value?.dimensions || [])
+const radarSize = 320
+const radarCenter = radarSize / 2
+const radarRadius = 130
+
+function _radarPt(angle, radius) {
+  return { x: radarCenter + radius * Math.sin(angle), y: radarCenter - radius * Math.cos(angle) }
+}
+
+function radarPoints(radius) {
+  const n = radarDims.value.length
+  if (!n) return ''
+  return Array.from({ length: n }, (_, i) => {
+    const angle = (2 * Math.PI * i) / n
+    const pt = _radarPt(angle, radius)
+    return `${pt.x},${pt.y}`
+  }).join(' ')
+}
+
+const radarDataPoints = computed(() => {
+  const n = radarDims.value.length
+  if (!n) return ''
+  return Array.from({ length: n }, (_, i) => {
+    const angle = (2 * Math.PI * i) / n
+    return _radarPt(angle, (radarDims.value[i].score / 100) * radarRadius)
+  }).map(p => `${p.x},${p.y}`).join(' ')
+})
+
+const radarDataPointList = computed(() => {
+  return Array.from({ length: radarDims.value.length }, (_, i) => {
+    const angle = (2 * Math.PI * i) / radarDims.value.length
+    return _radarPt(angle, (radarDims.value[i].score / 100) * radarRadius)
+  })
+})
+
+const radarLabelPositions = computed(() => {
+  return Array.from({ length: radarDims.value.length }, (_, i) => {
+    const angle = (2 * Math.PI * i) / radarDims.value.length
+    return _radarPt(angle, radarRadius + 18)
+  })
+})
+
+function butterflyDim(dim, level) {
+  return (mockData.value?.riskItems || []).filter(i => i.dimensionKey === dim.key && i.level === level).length
+}
+function butterflyTotal(dim) {
+  return ['high', 'medium', 'low'].reduce((s, l) => s + butterflyDim(dim, l), 0)
+}
+const maxRiskInDim = computed(() => {
+  let max = 0
+  ;(mockData.value?.dimensions || []).forEach(d => { const t = butterflyTotal(d); if (t > max) max = t })
+  return max || 1
+})
+
+function roseCount(dim) {
+  return (mockData.value?.highlightItems || []).filter(i => i.dimensionKey === dim.key).length
+}
+const maxHighlightInDim = computed(() => {
+  let max = 0
+  ;(mockData.value?.dimensions || []).forEach(d => { const c = roseCount(d); if (c > max) max = c })
+  return max || 1
+})
+
+function toggleReportDim(key) {
+  if (reportDimensionFilter.value === key) {
+    reportDimensionFilter.value = 'all'
+  } else {
+    reportDimensionFilter.value = key
+  }
+  activeReportDimension.value = activeReportDimension.value === key ? null : key
+}
+
+function setReportTab(tab) {
+  reportIndicatorTab.value = tab
+  reportIndicatorLevelFilter.value = 'all'
+  if (tab !== 'all') reportDimensionFilter.value = 'all'
+}
+
+const filteredReportIndicators = computed(() => {
+  let list = []
+  if (reportIndicatorTab.value === 'risk') list = riskItems.value
+  else if (reportIndicatorTab.value === 'highlight') list = highlightItems.value
+  else list = mockData.value?.allIndicators || []
+  if (reportIndicatorTab.value === 'risk' || reportIndicatorTab.value === 'highlight') {
+    if (reportIndicatorLevelFilter.value !== 'all') {
+      list = list.filter(i => i.level === reportIndicatorLevelFilter.value)
+    }
+  } else {
+    if (reportDimensionFilter.value !== 'all') {
+      list = list.filter(i => i.dimensionKey === reportDimensionFilter.value)
+    }
+  }
+  return list
+})
+
+function indicatorLevelText(ind) {
+  if (ind.type === 'risk') return { high: '高风险', medium: '中风险', low: '低风险' }[ind.level] || ind.level
+  if (ind.type === 'highlight') return { strong: '强亮点', normal: '亮点' }[ind.level] || ind.level
+  return ind.level
+}
+
+function dimLevelText(level) {
+  return { high: '高', medium: '中', low: '低' }[level] || ''
+}
+
+function dimColor(level) {
+  if (level === 'high') return 'var(--color-danger)'
+  if (level === 'medium') return 'var(--color-warning)'
+  return 'var(--color-success)'
+}
 const topEvidences = computed(() => indicators.filter(i => i.level === 'high').flatMap(i => i.evidenceIds).slice(0, 6).map(id => evidenceChain[id]).filter(Boolean))
 
 const activeEvidenceIndicator = ref(null)
@@ -776,10 +911,10 @@ function classifyQuestion(text) {
   const q = text.toLowerCase()
 
   // 报告类
-  if (/生成.*工商.*报告|生成工商分析报告/.test(q)) return { type: 'report_business', viewName: '工商分析报告', newView: 'business' }
-  if (/生成.*纳税.*报告|生成纳税全景报告/.test(q)) return { type: 'report_tax', viewName: '纳税全景报告', newView: 'tax' }
-  if (/生成.*诊断.*报告|生成企业诊断报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'risk' }
-  if (/生成.*报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'risk' }
+  if (/生成.*工商.*报告|生成工商分析报告/.test(q)) return { type: 'report_business', viewName: '工商分析报告', newView: 'businessReport' }
+  if (/生成.*纳税.*报告|生成纳税全景报告/.test(q)) return { type: 'report_tax', viewName: '纳税全景报告', newView: 'taxPanoramaReport' }
+  if (/生成.*诊断.*报告|生成企业诊断报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'diagnosisReport' }
+  if (/生成.*报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'diagnosisReport' }
 
   // 明细类 — 左侧打开表格
   if (/股东|出资|持股/.test(q)) return { type: 'detail_shareholders', viewName: '股东明细', newView: 'shareholders' }
@@ -1017,80 +1152,131 @@ function buildAnalysisSummary(qa) {
   return text
 }
 
+// ══ 报告生成流程引擎 ══
+async function runReportGenerationFlow(reportType) {
+  const viewMap = {
+    business: 'businessReport',
+    tax: 'taxPanoramaReport',
+    diagnosis: 'diagnosisReport',
+  }
+  const labelMap = {
+    business: '工商分析报告',
+    tax: '纳税全景报告',
+    diagnosis: '企业诊断报告',
+  }
+  const targetView = viewMap[reportType]
+  const label = labelMap[reportType]
+
+  // 1. 打字机式开场说明
+  const introMap = {
+    business: '正在基于工商、司法、公开信息生成工商分析报告。',
+    tax: '正在基于税票、纳税申报、发票数据生成纳税全景报告。',
+    diagnosis: '正在基于已获取的工商、司法' + (hasTaxData.value ? '、税票' : '') + '等数据，生成企业诊断报告。',
+  }
+  await typeAiMessage(introMap[reportType] || '正在生成报告。')
+  await delay(300)
+
+  // 2. 推送 engine 流程卡
+  chatMessages.value.push({ role: 'ai', type: 'engine' })
+  scrollToBottom()
+
+  const phases = ['identifying', 'checking', 'judging', 'rendering']
+  for (const phase of phases) {
+    explorationPhase.value = phase
+    await delay(500)
+    scrollToBottom()
+  }
+  explorationPhase.value = 'done'
+  scrollToBottom()
+
+  // 3. 完成后打字机式总结 + 打开报告
+  const doneMap = {
+    business: '已基于工商、司法和公开信息生成**工商分析报告**。补充税票或流水后，可增强税务异常和经营真实性判断。',
+    tax: hasFlowData.value
+      ? '已基于税票、纳税申报和发票数据生成**纳税全景报告**。'
+      : '已基于税票、纳税申报和发票数据生成**纳税全景报告**。缺流水时，资金闭环和经营真实性判断会标记为待补充。',
+    diagnosis: (() => {
+      const covParts = []
+      if (sourceData.value) covParts.push('工商、司法')
+      if (hasTaxData.value) covParts.push('税票')
+      else covParts.push('税票未授权')
+      const missParts = []
+      if (!hasFlowData.value) missParts.push('流水')
+      let msg = '已基于当前已获取数据生成**企业诊断报告**。当前覆盖：' + covParts.join('、')
+      if (missParts.length) msg += '；缺失：' + missParts.join('、')
+      msg += '。报告中的经营真实性和欺诈识别会标记为待补充，上传流水后可生成更完整版本。'
+      return msg
+    })(),
+  }
+
+  const actionsMap = {
+    business: [
+      { label: '查看工商分析报告', action: 'report_business_detail' },
+      { label: '查看证据链', action: 'evidence' },
+      { label: '加入尽调任务', action: 'dd' },
+    ],
+    tax: [
+      { label: '查看纳税全景报告', action: 'report_tax_detail' },
+      { label: '查看税负率计算', action: 'explain' },
+      { label: '查看证据链', action: 'evidence' },
+    ],
+    diagnosis: (() => {
+      const actions = [
+        { label: '查看企业诊断报告', action: 'report_diagnosis_detail' },
+        { label: '查看证据链', action: 'evidence' },
+      ]
+      if (!hasTaxData.value) actions.push({ label: '授权税票', action: 'auth', type: 'warning' })
+      if (!hasFlowData.value) actions.push({ label: '上传流水', action: 'upload', type: 'warning' })
+      actions.push({ label: '推送尽调', action: 'dd' })
+      return actions
+    })(),
+  }
+
+  await typeAiMessage(doneMap[reportType], { actions: actionsMap[reportType] })
+  await delay(200)
+
+  // 4. 打开左侧报告
+  workspaceActive.value = true
+  hasResult.value = true
+  currentView.value = targetView
+}
+
 // ══ 报告请求处理 ══
 async function handleReportRequest(text) {
-  workspaceActive.value = true
+  try {
+    isExploring.value = true
+    hasResult.value = true
 
-  // ══ 工商分析报告 ══
-  if (/工商|工商分析/.test(text)) {
-    currentView.value = 'diagnosisReport'
-    await typeAiMessage('已基于工商、司法和公开信息生成**工商分析报告**。补充税票或流水后，可增强税务异常和经营真实性判断。', {
-      actions: [
-        { label: '查看工商分析报告', action: 'report_business_detail' },
-        { label: '查看证据链', action: 'evidence' },
-        { label: '加入尽调任务', action: 'dd' },
-      ]
-    })
-    return
-  }
-
-  // ══ 纳税全景报告 ══
-  if (/纳税|税票/.test(text)) {
-    if (!hasTaxData.value) {
-      await typeAiMessage('当前**税票数据未授权**，无法生成纳税全景报告。\n\n请先授权税票数据后，系统将生成包含税负分析、申报明细、开票差异等内容的纳税全景报告。', {
-        actions: [{ label: '授权税票', action: 'auth', type: 'warning' }]
-      })
+    // ══ 工商分析报告 ══
+    if (/工商|工商分析/.test(text)) {
+      await runReportGenerationFlow('business')
       return
     }
-    // 有税票即可生成，不要求流水
-    currentView.value = 'taxPanoramaReport'
-    let taxMsg = '已基于税票、纳税申报和发票数据生成**纳税全景报告**。'
-    if (!hasFlowData.value) {
-      taxMsg += '\n\n缺流水时，资金闭环和经营真实性判断会标记为待补充。'
+
+    // ══ 纳税全景报告 ══
+    if (/纳税|税票/.test(text)) {
+      if (!hasTaxData.value) {
+        await typeAiMessage('当前**税票数据未授权**，无法生成纳税全景报告。\n\n请先授权税票数据后，系统将生成包含税负分析、申报明细、开票差异等内容的纳税全景报告。', {
+          actions: [{ label: '授权税票', action: 'auth', type: 'warning' }]
+        })
+        return
+      }
+      await runReportGenerationFlow('tax')
+      return
     }
-    await typeAiMessage(taxMsg, {
-      actions: [
-        { label: '查看纳税全景报告', action: 'report_tax_detail' },
-        { label: '查看税负率计算', action: 'explain' },
-        { label: '查看证据链', action: 'evidence' },
-      ]
-    })
-    return
+
+    // ══ 企业诊断报告 ══
+    // 只要识别到企业并有基础数据，就生成报告（不阻断缺流水/缺税票）
+    if (mockData.value?.riskItems || sourceData.value) {
+      await runReportGenerationFlow('diagnosis')
+      return
+    }
+
+    // ══ 兜底：企业未识别 ══
+    await typeAiMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
+  } finally {
+    isExploring.value = false
   }
-
-  // ══ 企业诊断报告 ══
-  // 只要识别到企业并有基础数据，就生成报告（不阻断缺流水/缺税票）
-  if (mockData.value?.riskItems || sourceData.value) {
-    currentView.value = 'diagnosisReport'
-    const covParts = []
-    if (sourceData.value) covParts.push('工商、司法')
-    if (hasTaxData.value) covParts.push('税票')
-    else covParts.push('税票未授权')
-    const missParts = []
-    if (!hasFlowData.value) missParts.push('流水')
-
-    let diagMsg = '已基于当前已获取数据生成**企业诊断报告**。当前覆盖：' + covParts.join('、')
-    if (missParts.length) diagMsg += '；缺失：' + missParts.join('、')
-    diagMsg += '。报告中的经营真实性和欺诈识别会标记为待补充，上传流水后可生成更完整版本。'
-
-    const actions = [
-      { label: '查看企业诊断报告', action: 'report_diagnosis_detail' },
-      { label: '查看证据链', action: 'evidence' },
-    ]
-    if (!hasTaxData.value) {
-      actions.push({ label: '授权税票', action: 'auth', type: 'warning' })
-    }
-    if (!hasFlowData.value) {
-      actions.push({ label: '上传流水', action: 'upload', type: 'warning' })
-    }
-    actions.push({ label: '推送尽调', action: 'dd' })
-
-    await typeAiMessage(diagMsg, { actions })
-    return
-  }
-
-  // ══ 兜底：企业未识别 ══
-  await typeAiMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
 }
 
 onMounted(() => {
