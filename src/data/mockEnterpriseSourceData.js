@@ -49,6 +49,67 @@ export const enterpriseSourceData = {
       note: '从业人数来自企业所得税申报附表（104从业人数），缴保连续性基于工商登记信息推算，非完整社保费明细。',
       isEstimated: true
     },
+    // ══ 工商分析详细数据 ══
+    businessDetail: {
+      registry: {
+        name: '唐山物桥商贸有限公司',
+        creditNo: '91130203MA7EEQ2N0T',
+        operName: '马丽',
+        startDate: '2022-03-15',
+        registCapi: '500万',
+        status: '存续',
+        industryName: '建材批发',
+        econKind: '有限责任公司(自然人投资或控股)',
+        address: '河北省唐山市路南区新华道15号',
+        scope: '建材、钢材、水泥制品、五金交电、电子产品批发零售；机械设备租赁；普通货物装卸服务。',
+        termStart: '2022-03-15',
+        termEnd: '长期',
+        checkDate: '2024-06-20',
+        domains: '建材批发',
+        registeredOrg: '唐山市市场监督管理局',
+      },
+      taxRegistry: {
+        hymc: '建材批发',
+        mlmc: '批发和零售业',
+        zcrq: '2022-03-15',
+        cyrs: '5',
+        djzclx: '私营有限责任公司',
+        frName: '马丽',
+        zczb: '5000000.0',
+        zgswjg: '唐山市路南区税务局',
+        nsrztdm: '一般纳税人',
+      },
+      shareholders: [
+        { name: '马丽', stockRate: '70.00%', totalShouldCapi: '350万', stockType: '自然人股东', maxShouldCapiDate: '2043-03-20', totalRealCapi: '0' },
+        { name: '李某', stockRate: '30.00%', totalShouldCapi: '150万', stockType: '自然人股东', maxShouldCapiDate: '2043-03-20', totalRealCapi: '0' },
+      ],
+      employees: [
+        { name: '马丽', jobTitle: '执行董事兼总经理' },
+        { name: '张某', jobTitle: '监事' },
+      ],
+      changes: [
+        { changeDate: '2024-06-20', changeItem: '章程备案', beforeContent: '', afterContent: '' },
+        { changeDate: '2024-06-20', changeItem: '经营范围变更', beforeContent: '建材、钢材批发零售', afterContent: '建材、钢材、水泥制品、五金交电、电子产品批发零售' },
+        { changeDate: '2023-12-10', changeItem: '住所变更', beforeContent: '唐山市路北区建设路88号', afterContent: '唐山市路南区新华道15号' },
+        { changeDate: '2022-03-15', changeItem: '设立登记', beforeContent: '', afterContent: '公司成立' },
+      ],
+      patents: [],
+      taxPersons: [
+        { name: '马丽', type: '法定代表人', phone: '138****1234' },
+        { name: '王某', type: '财务负责人', phone: '139****5678' },
+      ],
+      abnormal: [],
+      judicialRisks: [],
+      wenshu: [],
+      penalties: [],
+      infoPrompt: {
+        wenshuCount: 0,
+        disruptCount: 0,
+        cntOperChange3yr: 2,
+        totalAmount: 0,
+        applierConsumLimited: 0,
+      },
+    },
     metrics: {
       vatBurdenRate: 0.8,       // 增值税税负率 %
       revenueYoY: 188.3,        // 营收同比增速 %
@@ -143,4 +204,13 @@ export function calculateVatBurden(creditCode) {
     judgment: m.vatBurdenRate < m.industryAvgVatRate * 0.5 ? '异常偏低' :
               m.vatBurdenRate < m.industryAvgVatRate * 0.7 ? '偏低' : '正常'
   }
+}
+
+/**
+ * 获取工商分析详细数据
+ */
+export function getBusinessDetail(creditCode) {
+  const src = enterpriseSourceData[creditCode]
+  if (!src) return null
+  return src.businessDetail || null
 }

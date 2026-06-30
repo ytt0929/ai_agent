@@ -398,68 +398,204 @@
                       </div>
                     </template>
 
-                    <template v-if="currentView === 'diagnosisReport'">
+                    <template v-if="currentView === 'businessReport'">
                       <div class="edw-card edw-card--conclusion">
-                        <div class="edw-card-label">企业诊断报告</div>
-                        <p class="edw-conclusion-text">以下为 <strong>{{ enterprise.name }}</strong> 的企业诊断报告（Demo），包含八大维度分析结果。</p>
+                        <div class="edw-card-label">工商分析报告</div>
+                        <p class="edw-conclusion-text">基于工商、司法和公开信息完成基础探查。补充税票或流水后，可增强税务异常和经营真实性判断。</p>
                       </div>
                       <div class="edw-card">
                         <h3>企业基本信息</h3>
                         <div class="edw-meta-grid">
-                          <div class="edw-meta-row"><span>企业名称</span><strong>{{ enterprise.name }}</strong></div>
-                          <div class="edw-meta-row"><span>信用代码</span><strong>{{ enterprise.creditCode }}</strong></div>
-                          <div class="edw-meta-row"><span>行业</span><strong>{{ enterprise.industry }}</strong></div>
-                          <div class="edw-meta-row"><span>法人</span><strong>{{ enterprise.legalRep }}</strong></div>
-                          <div class="edw-meta-row"><span>成立年份</span><strong>{{ enterprise.establishedYear }}</strong></div>
-                          <div class="edw-meta-row"><span>综合评分</span><strong :class="'edw-score--' + mockData.riskLevel">{{ mockData.score }}</strong></div>
-                          <div class="edw-meta-row"><span>评级</span><strong class="edw-grade-tag" :class="'edw-grade--' + gradeColor(mockData.grade)">{{ mockData.grade }}</strong></div>
+                          <div class="edw-meta-row"><span>企业名称</span><strong>{{ businessDetail?.registry?.name || enterprise.name }}</strong></div>
+                          <div class="edw-meta-row"><span>统一信用代码</span><strong>{{ businessDetail?.registry?.creditNo || enterprise.creditCode }}</strong></div>
+                          <div class="edw-meta-row"><span>法定代表人</span><strong>{{ businessDetail?.registry?.operName || enterprise.legalRep }}</strong></div>
+                          <div class="edw-meta-row"><span>成立日期</span><strong>{{ businessDetail?.registry?.startDate }}</strong></div>
+                          <div class="edw-meta-row"><span>注册资本</span><strong>{{ businessDetail?.registry?.registCapi }}</strong></div>
+                          <div class="edw-meta-row"><span>企业状态</span><strong class="edw-success">{{ businessDetail?.registry?.status }}</strong></div>
+                          <div class="edw-meta-row"><span>行业</span><strong>{{ businessDetail?.registry?.industryName }}</strong></div>
+                          <div class="edw-meta-row"><span>公司类型</span><strong>{{ businessDetail?.registry?.econKind }}</strong></div>
+                          <div class="edw-meta-row"><span>注册地址</span><strong>{{ businessDetail?.registry?.address }}</strong></div>
+                          <div class="edw-meta-row"><span>经营期限</span><strong>{{ businessDetail?.registry?.termStart }} 至 {{ businessDetail?.registry?.termEnd }}</strong></div>
+                          <div class="edw-meta-row"><span>登记机关</span><strong>{{ businessDetail?.registry?.registeredOrg }}</strong></div>
+                          <div class="edw-meta-row"><span>核准日期</span><strong>{{ businessDetail?.registry?.checkDate }}</strong></div>
                         </div>
                       </div>
                       <div class="edw-card">
-                        <h3>风险等级分布</h3>
-                        <div class="edw-risk-summary">
-                          <span class="edw-risk-badge edw-risk--high">高风险 {{ highRiskCount }}项</span>
-                          <span class="edw-risk-badge edw-risk--medium">中风险 {{ mediumRiskCount }}项</span>
-                          <span class="edw-risk-badge edw-risk--low">低风险 {{ lowRiskCount }}项</span>
-                          <span class="edw-risk-badge edw-risk--good">企业亮点 {{ highlightCount }}项</span>
+                        <h3>经营范围</h3>
+                        <p class="edw-conclusion-text" style="line-height:1.8">{{ businessDetail?.registry?.scope || '暂无' }}</p>
+                      </div>
+                      <div class="edw-card">
+                        <h3>税务登记信息</h3>
+                        <div class="edw-meta-grid">
+                          <div class="edw-meta-row"><span>行业门类</span><strong>{{ businessDetail?.taxRegistry?.mlmc }}</strong></div>
+                          <div class="edw-meta-row"><span>行业小类</span><strong>{{ businessDetail?.taxRegistry?.hymc }}</strong></div>
+                          <div class="edw-meta-row"><span>登记注册类型</span><strong>{{ businessDetail?.taxRegistry?.djzclx }}</strong></div>
+                          <div class="edw-meta-row"><span>主管税务机关</span><strong>{{ businessDetail?.taxRegistry?.zgswjg }}</strong></div>
+                          <div class="edw-meta-row"><span>从业人数</span><strong>{{ businessDetail?.taxRegistry?.cyrs }}</strong></div>
+                          <div class="edw-meta-row"><span>纳税人资格</span><strong>{{ businessDetail?.taxRegistry?.nsrztdm }}</strong></div>
                         </div>
                       </div>
                       <div class="edw-card">
-                        <h3>经营维度</h3>
-                        <div class="edw-data-grid">
-                          <div class="edw-data-cell"><span>收入增长</span><strong class="edw-danger">188.3%</strong></div>
-                          <div class="edw-data-cell"><span>行业均值</span><strong>12.5%</strong></div>
-                          <div class="edw-data-cell"><span>2025应税收入</span><strong>2275.98万</strong></div>
-                          <div class="edw-data-cell"><span>申报差异</span><strong class="edw-warning">4.4%</strong></div>
-                        </div>
+                        <h3>股东信息</h3>
+                        <table class="edw-detail-table">
+                          <thead><tr><th>股东名称</th><th>持股比例</th><th>认缴出资额</th><th>股东类型</th><th>认缴出资日期</th></tr></thead>
+                          <tbody>
+                            <tr v-for="s in businessDetail?.shareholders" :key="s.name"><td>{{ s.name }}</td><td>{{ s.stockRate }}</td><td>{{ s.totalShouldCapi }}</td><td>{{ s.stockType }}</td><td>{{ s.maxShouldCapiDate }}</td></tr>
+                          </tbody>
+                        </table>
                       </div>
                       <div class="edw-card">
-                        <h3>税票维度</h3>
-                        <div class="edw-data-grid">
-                          <div class="edw-data-cell"><span>增值税税负率</span><strong class="edw-danger">0.8%</strong></div>
-                          <div class="edw-data-cell"><span>行业均值</span><strong>2.8%</strong></div>
-                          <div class="edw-data-cell"><span>开票收入</span><strong>2275.98万元</strong></div>
-                          <div class="edw-data-cell"><span>纳税信用</span><strong class="edw-success">A级</strong></div>
-                        </div>
+                        <h3>主要人员</h3>
+                        <table class="edw-detail-table">
+                          <thead><tr><th>姓名</th><th>职务</th></tr></thead>
+                          <tbody>
+                            <tr v-for="e in businessDetail?.employees" :key="e.name"><td>{{ e.name }}</td><td>{{ e.jobTitle }}</td></tr>
+                          </tbody>
+                        </table>
                       </div>
                       <div class="edw-card">
-                        <h3>风险事项</h3>
-                        <ul class="edw-signal-list edw-signal-list--danger">
-                          <li v-for="ind in highRiskItems" :key="ind.id"><strong>{{ ind.name }}</strong> — {{ ind.fact }}</li>
-                        </ul>
+                        <h3>变更记录（最近{{ (businessDetail?.changes || []).length }}条）</h3>
+                        <table class="edw-detail-table">
+                          <thead><tr><th>变更日期</th><th>变更事项</th><th>变更前</th><th>变更后</th></tr></thead>
+                          <tbody>
+                            <tr v-for="ch in (businessDetail?.changes || []).slice(0,5)" :key="ch.changeDate + ch.changeItem"><td>{{ ch.changeDate }}</td><td>{{ ch.changeItem }}</td><td>{{ ch.beforeContent || '—' }}</td><td>{{ ch.afterContent || '—' }}</td></tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <div class="edw-card edw-card--abnormal">
-                        <h3>欺诈 / 真实性信号</h3>
-                        <ul class="edw-signal-list edw-signal-list--danger">
-                          <li><strong>购销两头在外：</strong>主要供应商和客户均在外地，物流与资金流匹配存疑</li>
-                          <li><strong>票税差异：</strong>开票收入2275.98万 vs 申报收入2175.46万，差异4.4%</li>
-                          <li><strong>电费与收入不匹配：</strong>相关性仅0.18，远低于正常值0.6+</li>
-                        </ul>
+                      <div class="edw-card">
+                        <h3>司法 / 经营异常</h3>
+                        <template v-if="businessDetail?.abnormal?.length || businessDetail?.judicialRisks?.length">
+                          <ul class="edw-signal-list edw-signal-list--warn">
+                            <li v-for="r in (businessDetail?.abnormal || []).concat(businessDetail?.judicialRisks || [])" :key="r">{{ r }}</li>
+                          </ul>
+                        </template>
+                        <template v-else>
+                          <p class="edw-conclusion-text edw-success">未发现明显经营异常和司法负面记录。</p>
+                        </template>
+                      </div>
+                      <div class="edw-card">
+                        <h3>数据来源</h3>
+                        <p class="edw-conclusion-text">工商登记信息来自国家企业信用信息公示系统，税务登记信息来自税务系统，公开信息截至 <strong>{{ businessDetail?.registry?.checkDate }}</strong>。</p>
                       </div>
                       <div class="edw-card-actions">
                         <el-button size="small" @click="openEvidenceView('R1')">查看证据链</el-button>
-                        <el-button size="small" @click="aiAction('生成诊断说明')">生成专项说明</el-button>
-                        <el-button size="small" @click="pushToDD">推送尽调</el-button>
+                        <el-button size="small" @click="aiAction('生成企业诊断报告')">生成企业诊断报告</el-button>
+                        <el-button v-if="!hasTaxData" size="small" type="warning" @click="authMissing()">授权税票</el-button>
+                        <el-button v-if="!hasFlowData" size="small" type="warning" @click="uploadFlow()">上传流水</el-button>
+                      </div>
+                    </template>
+
+                    <template v-if="currentView === 'diagnosisReport'">
+                      <!-- AI 综合诊断摘要 -->
+                      <div class="edw-card edw-card--conclusion">
+                        <div class="edw-card-label">AI 综合诊断</div>
+                        <p class="edw-conclusion-text"><strong>{{ enterprise.name }}</strong> · 综合评分 <strong class="edw-danger">{{ mockData.score }}</strong> · 评级 <strong class="edw-grade-badge" :class="'edw-grade--' + gradeColor(mockData.grade)">{{ mockData.grade }}</strong> · 风险 {{ riskItems.length }} 项 · 高风险 {{ highRiskCount }} 项 · 亮点 {{ highlightCount }} 项</p>
+                      </div>
+                      <div class="edw-card" v-if="mockData.summary">
+                        <h3>诊断摘要</h3>
+                        <p class="edw-conclusion-text" style="line-height:1.8">{{ mockData.summary }}</p>
+                      </div>
+                      <div class="edw-card" v-if="mockData.suggestions?.length">
+                        <h3>关键行动建议</h3>
+                        <ul class="edw-next-list">
+                          <li v-for="(s, i) in mockData.suggestions" :key="i"><strong v-if="s.level === 'critical'" class="edw-danger">【关键】</strong><strong v-else-if="s.level === 'important'" class="edw-warning">【重要】</strong>{{ s.text }}</li>
+                        </ul>
+                      </div>
+                      <!-- 八大维度诊断结果 -->
+                      <div class="edw-card">
+                        <div class="edw-card-header">
+                          <h3>八大维度诊断结果</h3>
+                          <div class="edw-chart-tabs">
+                            <button class="edw-chart-tab" :class="{ active: reportChartType === 'radar' }" @click="reportChartType = 'radar'">维度矩阵</button>
+                            <button class="edw-chart-tab" :class="{ active: reportChartType === 'butterfly' }" @click="reportChartType = 'butterfly'">风险分布</button>
+                            <button class="edw-chart-tab" :class="{ active: reportChartType === 'rose' }" @click="reportChartType = 'rose'">亮点分布</button>
+                          </div>
+                        </div>
+                        <div class="edw-dim-wrap">
+                          <div class="edw-dim-chart">
+                            <div v-show="reportChartType === 'radar'" class="edw-radar-container">
+                              <svg :viewBox="'0 0 ' + radarSize + ' ' + radarSize" class="edw-radar-svg" v-if="radarDims.length">
+                                <polygon v-for="ring in [0.2, 0.4, 0.6, 0.8, 1]" :key="ring" :points="radarPoints(ring * radarRadius)" class="edw-radar-ring" />
+                                <polygon :points="radarDataPoints" class="edw-radar-data" />
+                                <line v-for="(pt, i) in radarLabelPositions" :key="'axis-' + i" :x1="radarCenter" :y1="radarCenter" :x2="pt.x" :y2="pt.y" class="edw-radar-axis" />
+                                <circle v-for="(pt, i) in radarDataPointList" :key="'dot-' + i" :cx="pt.x" :cy="pt.y" r="4" class="edw-radar-dot" :style="{ fill: dimColor(radarDims[i].level) }" />
+                                <text v-for="(lb, i) in radarLabelPositions" :key="'lbl-' + i" :x="lb.x" :y="lb.y" text-anchor="middle" dominant-baseline="middle" class="edw-radar-label">{{ radarDims[i].name.replace('维度','') }}</text>
+                              </svg>
+                            </div>
+                            <div v-show="reportChartType === 'butterfly'" class="edw-butterfly">
+                              <div class="edw-butterfly__legend">
+                                <span class="edw-bf-legend"><span class="edw-bf-dot edw-bf-dot--high"></span>高</span>
+                                <span class="edw-bf-legend"><span class="edw-bf-dot edw-bf-dot--medium"></span>中</span>
+                                <span class="edw-bf-legend"><span class="edw-bf-dot edw-bf-dot--low"></span>低</span>
+                              </div>
+                              <div v-for="dim in radarDims" :key="'bf-' + dim.key" class="edw-bf-row">
+                                <span class="edw-bf-label">{{ dim.name.replace('维度','') }}</span>
+                                <div class="edw-bf-bars">
+                                  <div class="edw-bf-bar edw-bf-bar--high" :style="{ width: (butterflyDim(dim, 'high') / maxRiskInDim * 100) + '%' }" v-if="butterflyDim(dim, 'high')"><span>{{ butterflyDim(dim, 'high') }}</span></div>
+                                  <div class="edw-bf-bar edw-bf-bar--medium" :style="{ width: (butterflyDim(dim, 'medium') / maxRiskInDim * 100) + '%' }" v-if="butterflyDim(dim, 'medium')"><span>{{ butterflyDim(dim, 'medium') }}</span></div>
+                                  <div class="edw-bf-bar edw-bf-bar--low" :style="{ width: (butterflyDim(dim, 'low') / maxRiskInDim * 100) + '%' }" v-if="butterflyDim(dim, 'low')"><span>{{ butterflyDim(dim, 'low') }}</span></div>
+                                  <div v-if="butterflyTotal(dim) === 0" class="edw-bf-none">暂无</div>
+                                </div>
+                              </div>
+                            </div>
+                            <div v-show="reportChartType === 'rose'" class="edw-rose">
+                              <div class="edw-rose__bars">
+                                <div v-for="dim in radarDims" :key="'rose-' + dim.key" class="edw-rose-col" @click="toggleReportDim(dim.key)">
+                                  <div class="edw-rose-val" :style="{ color: roseCount(dim) ? 'var(--color-success)' : 'var(--text-tertiary)' }">{{ roseCount(dim) }}</div>
+                                  <div class="edw-rose-bar-wrap">
+                                    <div class="edw-rose-bar" :style="{ height: (maxHighlightInDim > 0 ? (roseCount(dim) / maxHighlightInDim * 100) : 0) + '%' }" :class="{ 'edw-rose-bar--empty': roseCount(dim) === 0 }"></div>
+                                  </div>
+                                  <div class="edw-rose-label">{{ dim.name.replace('维度','') }}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="edw-dim-grid">
+                            <div v-for="dim in radarDims" :key="dim.key" class="edw-dim-chip" :class="{ active: activeReportDimension === dim.key }" @click="toggleReportDim(dim.key)">
+                              <div class="edw-dim-chip__top">
+                                <span class="edw-dim-chip__name">{{ dim.name }}</span>
+                                <span class="edw-level" :class="'edw-level--' + dim.level">{{ dimLevelText(dim.level) }}</span>
+                              </div>
+                              <div class="edw-dim-chip__count" v-if="reportChartType === 'butterfly'">{{ butterflyTotal(dim) }} 项风险</div>
+                              <div class="edw-dim-chip__count" v-else-if="reportChartType === 'rose'">{{ roseCount(dim) }} 项亮点</div>
+                              <div class="edw-dim-chip__count" v-else>评分 {{ dim.score }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- 核心风险和亮点 -->
+                      <div class="edw-card" v-if="mockData.riskItems?.length || mockData.highlightItems?.length">
+                        <h3>核心风险和亮点</h3>
+                        <div class="edw-indicator-toolbar">
+                          <div class="edw-tabs">
+                            <button class="edw-tab" :class="{ active: reportIndicatorTab === 'risk' }" @click="setReportTab('risk')">风险事项 ({{ riskItems.length }})</button>
+                            <button class="edw-tab" :class="{ active: reportIndicatorTab === 'highlight' }" @click="setReportTab('highlight')">企业亮点 ({{ highlightItems.length }})</button>
+                            <button class="edw-tab" :class="{ active: reportIndicatorTab === 'all' }" @click="setReportTab('all')">全量指标 ({{ (mockData.allIndicators || []).length }})</button>
+                          </div>
+                        </div>
+                        <div class="edw-filters">
+                          <template v-if="reportIndicatorTab === 'risk'">
+                            <button class="edw-filter-chip" :class="{ active: reportIndicatorLevelFilter === 'all' }" @click="reportIndicatorLevelFilter = 'all'">全部</button>
+                            <button v-for="lv in riskLevels" :key="lv.key" class="edw-filter-chip" :class="{ active: reportIndicatorLevelFilter === lv.key }" @click="reportIndicatorLevelFilter = lv.key">{{ lv.label }}</button>
+                          </template>
+                          <template v-else-if="reportIndicatorTab === 'highlight'">
+                            <button class="edw-filter-chip" :class="{ active: reportIndicatorLevelFilter === 'all' }" @click="reportIndicatorLevelFilter = 'all'">全部</button>
+                            <button v-for="lv in highlightLevels" :key="lv.key" class="edw-filter-chip" :class="{ active: reportIndicatorLevelFilter === lv.key }" @click="reportIndicatorLevelFilter = lv.key">{{ lv.label }}</button>
+                          </template>
+                          <template v-else>
+                            <button class="edw-filter-chip" :class="{ active: reportDimensionFilter === 'all' }" @click="reportDimensionFilter = 'all'">全部</button>
+                            <button v-for="dim in radarDims" :key="dim.key" class="edw-filter-chip" :class="{ active: reportDimensionFilter === dim.key }" @click="toggleReportDim(dim.key)">{{ dim.name }}</button>
+                          </template>
+                        </div>
+                        <div class="edw-indicator-list">
+                          <div v-for="ind in filteredReportIndicators" :key="ind.id" class="edw-indicator-row" :class="{ selected: activeReportDimension === ind.dimensionKey }">
+                            <strong class="edw-indicator-row__name">{{ ind.name }}</strong>
+                            <span class="edw-level" :class="'edw-level--' + ind.level">{{ indicatorLevelText(ind) }}</span>
+                            <span class="edw-indicator-row__dim">{{ ind.dimensionName }}</span>
+                            <div class="edw-indicator-row__fact">{{ ind.fact }}</div>
+                            <el-button size="small" text type="primary" @click="openEvidenceView(ind.id)">查看证据链</el-button>
+                          </div>
+                        </div>
                       </div>
                     </template>
                   </div>
@@ -522,7 +658,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getDiagnosisMock, enterpriseDB, evidenceChain, indicators } from '../data/mockEnterpriseDiagnosis.js'
-import { enterpriseSourceData, findEnterpriseFromText, getEnterpriseSourceData, getDataCoverage, getTaxDeclarationRows, getShareholderRows, calculateVatBurden } from '../data/mockEnterpriseSourceData.js'
+import { enterpriseSourceData, findEnterpriseFromText, getEnterpriseSourceData, getDataCoverage, getTaxDeclarationRows, getShareholderRows, calculateVatBurden, getBusinessDetail } from '../data/mockEnterpriseSourceData.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -601,6 +737,7 @@ const currentViewTitle = computed(() => ({
 }[currentView.value] || '企业概览'))
 
 const taxDeclarationRows = computed(() => creditCode.value ? getTaxDeclarationRows(creditCode.value) : [])
+const businessDetail = computed(() => creditCode.value ? getBusinessDetail(creditCode.value) : null)
 const shareholderRows = computed(() => creditCode.value ? getShareholderRows(creditCode.value) : [])
 
 const highRiskCount = computed(() => (mockData.value?.riskItems || []).filter(i => i.level === 'high').length)
@@ -618,6 +755,7 @@ const chatMessages = ref([])
 const chatRef = ref(null)
 const isExploring = ref(false)
 const hasResult = ref(false)
+const workspaceActive = ref(false)
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -638,7 +776,7 @@ function classifyQuestion(text) {
   const q = text.toLowerCase()
 
   // 报告类
-  if (/生成.*工商.*报告|生成工商分析报告/.test(q)) return { type: 'report_business', viewName: '工商分析报告', newView: 'overview' }
+  if (/生成.*工商.*报告|生成工商分析报告/.test(q)) return { type: 'report_business', viewName: '工商分析报告', newView: 'business' }
   if (/生成.*纳税.*报告|生成纳税全景报告/.test(q)) return { type: 'report_tax', viewName: '纳税全景报告', newView: 'tax' }
   if (/生成.*诊断.*报告|生成企业诊断报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'risk' }
   if (/生成.*报告/.test(q)) return { type: 'report_diagnosis', viewName: '企业诊断报告', newView: 'risk' }
@@ -882,16 +1020,21 @@ function buildAnalysisSummary(qa) {
 // ══ 报告请求处理 ══
 async function handleReportRequest(text) {
   workspaceActive.value = true
+
+  // ══ 工商分析报告 ══
   if (/工商|工商分析/.test(text)) {
     currentView.value = 'diagnosisReport'
-    await typeAiMessage('已为你生成**工商分析报告**（Demo）。基于工商登记和司法公开数据，包含企业基本信息、股权结构、司法风险等内容。', {
+    await typeAiMessage('已基于工商、司法和公开信息生成**工商分析报告**。补充税票或流水后，可增强税务异常和经营真实性判断。', {
       actions: [
-        { label: '查看报告详情', action: 'report_detail' },
+        { label: '查看工商分析报告', action: 'report_business_detail' },
+        { label: '查看证据链', action: 'evidence' },
         { label: '加入尽调任务', action: 'dd' },
       ]
     })
     return
   }
+
+  // ══ 纳税全景报告 ══
   if (/纳税|税票/.test(text)) {
     if (!hasTaxData.value) {
       await typeAiMessage('当前**税票数据未授权**，无法生成纳税全景报告。\n\n请先授权税票数据后，系统将生成包含税负分析、申报明细、开票差异等内容的纳税全景报告。', {
@@ -899,30 +1042,55 @@ async function handleReportRequest(text) {
       })
       return
     }
-    await typeAiMessage('已为你生成**纳税全景报告**（Demo）。包含近12个月税负率趋势、申报明细对比、开票差异分析等内容。', {
+    // 有税票即可生成，不要求流水
+    currentView.value = 'taxPanoramaReport'
+    let taxMsg = '已基于税票、纳税申报和发票数据生成**纳税全景报告**。'
+    if (!hasFlowData.value) {
+      taxMsg += '\n\n缺流水时，资金闭环和经营真实性判断会标记为待补充。'
+    }
+    await typeAiMessage(taxMsg, {
       actions: [
-        { label: '查看报告详情', action: 'report_detail' },
+        { label: '查看纳税全景报告', action: 'report_tax_detail' },
         { label: '查看税负率计算', action: 'explain' },
+        { label: '查看证据链', action: 'evidence' },
       ]
     })
     return
   }
-  // 默认：企业诊断报告
-  if (!hasFlowData.value) {
-    await typeAiMessage('当前数据覆盖不足以生成完整的企业诊断报告。\n\n已获取：工商、司法' + (hasTaxData.value ? '、税票' : '') + '。\n缺失：流水。\n\n上传流水后可增强经营真实性和欺诈识别判断。', {
-      actions: [
-        { label: '查看工商分析报告', action: 'report_business' },
-        { label: '上传流水', action: 'upload', type: 'warning' },
-      ]
-    })
-    return
-  }
-  await typeAiMessage('已为你生成**企业诊断报告**（Demo）。包含经营、税票、风险、欺诈、证据链等全维度分析。', {
-    actions: [
-      { label: '查看报告详情', action: 'report_detail' },
-      { label: '推送尽调', action: 'dd' },
+
+  // ══ 企业诊断报告 ══
+  // 只要识别到企业并有基础数据，就生成报告（不阻断缺流水/缺税票）
+  if (mockData.value?.riskItems || sourceData.value) {
+    currentView.value = 'diagnosisReport'
+    const covParts = []
+    if (sourceData.value) covParts.push('工商、司法')
+    if (hasTaxData.value) covParts.push('税票')
+    else covParts.push('税票未授权')
+    const missParts = []
+    if (!hasFlowData.value) missParts.push('流水')
+
+    let diagMsg = '已基于当前已获取数据生成**企业诊断报告**。当前覆盖：' + covParts.join('、')
+    if (missParts.length) diagMsg += '；缺失：' + missParts.join('、')
+    diagMsg += '。报告中的经营真实性和欺诈识别会标记为待补充，上传流水后可生成更完整版本。'
+
+    const actions = [
+      { label: '查看企业诊断报告', action: 'report_diagnosis_detail' },
+      { label: '查看证据链', action: 'evidence' },
     ]
-  })
+    if (!hasTaxData.value) {
+      actions.push({ label: '授权税票', action: 'auth', type: 'warning' })
+    }
+    if (!hasFlowData.value) {
+      actions.push({ label: '上传流水', action: 'upload', type: 'warning' })
+    }
+    actions.push({ label: '推送尽调', action: 'dd' })
+
+    await typeAiMessage(diagMsg, { actions })
+    return
+  }
+
+  // ══ 兜底：企业未识别 ══
+  await typeAiMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
 }
 
 onMounted(() => {
@@ -1012,6 +1180,9 @@ function onMsgAction(a) {
       case 'auth': authMissing(); break
       case 'upload': uploadFlow(); break
       case 'report_detail': openReportView('diagnosis'); break
+      case 'report_business_detail': openReportView('business'); break
+      case 'report_tax_detail': openReportView('tax'); break
+      case 'report_diagnosis_detail': openReportView('diagnosis'); break
       case 'report_business':
         chatMessages.value.push({ role: 'ai', text: '正在生成**工商分析报告**（Demo）...\n\n包含企业基本信息、股权结构、司法风险等内容。' })
         scrollToBottom()
@@ -1054,9 +1225,10 @@ function openEvidenceView(indId) {
 }
 function openReportView(type) {
   workspaceActive.value = true
-  if (type === 'tax') currentView.value = 'taxPanoramaReport'
+  if (type === 'business') currentView.value = 'businessReport'
+  else if (type === 'tax') currentView.value = 'taxPanoramaReport'
   else if (type === 'diagnosis') currentView.value = 'diagnosisReport'
-  else currentView.value = 'taxPanoramaReport'
+  else currentView.value = 'diagnosisReport'
 }
 function goEvidencePage() { openEvidenceView('R1') }
 function pushToDD() { ElMessage.info('Demo: 已将探查结果推送至尽调任务') }
@@ -1202,6 +1374,72 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-danger { color: #dc2626; }
 .edw-warning { color: #b45309; }
 .edw-success { color: #16a34a; }
+
+/* ══ 报告视图样式 ══ */
+.edw-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.edw-card-header h3 { margin: 0; font-size: var(--font-size-sm); font-weight: 600; }
+.edw-chart-tabs { display: flex; gap: 8px; }
+.edw-chart-tab { border: 1px solid var(--border-default); background: #fff; border-radius: 6px; padding: 7px 12px; cursor: pointer; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.edw-chart-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.edw-dim-wrap { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.edw-dim-chart { position: relative; }
+.edw-radar-container { display: flex; align-items: center; justify-content: center; height: 280px; }
+.edw-radar-svg { max-width: 100%; max-height: 100%; }
+.edw-radar-ring { fill: none; stroke: #e2e8f0; stroke-width: 1; }
+.edw-radar-data { fill: rgba(37,99,235,0.12); stroke: rgba(37,99,235,0.6); stroke-width: 2; }
+.edw-radar-axis { stroke: #e2e8f0; stroke-width: 0.8; }
+.edw-radar-dot { stroke: #fff; stroke-width: 1.5; }
+.edw-radar-label { font-size: 11px; fill: var(--text-secondary); font-weight: 500; }
+.edw-dim-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); gap: 8px; }
+.edw-dim-chip { border: 1px solid var(--border-default); border-radius: 8px; padding: 10px 12px; background: #fff; cursor: pointer; display: flex; flex-direction: column; justify-content: center; gap: 4px; transition: all .15s; min-height: 56px; }
+.edw-dim-chip:hover { border-color: var(--color-primary); }
+.edw-dim-chip.active { border-color: var(--color-primary); background: var(--color-primary-bg); }
+.edw-dim-chip__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.edw-dim-chip__name { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+.edw-dim-chip__count { font-size: 11px; color: var(--text-tertiary); }
+.edw-level { font-size: 12px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; font-weight: 500; }
+.edw-level--high { color: var(--color-danger); background: var(--color-danger-bg); }
+.edw-level--medium { color: var(--color-warning); background: var(--color-warning-bg); }
+.edw-level--low { color: var(--color-success); background: var(--color-success-bg); }
+.edw-level--strong { color: var(--color-success); background: var(--color-success-bg); }
+.edw-level--normal { color: var(--color-success); background: var(--color-success-bg); }
+.edw-butterfly__legend { display: flex; gap: 12px; margin-bottom: 10px; }
+.edw-bf-legend { font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; gap: 4px; }
+.edw-bf-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.edw-bf-dot--high { background: var(--color-danger); }
+.edw-bf-dot--medium { background: var(--color-warning); }
+.edw-bf-dot--low { background: var(--color-success); }
+.edw-bf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.edw-bf-label { font-size: 12px; color: var(--text-secondary); width: 100px; flex-shrink: 0; }
+.edw-bf-bars { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.edw-bf-bar { height: 18px; border-radius: 3px; display: flex; align-items: center; padding: 0 6px; font-size: 10px; color: #fff; font-weight: 600; min-width: 28px; }
+.edw-bf-bar--high { background: var(--color-danger); }
+.edw-bf-bar--medium { background: var(--color-warning); }
+.edw-bf-bar--low { background: var(--color-success); }
+.edw-bf-none { font-size: 11px; color: var(--text-tertiary); font-style: italic; }
+.edw-rose__bars { display: flex; justify-content: space-around; align-items: flex-end; gap: 4px; height: 200px; padding: 0 8px; }
+.edw-rose-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; cursor: pointer; }
+.edw-rose-val { font-size: 18px; font-weight: 700; }
+.edw-rose-bar-wrap { width: 100%; height: 140px; display: flex; align-items: flex-end; }
+.edw-rose-bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--color-success); transition: height .3s ease; min-height: 2px; }
+.edw-rose-bar--empty { background: #e2e8f0; }
+.edw-rose-label { font-size: 11px; color: var(--text-tertiary); text-align: center; }
+.edw-indicator-toolbar { display: flex; gap: 12px; margin-bottom: 12px; }
+.edw-tabs { display: flex; gap: 8px; }
+.edw-tab { border: 1px solid var(--border-default); background: #fff; border-radius: 6px; padding: 7px 12px; cursor: pointer; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.edw-tab.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.edw-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.edw-filter-chip { border: 1px solid var(--border-default); background: #fff; border-radius: var(--radius-full); padding: 4px 12px; cursor: pointer; color: var(--text-secondary); font-size: var(--font-size-xs); }
+.edw-filter-chip.active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-bg); }
+.edw-indicator-list { display: grid; gap: 8px; }
+.edw-indicator-row { display: grid; grid-template-columns: 160px 74px 104px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border-default); border-radius: 6px; background: #fff; padding: 8px 10px; cursor: pointer; }
+.edw-indicator-row:hover { border-color: var(--color-primary); }
+.edw-indicator-row.selected { border-color: var(--color-primary); background: var(--color-primary-bg); }
+.edw-indicator-row__name { font-size: 14px; }
+.edw-indicator-row__dim { font-size: var(--font-size-xs); color: var(--text-tertiary); white-space: nowrap; }
+.edw-indicator-row__fact { color: #344054; line-height: 1.5; font-size: var(--font-size-sm); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.edw-grade-badge { display: inline-block; padding: 1px 8px; border-radius: var(--radius-sm); font-weight: 600; font-size: var(--font-size-xs); }
+
 @media (max-width: 900px) { .edw-workspace-layout { grid-template-columns: 1fr; } .edw-chat-panel { max-height: 400px; position: static; } .edw-result-layout { grid-template-columns: 1fr; } .edw-chat { max-height: 400px; position: static; } }
 .edw-detail-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-xs); }
 .edw-detail-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #e2e8f0; color: #94a3b8; font-weight: 500; }
