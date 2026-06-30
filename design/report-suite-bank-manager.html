@@ -1,0 +1,1658 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>银行客户经理报告设计稿</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-bg: #eef2ff;
+      --success: #10b981;
+      --success-bg: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-bg: #fffbeb;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --text: #1a1a2e;
+      --muted: #64748b;
+      --weak: #94a3b8;
+      --line: #dbe7f5;
+      --line-soft: #edf2f7;
+      --page: #f7faff;
+      --card: #ffffff;
+      --table-head: #fafbfd;
+      --shadow: 0 8px 28px rgba(30, 64, 175, 0.06);
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 236px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .side {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 22px 18px;
+      background: #fff;
+      border-right: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #2563eb, #60a5fa);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    }
+
+    .nav-title {
+      margin: 18px 0 8px;
+      color: var(--weak);
+      font-size: 11px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 10px;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      background: var(--primary-bg);
+      color: var(--primary);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: currentColor;
+      opacity: .75;
+    }
+
+    .main {
+      padding: 24px 32px 56px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      max-width: 1180px;
+      margin: 0 auto 18px;
+    }
+
+    .page-title {
+      margin: 0 0 4px;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 650;
+    }
+
+    .page-subtitle {
+      margin: 0;
+      color: var(--weak);
+      font-size: 12.5px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px;
+      padding: 0 13px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12.5px;
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .report {
+      max-width: 1180px;
+      margin: 0 auto 26px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .cover {
+      padding: 24px 26px 22px;
+      background:
+        radial-gradient(circle at 88% 8%, rgba(37, 99, 235, .11), transparent 28%),
+        linear-gradient(180deg, #fff, #f8fbff);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cover-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .report-type {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 4px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .company {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 4px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .tag.success { background: var(--success-bg); border-color: #d1fae5; color: #059669; }
+    .tag.warning { background: var(--warning-bg); border-color: #fde68a; color: #d97706; }
+    .tag.danger { background: var(--danger-bg); border-color: #fecaca; color: #dc2626; }
+    .tag.primary { background: var(--primary-bg); border-color: var(--line); color: var(--primary); }
+
+    .score-box {
+      padding: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .score-head {
+      display: flex;
+      justify-content: space-between;
+      color: var(--weak);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .score-main {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .score-main strong {
+      color: var(--primary);
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .score-main span { color: var(--weak); }
+
+    .bar {
+      height: 8px;
+      border-radius: 99px;
+      background: #edf2f7;
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #60a5fa, #2563eb);
+    }
+
+    .body {
+      padding: 22px 26px 26px;
+    }
+
+    .section {
+      margin-top: 22px;
+    }
+
+    .section:first-child { margin-top: 0; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .section-note {
+      color: var(--weak);
+      font-size: 12px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 15px 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--accent, var(--primary));
+    }
+
+    .metric .label {
+      color: var(--weak);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric .value {
+      font-size: 21px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .metric .desc {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .panel {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .panel.soft { background: #fbfdff; }
+
+    .insight {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 10px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .insight-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .insight-title {
+      font-weight: 650;
+      margin-bottom: 3px;
+    }
+
+    .insight-text {
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    th {
+      padding: 10px 12px;
+      text-align: left;
+      color: var(--weak);
+      font-size: 12px;
+      font-weight: 550;
+      background: var(--table-head);
+      border-bottom: 1px solid var(--line);
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .risk-row {
+      display: grid;
+      grid-template-columns: 88px minmax(0, 1fr) 108px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .risk-row:last-child { border-bottom: 0; }
+
+    .risk-level {
+      font-weight: 650;
+    }
+
+    .risk-level.high { color: var(--danger); }
+    .risk-level.mid { color: var(--warning); }
+    .risk-level.low { color: var(--success); }
+
+    .timeline {
+      display: grid;
+      gap: 10px;
+      border-left: 2px solid var(--line);
+      margin-left: 7px;
+      padding-left: 18px;
+    }
+
+    .event {
+      position: relative;
+      padding: 10px 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .event::before {
+      content: "";
+      position: absolute;
+      left: -25px;
+      top: 16px;
+      width: 10px;
+      height: 10px;
+      border-radius: 99px;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-bg);
+    }
+
+    .event-date {
+      color: var(--weak);
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .chart-bars {
+      display: grid;
+      gap: 10px;
+    }
+
+    .chart-line {
+      display: grid;
+      grid-template-columns: 92px 1fr 70px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .chart-label { color: var(--muted); }
+    .chart-track {
+      height: 8px;
+      border-radius: 99px;
+      background: #eef2f7;
+      overflow: hidden;
+    }
+
+    .chart-track i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 14px;
+      padding: 16px;
+      background: linear-gradient(135deg, #eef2ff, #f8fbff);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .decision h4 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .decision p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .decision-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+      color: var(--weak);
+      font-size: 12px;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .mini-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+    }
+
+    .mini-list li:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .kbd {
+      color: var(--text);
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .diagnosis-hero {
+      display: grid;
+      grid-template-columns: 1.1fr 320px;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .diagnosis-summary {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .diagnosis-summary h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .diagnosis-summary p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .diagnosis-counts {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .diagnosis-count {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .diagnosis-count strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .diagnosis-count span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .grade-card {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+      background: linear-gradient(180deg, #fff, #fff7f7);
+      text-align: center;
+    }
+
+    .grade-ring {
+      width: 142px;
+      height: 142px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--danger) 0 53%, #fee2e2 53% 100%);
+      margin-bottom: 12px;
+    }
+
+    .grade-ring-inner {
+      width: 104px;
+      height: 104px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: var(--danger);
+      font-size: 42px;
+      font-weight: 800;
+    }
+
+    .action-steps {
+      counter-reset: action;
+      display: grid;
+      gap: 9px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .action-steps li {
+      counter-increment: action;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+    }
+
+    .action-steps li::before {
+      content: counter(action);
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .dimension-layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .radar-card {
+      min-height: 360px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle, transparent 0 31%, rgba(219, 231, 245, .9) 31% 32%, transparent 32% 49%, rgba(219, 231, 245, .9) 49% 50%, transparent 50% 68%, rgba(219, 231, 245, .9) 68% 69%, transparent 69%),
+        linear-gradient(90deg, transparent 49.7%, #e5eaf2 50%, transparent 50.3%),
+        linear-gradient(30deg, transparent 49.7%, #e5eaf2 50%, transparent 50.3%),
+        linear-gradient(150deg, transparent 49.7%, #e5eaf2 50%, transparent 50.3%),
+        #fff;
+      position: relative;
+    }
+
+    .radar-score {
+      width: 138px;
+      height: 138px;
+      clip-path: polygon(50% 3%, 82% 20%, 96% 54%, 74% 86%, 36% 92%, 8% 63%, 16% 25%);
+      background: rgba(37, 99, 235, .22);
+      border: 2px solid rgba(37, 99, 235, .55);
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .radar-label {
+      position: absolute;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .radar-label.l1 { top: 22px; left: 50%; transform: translateX(-50%); }
+    .radar-label.l2 { top: 82px; right: 20px; }
+    .radar-label.l3 { bottom: 88px; right: 22px; }
+    .radar-label.l4 { bottom: 22px; left: 50%; transform: translateX(-50%); }
+    .radar-label.l5 { bottom: 88px; left: 20px; }
+    .radar-label.l6 { top: 82px; left: 20px; }
+
+    .dimension-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .dimension-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr) 50px 70px;
+      gap: 10px;
+      align-items: center;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .dimension-name {
+      font-weight: 650;
+    }
+
+    .dimension-score {
+      font-weight: 750;
+      color: var(--primary);
+    }
+
+    .relationship-map {
+      position: relative;
+      min-height: 300px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: radial-gradient(circle at center, #eef2ff, #fff 54%);
+      overflow: hidden;
+    }
+
+    .rel-node {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      min-width: 88px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
+      text-align: center;
+    }
+
+    .rel-node.center {
+      left: 50%;
+      top: 50%;
+      width: 170px;
+      min-height: 72px;
+      transform: translate(-50%, -50%);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+      border-radius: 14px;
+    }
+
+    .rel-node.risk { border-color: #fecaca; color: #dc2626; }
+    .rel-node.ok { border-color: #d1fae5; color: #059669; }
+    .rel-node.n1 { left: 8%; top: 14%; }
+    .rel-node.n2 { right: 8%; top: 14%; }
+    .rel-node.n3 { right: 9%; bottom: 16%; }
+    .rel-node.n4 { left: 8%; bottom: 16%; }
+    .rel-node.n5 { left: 42%; top: 6%; }
+
+    .rel-line {
+      position: absolute;
+      height: 1px;
+      background: #cbd5e1;
+      transform-origin: left center;
+      opacity: .8;
+    }
+
+    .rel-line.a { width: 225px; left: 26%; top: 35%; transform: rotate(22deg); }
+    .rel-line.b { width: 210px; left: 52%; top: 35%; transform: rotate(156deg); }
+    .rel-line.c { width: 220px; left: 52%; top: 59%; transform: rotate(24deg); }
+    .rel-line.d { width: 220px; left: 28%; top: 61%; transform: rotate(154deg); }
+
+    .risk-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .risk-tab {
+      height: 28px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .risk-tab.active {
+      background: var(--primary-bg);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .evidence-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .evidence-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+
+    .evidence-title {
+      font-weight: 700;
+    }
+
+    .evidence-desc {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .evidence-link {
+      color: var(--primary);
+      font-weight: 650;
+      font-size: 12px;
+    }
+
+    .document-report {
+      max-width: 960px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .paper {
+      margin: 0 auto 18px;
+      padding: 42px 48px;
+      min-height: 1120px;
+      background: #fff;
+      border: 1px solid #d8e2ef;
+      box-shadow: 0 12px 34px rgba(15, 23, 42, .08);
+    }
+
+    .paper.compact {
+      min-height: auto;
+    }
+
+    .paper-cover {
+      display: flex;
+      min-height: 760px;
+      flex-direction: column;
+      justify-content: space-between;
+      border-top: 5px solid var(--primary);
+      padding-top: 34px;
+    }
+
+    .paper-kicker {
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .paper-title {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.25;
+      font-weight: 750;
+      letter-spacing: .5px;
+    }
+
+    .paper-subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .paper-meta {
+      width: 100%;
+      margin-top: 44px;
+      border: 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .paper-meta th,
+    .paper-meta td {
+      border-bottom: 1px solid var(--line-soft);
+      background: #fff;
+      padding: 12px 14px;
+      font-size: 13px;
+    }
+
+    .paper-meta th {
+      width: 132px;
+      color: var(--weak);
+      font-weight: 550;
+    }
+
+    .paper-seal {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      color: var(--weak);
+      font-size: 12px;
+    }
+
+    .paper-section {
+      margin-top: 28px;
+      page-break-inside: avoid;
+    }
+
+    .paper-section:first-child {
+      margin-top: 0;
+    }
+
+    .paper-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 14px;
+      font-size: 17px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 10px;
+    }
+
+    .chapter-no {
+      color: var(--primary);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+    }
+
+    .para {
+      margin: 0 0 10px;
+      color: #25324a;
+      font-size: 14px;
+      line-height: 1.9;
+      text-indent: 2em;
+    }
+
+    .no-indent {
+      text-indent: 0;
+    }
+
+    .doc-summary {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .doc-verdict {
+      padding: 18px;
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--primary);
+    }
+
+    .doc-verdict h4 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .doc-verdict p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .doc-index {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .doc-index li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--muted);
+    }
+
+    .doc-index strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .doc-table th {
+      background: #f8fafc;
+      color: #526079;
+    }
+
+    .doc-table td,
+    .doc-table th {
+      padding: 11px 12px;
+      font-size: 13px;
+    }
+
+    .clause-list {
+      margin: 0;
+      padding-left: 20px;
+      color: #25324a;
+      line-height: 1.9;
+      font-size: 14px;
+    }
+
+    .signature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .signature-cell {
+      height: 92px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      color: var(--weak);
+      background: #fff;
+    }
+
+    .print-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 960px;
+      margin: 0 auto 10px;
+      color: var(--weak);
+      font-size: 12px;
+    }
+
+    @media (max-width: 1040px) {
+      .shell { grid-template-columns: 1fr; }
+      .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav { display: flex; flex-wrap: wrap; gap: 4px; }
+      .nav-title { display: none; }
+      .cover-row,
+      .decision,
+      .diagnosis-hero,
+      .dimension-layout,
+      .dimension-row,
+      .evidence-grid,
+      .grid-4,
+      .grid-3,
+      .grid-2 { grid-template-columns: 1fr; }
+      .diagnosis-counts { grid-template-columns: 1fr; }
+      .radar-card { min-height: 300px; }
+      .paper { padding: 28px 22px; min-height: auto; }
+      .doc-summary,
+      .signature-grid { grid-template-columns: 1fr; }
+      .topbar { gap: 12px; flex-direction: column; }
+      .main { padding: 18px; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .side,
+      .topbar,
+      .print-toolbar,
+      .report:not(.document-report) { display: none; }
+      .shell { display: block; }
+      .main { padding: 0; }
+      .document-report { max-width: none; }
+      .paper {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 20mm 18mm;
+        border: 0;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      .paper.compact { min-height: 297mm; }
+      .tag { border-color: #cbd5e1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark"></span><span>智能报告设计稿</span></div>
+      <div class="nav-title">报告产物</div>
+      <nav class="nav">
+        <a class="active" href="#panorama"><span class="dot"></span>全景报告</a>
+        <a href="#diagnosis"><span class="dot"></span>企业诊断</a>
+        <a href="#diligence"><span class="dot"></span>尽调报告</a>
+        <a href="#preloan"><span class="dot"></span>贷前尽调</a>
+        <a href="#postloan"><span class="dot"></span>贷后监控</a>
+        <a href="#bizjudicial"><span class="dot"></span>工商司法</a>
+      </nav>
+      <div class="nav-title">设计说明</div>
+      <div class="panel soft" style="font-size:12px;color:var(--muted);">
+        面向银行客户经理，突出“能不能进件、能不能授信、后续盯什么”。页面结构按 Vue 组件拆分友好设计。
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title">唐山物桥商贸有限公司 · 报告套件</h1>
+          <p class="page-subtitle">来源：智能筛查 / 智能报告 / 工商筛查产物，设计版 HTML，不接入现有代码。</p>
+        </div>
+        <div class="actions">
+          <button class="btn">返回列表</button>
+          <button class="btn">存为模板</button>
+          <button class="btn primary">导出PDF</button>
+        </div>
+      </div>
+
+      <section class="report" id="panorama">
+        <div class="cover">
+          <div class="cover-row">
+            <div>
+              <div class="report-type">全景报告</div>
+              <h2 class="company">唐山物桥商贸有限公司</h2>
+              <div class="meta">
+                <span class="tag">91130203MA7EEQ2N0T</span>
+                <span class="tag">法人：马丽</span>
+                <span class="tag">成立于 2022-01-05</span>
+                <span class="tag primary">建材批发</span>
+                <span class="tag success">一般纳税人</span>
+              </div>
+            </div>
+            <div class="score-box">
+              <div class="score-head"><span>客户经理综合视图</span><span>更新：2026-06-28</span></div>
+              <div class="score-main"><strong>78</strong><span>/100</span></div>
+              <div class="bar"><i style="width:78%"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="section">
+            <div class="grid-4">
+              <div class="metric" style="--accent:#2563eb"><div class="label">近3年销售收入</div><div class="value">2,275.98万</div><div class="desc">2025年同比 +188.30%</div></div>
+              <div class="metric" style="--accent:#10b981"><div class="label">司法状态</div><div class="value">正常</div><div class="desc">无失信、被执行、法院公告</div></div>
+              <div class="metric" style="--accent:#f59e0b"><div class="label">供应商集中度</div><div class="value">高</div><div class="desc">前两大供应商合计约100%</div></div>
+              <div class="metric" style="--accent:#ef4444"><div class="label">经营风险提示</div><div class="value">4项</div><div class="desc">滞纳金、税违、零申报需复核</div></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>客户经理摘要</h3><span class="section-note">用于拜访、进件、额度判断前快速阅读</span></div>
+            <div class="grid-3">
+              <div class="insight"><div class="insight-icon">企</div><div><div class="insight-title">主体稳定</div><div class="insight-text">工商登记、法人、行业、纳税人资格清晰，注册资本100万元，从业人数2人。</div></div></div>
+              <div class="insight"><div class="insight-icon">税</div><div><div class="insight-title">税票增长明显</div><div class="insight-text">2025年纳税销售额大幅提升，但近12个月零申报、滞纳金和税收违法次数需解释。</div></div></div>
+              <div class="insight"><div class="insight-icon">链</div><div><div class="insight-title">交易链条集中</div><div class="insight-text">销售以钢管、石灰石为主，客户和供应商集中，适合做上下游交叉核验。</div></div></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>全景数据看板</h3><span class="section-note">经营、纳税、开票、司法、知识产权</span></div>
+            <div class="grid-2">
+              <div class="panel">
+                <div class="chart-bars">
+                  <div class="chart-line"><span class="chart-label">营业收入</span><span class="chart-track"><i style="width:92%"></i></span><strong>2,275.98万</strong></div>
+                  <div class="chart-line"><span class="chart-label">营业成本</span><span class="chart-track"><i style="width:91%"></i></span><strong>2,265.83万</strong></div>
+                  <div class="chart-line"><span class="chart-label">净利润</span><span class="chart-track"><i style="width:24%"></i></span><strong>1.70万</strong></div>
+                  <div class="chart-line"><span class="chart-label">货币资金</span><span class="chart-track"><i style="width:18%"></i></span><strong>1.73万</strong></div>
+                </div>
+              </div>
+              <table>
+                <thead><tr><th>维度</th><th>状态</th><th>客户经理动作</th></tr></thead>
+                <tbody>
+                  <tr><td>工商司法</td><td><span class="tag success">正常</span></td><td>可作为准入正向项</td></tr>
+                  <tr><td>纳税信用</td><td><span class="tag primary">B级</span></td><td>补充近年评级连续性</td></tr>
+                  <tr><td>发票交易</td><td><span class="tag warning">集中</span></td><td>核验核心上下游真实性</td></tr>
+                  <tr><td>知识产权</td><td><span class="tag">无</span></td><td>贸易企业非核心资产</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="report" id="diagnosis">
+        <div class="cover">
+          <div class="cover-row">
+            <div>
+              <div class="report-type">企业诊断风险报告</div>
+              <h2 class="company">AI 综合诊断</h2>
+              <div class="meta">
+                <span class="tag danger">风险 8 · 高风险 3</span>
+                <span class="tag success">亮点 9 · 强亮点 3</span>
+                <span class="tag warning">综合评分 D</span>
+                <span class="tag">基于多维度数据智能分析</span>
+              </div>
+            </div>
+            <div class="score-box">
+              <div class="score-head"><span>企业综合评分</span><span>风险等级：较高</span></div>
+              <div class="score-main"><strong style="color:#ef4444">53</strong><span>/100</span></div>
+              <div class="bar"><i style="width:53%;background:linear-gradient(90deg,#fca5a5,#ef4444)"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="section">
+            <div class="diagnosis-hero">
+              <div class="diagnosis-summary">
+                <h3>诊断摘要</h3>
+                <p>唐山物桥商贸有限公司成立于2022年，主营建材批发，现有从业人员5人。近三年应税销售收入呈持续增长态势，2025年达2,275.98万元，同比增长+188.3%，增长势头显著。然而，增值税税负率仅为0.8%，远低于同行业均值，结合“两头在外”经营模式，业务真实性存在较高风险。企业司法记录清白、纳税信用等级A级、管理层连续稳定，具备一定的基础信用背书。</p>
+                <div class="diagnosis-counts">
+                  <div class="diagnosis-count"><strong style="color:#ef4444">8</strong><span>风险事项 · 高风险3项</span></div>
+                  <div class="diagnosis-count"><strong style="color:#10b981">9</strong><span>企业亮点 · 强亮点3项</span></div>
+                  <div class="diagnosis-count"><strong style="color:#2563eb">17</strong><span>全量指标 · 可穿透证据</span></div>
+                </div>
+              </div>
+              <div class="grade-card">
+                <div class="grade-ring"><div class="grade-ring-inner">D</div></div>
+                <strong>业务真实性与税负异常为主风险</strong>
+                <span style="color:var(--muted);margin-top:6px;">建议先核实交易真实性，再进入额度测算。</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>行动建议</h3><span class="section-note">给客户经理的下一步核查动作</span></div>
+            <ol class="action-steps">
+              <li>核实营收增长的真实来源，重点审查大额订单。</li>
+              <li>调查“两头在外”物流和资金流匹配情况。</li>
+              <li>核查增值税税负率异常偏低的原因。</li>
+              <li>关注客户集中度过高带来的经营风险。</li>
+              <li>督促企业优化债务结构，降低偿债压力。</li>
+            </ol>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>八大维度诊断结果</h3><span class="section-note">雷达图 / 蝴蝶图 / 玫瑰图可切换，点击维度查看指标</span></div>
+            <div class="dimension-layout">
+              <div class="radar-card">
+                <div class="radar-label l1">企业稳定性 80</div>
+                <div class="radar-label l2">经营稳定性 25</div>
+                <div class="radar-label l3">业务真实性 25</div>
+                <div class="radar-label l4">综合 53</div>
+                <div class="radar-label l5">税务风险 80</div>
+                <div class="radar-label l6">司法负面 80</div>
+                <div class="radar-score">53</div>
+              </div>
+              <div class="dimension-list">
+                <div class="dimension-row"><span class="dimension-name">司法负面</span><span class="chart-track"><i style="width:80%;background:#10b981"></i></span><span class="dimension-score">80</span><span class="tag success">低</span></div>
+                <div class="dimension-row"><span class="dimension-name">企业稳定性</span><span class="chart-track"><i style="width:80%;background:#10b981"></i></span><span class="dimension-score">80</span><span class="tag success">低</span></div>
+                <div class="dimension-row"><span class="dimension-name">税务风险</span><span class="chart-track"><i style="width:80%;background:#f59e0b"></i></span><span class="dimension-score">80</span><span class="tag warning">低</span></div>
+                <div class="dimension-row"><span class="dimension-name">经营稳定性</span><span class="chart-track"><i style="width:25%;background:#ef4444"></i></span><span class="dimension-score" style="color:#ef4444">25</span><span class="tag danger">高</span></div>
+                <div class="dimension-row"><span class="dimension-name">业务真实性</span><span class="chart-track"><i style="width:25%;background:#ef4444"></i></span><span class="dimension-score" style="color:#ef4444">25</span><span class="tag danger">高</span></div>
+                <div class="dimension-row"><span class="dimension-name">供应链稳定性</span><span class="chart-track"><i style="width:25%;background:#ef4444"></i></span><span class="dimension-score" style="color:#ef4444">25</span><span class="tag danger">高</span></div>
+                <div class="dimension-row"><span class="dimension-name">经营成长性</span><span class="chart-track"><i style="width:80%;background:#10b981"></i></span><span class="dimension-score">80</span><span class="tag success">高</span></div>
+                <div class="dimension-row"><span class="dimension-name">关联交易</span><span class="chart-track"><i style="width:25%;background:#ef4444"></i></span><span class="dimension-score" style="color:#ef4444">25</span><span class="tag danger">高</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>关联关系穿透图</h3><span class="section-note">用于解释“两头在外”、关联交易和供应链集中</span></div>
+            <div class="relationship-map">
+              <span class="rel-line a"></span><span class="rel-line b"></span><span class="rel-line c"></span><span class="rel-line d"></span>
+              <div class="rel-node center">唐山物桥商贸有限公司<br /><span style="font-weight:400;color:var(--muted)">建材批发 · 一般纳税人</span></div>
+              <div class="rel-node n1 risk">客户集中<br />江西云鹏</div>
+              <div class="rel-node n2 risk">供应商集中<br />天津宏祥顺</div>
+              <div class="rel-node n3">税负异常<br />0.8%</div>
+              <div class="rel-node n4 ok">司法清白<br />记录为0</div>
+              <div class="rel-node n5 ok">纳税信用<br />A级</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-head"><h3>核心风险和亮点</h3><span class="section-note">风险事项 8 · 企业亮点 9 · 全量指标 17</span></div>
+            <div class="risk-tabs">
+              <span class="risk-tab active">全部 (17)</span>
+              <span class="risk-tab">经营稳定性 (5)</span>
+              <span class="risk-tab">业务真实性 (3)</span>
+              <span class="risk-tab">税务风险 (3)</span>
+              <span class="risk-tab">企业稳定性 (3)</span>
+              <span class="risk-tab">供应链稳定性 (1)</span>
+              <span class="risk-tab">司法负面 (2)</span>
+            </div>
+            <div class="evidence-grid">
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">营收增长异常</span><span class="tag danger">高风险</span></div><p class="evidence-desc">近12月开票收入同比增长188.3%，增速远超行业平均水平。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">购销两头在外</span><span class="tag warning">中风险</span></div><p class="evidence-desc">主要供应商和客户均位于外地，存在两头在外经营模式。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">短期偿债压力过大</span><span class="tag danger">高风险</span></div><p class="evidence-desc">短期借款50万元，占流动资产61%，偿债压力较大。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">应收账款周转率下降</span><span class="tag warning">中风险</span></div><p class="evidence-desc">应收账款周转率从8.2降至5.6，回款速度变慢。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">税负率显著低于行业</span><span class="tag danger">高风险</span></div><p class="evidence-desc">增值税税负率0.8%，仅为行业均值2.8%的29%。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">开票收入与申报收入不一致</span><span class="tag warning">中风险</span></div><p class="evidence-desc">开票收入2,275.98万元，申报收入2,175.46万元，差异4.4%。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">电费与收入相关性低</span><span class="tag">低风险</span></div><p class="evidence-desc">近12月电费与收入相关性仅0.18，低于正常水平。</p><span class="evidence-link">查看证据链 →</span></div>
+              <div class="evidence-card"><div class="evidence-head"><span class="evidence-title">公司成立时间较短</span><span class="tag warning">中风险</span></div><p class="evidence-desc">企业成立39个月，经营历史相对较短。</p><span class="evidence-link">查看证据链 →</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="document-report" id="diligence">
+        <div class="print-toolbar">
+          <span>文档式设计 · 适合导出 PDF / Word / 审批附件</span>
+          <span>建议组件：DocumentShell、ReportCover、ApprovalSummary、ChapterSection</span>
+        </div>
+        <article class="paper paper-cover">
+          <div>
+            <div class="paper-kicker">智能尽调报告</div>
+            <h2 class="paper-title">唐山物桥商贸有限公司<br />尽职调查报告</h2>
+            <p class="paper-subtitle">面向银行客户经理、授信审批与风控复核的正式文档版式</p>
+            <table class="paper-meta">
+              <tbody>
+                <tr><th>企业名称</th><td>唐山物桥商贸有限公司</td><th>统一社会信用代码</th><td>91130203MA7EEQ2N0T</td></tr>
+                <tr><th>所属行业</th><td>建材批发</td><th>纳税人资格</th><td>一般纳税人</td></tr>
+                <tr><th>法定代表人</th><td>马丽</td><th>成立日期</th><td>2022-01-05</td></tr>
+                <tr><th>报告结论</th><td><span class="tag warning">建议有条件通过</span></td><th>生成日期</th><td>2026-06-28</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="paper-seal">
+            <span>客户经理：待填写</span>
+            <span>经办机构：待填写</span>
+            <span>报告编号：DD-20260628-001</span>
+          </div>
+        </article>
+
+        <article class="paper compact">
+          <div class="paper-section">
+            <h3><span class="chapter-no">00</span> 审批摘要</h3>
+            <div class="doc-summary">
+              <div class="doc-verdict">
+                <h4>总体结论：建议有条件通过。</h4>
+                <p>企业主体存续正常，司法信息未见重大负面，近年营业收入增长较快。授信前应重点补充税务异常说明、核心上下游交易凭证，并对贸易真实性进行交叉核验。</p>
+              </div>
+              <table class="doc-table">
+                <tbody>
+                  <tr><th>资料完整度</th><td><span class="tag primary">86%</span></td></tr>
+                  <tr><th>尽调可信度</th><td><span class="tag primary">82/100</span></td></tr>
+                  <tr><th>核心风险</th><td><span class="tag warning">税务与交易集中</span></td></tr>
+                  <tr><th>建议动作</th><td>补充材料后进入审批</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <table class="doc-table">
+              <thead><tr><th>审批关注项</th><th>调查发现</th><th>风险判断</th><th>缓释措施</th></tr></thead>
+              <tbody>
+                <tr><td>主体资质</td><td>工商登记、法人、行业、纳税人资格清晰</td><td><span class="tag success">较低</span></td><td>纳入准入正向材料</td></tr>
+                <tr><td>税务合规</td><td>近12个月滞纳金5次、税收违法4次</td><td><span class="tag danger">高关注</span></td><td>取得完税证明及异常原因说明</td></tr>
+                <tr><td>交易真实性</td><td>客户和供应商集中度较高</td><td><span class="tag warning">中关注</span></td><td>抽样核验合同、物流、发票、回款</td></tr>
+                <tr><td>司法风险</td><td>无失信、被执行、法院公告、裁判文书记录</td><td><span class="tag success">较低</span></td><td>保持贷后扫描</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">01</span> 企业基本情况</h3>
+            <p class="para">唐山物桥商贸有限公司成立于2022年1月5日，注册地址位于河北省唐山市路北区，统一社会信用代码为91130203MA7EEQ2N0T，法定代表人为马丽，注册资本100万元，企业类型为有限责任公司（自然人独资）。</p>
+            <p class="para">企业所属行业为建材批发，经营范围包括建筑材料销售、金属材料销售、五金产品批发、机械设备销售、金属矿石销售、煤炭及制品销售等。结合企业发票数据，主要交易商品为钢管、石灰石等建材贸易品类。</p>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">02</span> 经营与财税情况</h3>
+            <p class="para">根据已获取数据，企业2025年营业收入为2,275.98万元，较2024年增长明显；营业成本为2,265.83万元，净利润为1.70万元。企业收入规模提升较快，但利润水平偏薄，客户经理应结合贸易合同、资金流水和发票数据判断收入增长的持续性与真实性。</p>
+            <table class="doc-table">
+              <thead><tr><th>指标</th><th>2025年</th><th>2024年</th><th>2023年</th><th>调查意见</th></tr></thead>
+              <tbody>
+                <tr><td>营业收入</td><td>2,275.98万</td><td>789.46万</td><td>619.30万</td><td>增长较快，需核验订单来源</td></tr>
+                <tr><td>净利润</td><td>1.70万</td><td>1.96万</td><td>0.18万</td><td>利润偏薄，关注贸易价差</td></tr>
+                <tr><td>纳税信用</td><td>B级</td><td>B级</td><td>M级</td><td>信用等级有改善</td></tr>
+                <tr><td>近12个月异常</td><td colspan="3">滞纳金5次、税收违法4次、零申报3个月</td><td>贷前必须补充解释</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">03</span> 上下游交易分析</h3>
+            <p class="para">企业销售端主要客户包括江西云鹏实业有限公司、江西云鹏建设设备租赁有限公司、唐山铭潮国际贸易有限公司等，主营商品以钢管、石灰石为主。采购端主要供应商包括天津市宏祥顺钢铁有限公司、唐山市路北区鑫诚钢管有限公司等，供应商集中度连续较高。</p>
+            <p class="para">交易集中度高会提高企业对核心上下游的依赖程度。建议客户经理抽取前两大客户及供应商交易样本，进行合同、发票、物流、回款四流合一核验，并关注核心客户回款稳定性。</p>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">04</span> 风险结论与补充材料</h3>
+            <ol class="clause-list">
+              <li>税务风险：需补充近12个月完税证明、滞纳金处理证明及税收违法事项说明。</li>
+              <li>交易风险：需核验前十大客户及供应商交易合同、发票、物流和回款流水。</li>
+              <li>财务风险：收入增速较快但净利润偏薄，需关注贸易真实性、费用归集和持续经营能力。</li>
+              <li>司法风险：当前未见重大司法负面，可作为准入正向依据，但需纳入贷后持续监控。</li>
+            </ol>
+            <div class="signature-grid">
+              <div class="signature-cell">客户经理意见 / 签名</div>
+              <div class="signature-cell">支行负责人意见 / 签名</div>
+              <div class="signature-cell">风控复核意见 / 签名</div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="document-report" id="preloan">
+        <div class="print-toolbar">
+          <span>贷前尽调 · 审批摘要 + 调查正文 + 放款条件</span>
+          <span>定位：客户经理提交授信审批的正式调查材料</span>
+        </div>
+        <article class="paper paper-cover">
+          <div>
+            <div class="paper-kicker">贷前调查报告</div>
+            <h2 class="paper-title">唐山物桥商贸有限公司<br />贷前尽职调查及授信建议</h2>
+            <p class="paper-subtitle">用于流动资金贷款准入、额度测算、担保条件和放款条件确认</p>
+            <table class="paper-meta">
+              <tbody>
+                <tr><th>申请用途</th><td>流动资金周转</td><th>建议策略</th><td><span class="tag warning">审慎准入</span></td></tr>
+                <tr><th>准入判断</th><td><span class="tag success">可准入</span></td><th>建议额度</th><td>结合订单及流水审慎测算</td></tr>
+                <tr><th>担保建议</th><td>建议补强</td><th>核心条件</th><td>税务说明、交易凭证、回款归集</td></tr>
+                <tr><th>客户经理</th><td>待填写</td><th>报告日期</th><td>2026-06-28</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="paper-seal">
+            <span>经办支行：待填写</span>
+            <span>产品类型：小微企业流动资金贷款</span>
+            <span>报告编号：PL-20260628-001</span>
+          </div>
+        </article>
+
+        <article class="paper compact">
+          <div class="paper-section">
+            <h3><span class="chapter-no">00</span> 贷前审批摘要</h3>
+            <div class="doc-summary">
+              <div class="doc-verdict">
+                <h4>授信建议：在补齐税务与交易真实性材料后审慎准入。</h4>
+                <p>企业主体和司法准入条件基本满足，经营收入增长明显，但供应链集中、税务异常和利润偏薄构成贷前关注点。建议以真实订单、回款归集和受托支付作为主要风险缓释手段。</p>
+              </div>
+              <table class="doc-table">
+                <tbody>
+                  <tr><th>准入评分</th><td><span class="tag primary">74/100</span></td></tr>
+                  <tr><th>准入状态</th><td><span class="tag success">可准入</span></td></tr>
+                  <tr><th>放款条件</th><td><span class="tag danger">3项必备</span></td></tr>
+                  <tr><th>贷后等级</th><td>纳入重点监控</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <table class="doc-table">
+              <thead><tr><th>审批要素</th><th>调查结论</th><th>建议口径</th></tr></thead>
+              <tbody>
+                <tr><td>准入</td><td>工商存续、司法五类记录为0、纳税人资格正常</td><td><span class="tag success">可准入</span></td></tr>
+                <tr><td>额度</td><td>收入规模提升，但利润薄、交易集中</td><td>结合真实订单和回款流水审慎测算</td></tr>
+                <tr><td>担保</td><td>法人及关联风险需进一步核验</td><td><span class="tag warning">建议补强</span></td></tr>
+                <tr><td>用途</td><td>用于钢管、石灰石等建材贸易周转</td><td>采用受托支付和用途凭证闭环</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">01</span> 借款人准入调查</h3>
+            <p class="para">借款人唐山物桥商贸有限公司为建材批发企业，主体状态存续，纳税人状态正常，工商信息完整。企业未发现经营异常、失信被执行、被执行人、法院公告、裁判文书等重大司法负面记录，主体准入层面具备进入授信审批的基础条件。</p>
+            <p class="para">企业经营范围于2024年3月发生变更，新增金属矿石、非金属矿及制品、煤炭及制品、化工产品、石油制品销售等。客户经理应结合实际交易品类，核验新增经营范围与发票商品、合同标的是否匹配。</p>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">02</span> 还款来源与经营核验</h3>
+            <p class="para">企业第一还款来源主要来自建材贸易销售回款。2025年营业收入为2,275.98万元，较前期增长明显；主要销售商品为钢管、石灰石，销售地区以江西省、河北省为主。由于客户集中度较高，应重点核验核心客户回款稳定性。</p>
+            <table class="doc-table">
+              <thead><tr><th>核验对象</th><th>核验内容</th><th>资料要求</th><th>放款前状态</th></tr></thead>
+              <tbody>
+                <tr><td>江西云鹏实业有限公司</td><td>销售合同、发票、回款</td><td>合同、物流、流水</td><td><span class="tag warning">待核验</span></td></tr>
+                <tr><td>江西云鹏建设设备租赁有限公司</td><td>交易真实性与持续性</td><td>对账单、发票、回款</td><td><span class="tag warning">待核验</span></td></tr>
+                <tr><td>天津市宏祥顺钢铁有限公司</td><td>采购来源与付款情况</td><td>采购合同、物流凭证</td><td><span class="tag primary">部分具备</span></td></tr>
+                <tr><td>唐山市路北区鑫诚钢管有限公司</td><td>供应稳定性</td><td>对账单、付款流水</td><td><span class="tag primary">部分具备</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">03</span> 授信条件与风险缓释</h3>
+            <ol class="clause-list">
+              <li>放款前取得近12个月完税证明、滞纳金处理证明及税收违法事项说明，并由客户经理完成真实性核验。</li>
+              <li>对前两大客户及前两大供应商完成合同、发票、物流、回款或付款流水交叉核验，形成调查附件。</li>
+              <li>贷款资金采用受托支付或限定用途支付，确保资金流向与建材贸易采购场景一致。</li>
+              <li>要求企业将主要销售回款归集至本行账户，并设置开票下降、税务异常、司法新增负面等贷后监控规则。</li>
+              <li>若补充材料无法解释税务异常或交易真实性存在重大疑点，建议暂缓授信。</li>
+            </ol>
+          </div>
+
+          <div class="paper-section">
+            <h3><span class="chapter-no">04</span> 客户经理调查意见</h3>
+            <p class="para no-indent">经调查，借款人主体资格、司法记录和基础经营情况基本符合准入要求。鉴于企业交易对手集中、税务异常事项需进一步解释、利润水平较薄，建议在补齐上述资料并落实受托支付、回款归集、贷后监控措施后，提交授信审批。</p>
+            <div class="signature-grid">
+              <div class="signature-cell">客户经理签名<br /><br />日期：</div>
+              <div class="signature-cell">支行负责人签名<br /><br />日期：</div>
+              <div class="signature-cell">审批/风控意见<br /><br />日期：</div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="report" id="postloan">
+        <div class="cover">
+          <div class="cover-row">
+            <div>
+              <div class="report-type">贷后监控报告</div>
+              <h2 class="company">贷后预警与跟踪报告</h2>
+              <div class="meta">
+                <span class="tag primary">监控周期：近30天</span>
+                <span class="tag warning">命中预警 3 条</span>
+                <span class="tag">建议：持续跟踪</span>
+              </div>
+            </div>
+            <div class="score-box">
+              <div class="score-head"><span>贷后稳定度</span><span>规则：工商/司法/税票/交易</span></div>
+              <div class="score-main"><strong>71</strong><span>/100</span></div>
+              <div class="bar"><i style="width:71%"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="section">
+            <div class="section-head"><h3>本期监控摘要</h3><span class="section-note">给客户经理的跟进优先级</span></div>
+            <div class="grid-3">
+              <div class="insight"><div class="insight-icon">票</div><div><div class="insight-title">开票波动</div><div class="insight-text">近月开票金额存在波动，需结合订单排期判断是否季节性。</div></div></div>
+              <div class="insight"><div class="insight-icon">税</div><div><div class="insight-title">税务异常需闭环</div><div class="insight-text">税收违法、滞纳金记录需确认是否已处理并留存凭证。</div></div></div>
+              <div class="insight"><div class="insight-icon">链</div><div><div class="insight-title">交易集中仍高</div><div class="insight-text">若核心客户或供应商变化，需触发贷后走访。</div></div></div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-head"><h3>监控规则命中</h3><span class="section-note">可直接对应系统预警规则</span></div>
+            <table>
+              <thead><tr><th>规则</th><th>命中情况</th><th>影响判断</th><th>处置建议</th></tr></thead>
+              <tbody>
+                <tr><td>税务处罚/违法新增</td><td><span class="tag danger">命中</span></td><td>可能影响还款意愿和合规性</td><td>要求客户提供处理证明</td></tr>
+                <tr><td>核心交易对手集中</td><td><span class="tag warning">命中</span></td><td>依赖单一链条，抗波动能力偏弱</td><td>关注回款账户流水</td></tr>
+                <tr><td>开票连续下降</td><td><span class="tag warning">观察</span></td><td>需排除淡旺季影响</td><td>下期继续监控</td></tr>
+                <tr><td>司法负面新增</td><td><span class="tag success">未命中</span></td><td>暂未发现重大司法负面</td><td>保持月度扫描</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="section">
+            <div class="section-head"><h3>贷后动作</h3><span class="section-note">客户经理跟进台账</span></div>
+            <div class="grid-2">
+              <div class="panel soft">
+                <ul class="mini-list">
+                  <li><span>电话回访企业实际经营情况</span><span class="kbd">T+2完成</span></li>
+                  <li><span>收集完税及滞纳金处理证明</span><span class="kbd">高优先级</span></li>
+                  <li><span>复核核心客户近期回款情况</span><span class="kbd">本周完成</span></li>
+                </ul>
+              </div>
+              <div class="panel soft">
+                <ul class="mini-list">
+                  <li><span>工商变更监控</span><span class="kbd">每周</span></li>
+                  <li><span>司法负面扫描</span><span class="kbd">每日</span></li>
+                  <li><span>税票趋势更新</span><span class="kbd">每月</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="report" id="bizjudicial">
+        <div class="cover">
+          <div class="cover-row">
+            <div>
+              <div class="report-type">工商司法报告</div>
+              <h2 class="company">工商信息与司法风险筛查</h2>
+              <div class="meta">
+                <span class="tag success">主体存续</span>
+                <span class="tag success">司法五类记录为0</span>
+                <span class="tag warning">经营范围曾变更</span>
+              </div>
+            </div>
+            <div class="score-box">
+              <div class="score-head"><span>工商司法风险</span><span>低风险</span></div>
+              <div class="score-main"><strong>88</strong><span>/100</span></div>
+              <div class="bar"><i style="width:88%"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <div class="section">
+            <div class="section-head"><h3>工商基础信息</h3><span class="section-note">工商筛查产物结构</span></div>
+            <table>
+              <tbody>
+                <tr><th>企业名称</th><td>唐山物桥商贸有限公司</td><th>企业类型</th><td>有限责任公司（自然人独资）</td></tr>
+                <tr><th>统一社会信用代码</th><td>91130203MA7EEQ2N0T</td><th>法定代表人</th><td>马丽</td></tr>
+                <tr><th>注册资本</th><td>100万元</td><th>成立日期</th><td>2022-01-05</td></tr>
+                <tr><th>注册地址</th><td colspan="3">河北省唐山市路北区</td></tr>
+                <tr><th>经营范围</th><td colspan="3">建筑材料销售、金属材料销售、五金产品批发、机械设备销售、金属矿石销售、煤炭及制品销售等。</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="section">
+            <div class="section-head"><h3>司法筛查</h3><span class="section-note">审批准入类风险一屏看清</span></div>
+            <div class="grid-3">
+              <div class="metric" style="--accent:#10b981"><div class="label">经营异常</div><div class="value">0</div><div class="desc">无经营异常记录</div></div>
+              <div class="metric" style="--accent:#10b981"><div class="label">失信被执行</div><div class="value">0</div><div class="desc">无失信记录</div></div>
+              <div class="metric" style="--accent:#10b981"><div class="label">被执行人</div><div class="value">0</div><div class="desc">无被执行记录</div></div>
+              <div class="metric" style="--accent:#10b981"><div class="label">法院公告</div><div class="value">0</div><div class="desc">无法院公告</div></div>
+              <div class="metric" style="--accent:#10b981"><div class="label">裁判文书</div><div class="value">0</div><div class="desc">无裁判文书记录</div></div>
+              <div class="metric" style="--accent:#f59e0b"><div class="label">工商变更</div><div class="value">1</div><div class="desc">2024-03-07经营范围变更</div></div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-head"><h3>股东与变更</h3><span class="section-note">用于识别实控人与关联风险</span></div>
+            <div class="grid-2">
+              <table>
+                <thead><tr><th>股东</th><th>持股比例</th><th>认缴出资</th><th>类型</th></tr></thead>
+                <tbody><tr><td>马丽</td><td>100%</td><td>100万元</td><td>自然人股东</td></tr></tbody>
+              </table>
+              <div class="panel">
+                <div class="event-date">2024-03-07 · 经营范围变更</div>
+                <strong>新增业务范围</strong>
+                <p style="margin:6px 0 0;color:var(--muted);">新增金属矿石、非金属矿及制品、煤炭及制品、化工产品、石油制品销售等。建议客户经理关注新增经营范围与实际交易品类是否一致。</p>
+              </div>
+            </div>
+          </div>
+          <div class="footer-note">
+            设计意图：工商司法报告保留强表格属性，但在顶部增加风险判断、在中段增加司法零记录矩阵，便于银行客户经理快速完成准入筛查。
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

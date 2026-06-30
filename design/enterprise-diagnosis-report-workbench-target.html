@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>企业诊断报告工作台目标稿</title>
+  <style>
+    :root {
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --green: #10b981;
+      --green-bg: #ecfdf5;
+      --yellow: #f59e0b;
+      --yellow-bg: #fffbeb;
+      --red: #dc2626;
+      --red-bg: #fef2f2;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e5e7eb;
+      --page: #f5f7fb;
+      --card: #fff;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: var(--page);
+      color: var(--text);
+      font-size: 14px;
+    }
+    .page { max-width: 1440px; margin: 0 auto; padding: 24px 28px 32px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 16px; }
+    .back { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 7px 12px; color: var(--muted); }
+    .company { display: flex; gap: 12px; align-items: flex-start; }
+    .company h1 { margin: 0 0 6px; font-size: 26px; line-height: 1.2; }
+    .meta { color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+    .score-card { min-width: 180px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; text-align: right; }
+    .score { font-size: 34px; font-weight: 800; color: var(--red); line-height: 1; }
+    .grade { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--red); background: var(--red-bg); padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+    .grid { display: grid; grid-template-columns: 1.8fr 1fr; gap: 16px; align-items: start; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+    .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .section-title h2 { margin: 0; font-size: 18px; }
+    .sub { color: var(--muted); font-size: 12px; }
+    .diag-head { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    .metric { background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+    .metric strong { display: block; font-size: 22px; margin-bottom: 2px; }
+    .metric.risk strong { color: var(--red); }
+    .metric.good strong { color: var(--green); }
+    .diagnosis { line-height: 1.8; color: #344054; background: #f8fafc; border-radius: 6px; padding: 12px; margin-bottom: 14px; }
+    .actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; counter-reset: item; }
+    .action { border: 1px solid var(--line); border-radius: 6px; padding: 10px; line-height: 1.5; background: #fff; position: relative; }
+    .action:before { counter-increment: item; content: counter(item); display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); font-weight: 700; margin-right: 6px; }
+    .chart-tabs, .tabs, .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 7px 12px; cursor: pointer; color: #344054; }
+    button.active, button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    button.ghost { background: var(--blue-bg); color: var(--blue); border-color: transparent; }
+    .dimension-wrap { margin-top: 14px; display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+    .dimension-list { display: grid; gap: 8px; }
+    .dimension { display: grid; grid-template-columns: 1fr auto; gap: 8px; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #fff; }
+    .dimension.active { border-color: var(--blue); background: var(--blue-bg); }
+    .dimension-name { font-weight: 700; }
+    .dimension-desc { color: var(--muted); font-size: 12px; margin-top: 4px; grid-column: 1 / 3; }
+    .level { font-size: 12px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+    .level.high { color: var(--red); background: var(--red-bg); }
+    .level.medium { color: var(--yellow); background: var(--yellow-bg); }
+    .level.low, .level.strong { color: var(--green); background: var(--green-bg); }
+    .matrix { min-height: 320px; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; background: #fbfdff; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; align-content: center; }
+    .matrix-cell { height: 90px; border-radius: 8px; background: #fff; border: 1px solid var(--line); padding: 12px; position: relative; overflow: hidden; }
+    .matrix-cell strong { display: block; font-size: 20px; margin-bottom: 6px; }
+    .matrix-cell:after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); background: var(--c); }
+    .workbench { margin-top: 16px; display: grid; grid-template-columns: 1.5fr 420px; gap: 16px; align-items: start; }
+    .indicator-toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .indicator-list { display: grid; gap: 8px; }
+    .indicator { display: grid; grid-template-columns: 190px 80px 120px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 11px 12px; }
+    .indicator strong { font-size: 15px; }
+    .fact { color: #344054; line-height: 1.5; }
+    .assistant { position: sticky; top: 16px; display: grid; gap: 12px; }
+    .report-state { background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 8px; }
+    .report-row { display: flex; justify-content: space-between; color: var(--muted); }
+    .chat { min-height: 260px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #fff; }
+    .bubble { background: var(--blue-bg); border-radius: 6px; padding: 10px; line-height: 1.6; margin-bottom: 10px; }
+    .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+    .drawer {
+      position: fixed; right: 24px; top: 24px; width: 420px; bottom: 24px;
+      background: #fff; border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(15, 23, 42, .16);
+      border-radius: 10px; padding: 18px; display: none; z-index: 5; overflow: auto;
+    }
+    .drawer.open { display: block; }
+    .evidence { border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-top: 10px; }
+    .evidence-title { font-weight: 700; margin-bottom: 6px; }
+    .evidence-meta { color: var(--muted); font-size: 12px; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="company">
+        <button class="back">返回列表</button>
+        <div>
+          <h1>唐山物桥商贸有限公司</h1>
+          <div class="meta">
+            <span>建材批发</span><span>一般纳税人</span><span>纳税信用 D</span>
+            <span>91130203MA7EEQ2N0T</span><span>法人：马丽</span><span>成立于2022年</span>
+          </div>
+        </div>
+      </div>
+      <div class="score-card">
+        <div class="sub">综合评分</div>
+        <div class="score">513</div>
+        <span class="grade">D · 审慎推进</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <div class="section-title">
+          <div><h2>AI 综合诊断</h2><div class="sub">基于多维度数据智能分析</div></div>
+        </div>
+        <div class="diag-head">
+          <div class="metric risk"><strong>8</strong><span>风险事项</span></div>
+          <div class="metric risk"><strong>3</strong><span>高风险</span></div>
+          <div class="metric good"><strong>9</strong><span>企业亮点</span></div>
+          <div class="metric good"><strong>3</strong><span>强亮点</span></div>
+        </div>
+        <div class="diagnosis">
+          唐山物桥商贸有限公司成立于 2022 年，主营建材批发，现有从业人员 5 人。近三年应税销售收入呈持续增长态势，2025 年达 2,275.98 万元，同比增长 +188.3%，增长势头显著。然而，增值税税负率仅为 0.8%，远低于同行业均值，结合“两头在外”经营模式，业务真实性存在较高风险。企业司法记录清白、纳税信用等级 A 级、管理层连续稳定，具备一定基础信用背书。
+        </div>
+        <div class="actions">
+          <div class="action">核实营收增长的真实来源，重点审查大额订单</div>
+          <div class="action">调查“两头在外”物流和资金流匹配情况</div>
+          <div class="action">核查增值税税负率异常偏低的原因</div>
+          <div class="action">关注客户集中度过高带来的经营风险</div>
+          <div class="action">督促企业优化债务结构，降低偿债压力</div>
+        </div>
+      </div>
+      <aside class="card">
+        <div class="section-title"><h2>报告产物</h2></div>
+        <div class="report-state">
+          <div class="report-row"><span>报告草稿</span><strong>已生成</strong></div>
+          <div class="report-row"><span>纳入结论</span><strong>15 条</strong></div>
+          <div class="report-row"><span>证据链</span><strong>29 条</strong></div>
+          <div class="report-row"><span>待确认</span><strong>1 条</strong></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+          <button class="primary">生成诊断报告</button>
+          <button>加入智能报告</button>
+          <button>推送至尽调</button>
+          <button>创建监测规则</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="section-title">
+        <h2>八大维度诊断结果</h2>
+        <div class="chart-tabs"><button class="active">雷达图</button><button>蝴蝶图</button><button>玫瑰图</button></div>
+      </div>
+      <div class="sub">点击维度查看指标</div>
+      <div class="dimension-wrap">
+        <div class="dimension-list">
+          <div class="dimension active"><span class="dimension-name">经营稳定性</span><span class="level high">高</span><div class="dimension-desc">偿债压力和回款效率需要重点核实</div></div>
+          <div class="dimension"><span class="dimension-name">业务真实性</span><span class="level high">高</span><div class="dimension-desc">两头在外、收入申报差异、电费相关性低</div></div>
+          <div class="dimension"><span class="dimension-name">税务风险</span><span class="level high">高</span><div class="dimension-desc">税负率显著低于行业</div></div>
+          <div class="dimension"><span class="dimension-name">企业稳定性</span><span class="level medium">中</span><div class="dimension-desc">成立时间较短但管理层稳定</div></div>
+          <div class="dimension"><span class="dimension-name">经营成长性</span><span class="level low">低</span><div class="dimension-desc">收入连续增长，成长性较强</div></div>
+          <div class="dimension"><span class="dimension-name">供应链稳定性</span><span class="level low">低</span><div class="dimension-desc">客户结构清晰但集中度高</div></div>
+          <div class="dimension"><span class="dimension-name">关联交易</span><span class="level low">低</span><div class="dimension-desc">未见异常资金占用</div></div>
+          <div class="dimension"><span class="dimension-name">司法负面</span><span class="level low">低</span><div class="dimension-desc">司法和行政处罚记录清白</div></div>
+        </div>
+        <div class="matrix">
+          <div class="matrix-cell" style="--w:42%;--c:var(--red)"><strong>42</strong>经营稳定性</div>
+          <div class="matrix-cell" style="--w:38%;--c:var(--red)"><strong>38</strong>业务真实性</div>
+          <div class="matrix-cell" style="--w:35%;--c:var(--red)"><strong>35</strong>税务风险</div>
+          <div class="matrix-cell" style="--w:65%;--c:var(--yellow)"><strong>65</strong>企业稳定性</div>
+          <div class="matrix-cell" style="--w:78%;--c:var(--green)"><strong>78</strong>经营成长性</div>
+          <div class="matrix-cell" style="--w:70%;--c:var(--green)"><strong>70</strong>供应链稳定性</div>
+          <div class="matrix-cell" style="--w:80%;--c:var(--green)"><strong>80</strong>关联交易</div>
+          <div class="matrix-cell" style="--w:95%;--c:var(--green)"><strong>95</strong>司法负面</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workbench">
+      <div class="card">
+        <div class="section-title"><h2>核心风险和亮点</h2></div>
+        <div class="indicator-toolbar">
+          <div class="tabs"><button class="active">风险事项 (8)</button><button>企业亮点 (9)</button><button>全量指标 (17)</button></div>
+        </div>
+        <div class="filters"><button class="active">全部</button><button>经营稳定性</button><button>业务真实性</button><button>税务风险</button><button>企业稳定性</button><button>供应链稳定性</button><button>司法负面</button><button>关联交易</button></div>
+        <div class="indicator-list" style="margin-top:12px">
+          <div class="indicator"><strong>营收增长异常</strong><span class="level high">高风险</span><span>经营稳定性</span><div class="fact">近12月开票收入同比增长188.3%，增速远超行业平均水平</div><button class="ghost" onclick="openDrawer('营收增长异常')">查看证据链</button></div>
+          <div class="indicator"><strong>购销两头在外</strong><span class="level medium">中风险</span><span>业务真实性</span><div class="fact">主要供应商和客户均位于外地，存在两头在外经营模式</div><button class="ghost" onclick="openDrawer('购销两头在外')">查看证据链</button></div>
+          <div class="indicator"><strong>短期偿债压力过大</strong><span class="level high">高风险</span><span>经营稳定性</span><div class="fact">短期借款50万元，占流动资产61%，偿债压力较大</div><button class="ghost" onclick="openDrawer('短期偿债压力过大')">查看证据链</button></div>
+          <div class="indicator"><strong>税负率显著低于行业</strong><span class="level high">高风险</span><span>税务风险</span><div class="fact">增值税税负率0.8%，仅为行业均值2.8%的29%</div><button class="ghost" onclick="openDrawer('税负率显著低于行业')">查看证据链</button></div>
+          <div class="indicator"><strong>司法记录清白</strong><span class="level strong">强亮点</span><span>司法负面</span><div class="fact">无被执行、无失信、无限制高消费记录，司法风险为零</div><button class="ghost" onclick="openDrawer('司法记录清白')">查看证据链</button></div>
+        </div>
+      </div>
+      <aside class="assistant">
+        <div class="card">
+          <div class="section-title"><h2>AI 风险研究助手</h2></div>
+          <div class="sub">当前上下文：经营稳定性 / 营收增长异常</div>
+          <div class="chat">
+            <div class="bubble">该指标扣分主要来自收入增速显著偏离行业均值，需结合订单、合同、物流、回款流水共同验证业务真实性。</div>
+            <div class="quick"><button>解释扣分原因</button><button>查看证据链</button><button>生成专项说明</button><button>加入报告</button></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <aside id="drawer" class="drawer">
+    <div class="section-title"><h2 id="drawerTitle">证据链</h2><button onclick="closeDrawer()">关闭</button></div>
+    <div class="evidence">
+      <div class="evidence-title">近12月销项发票总额</div>
+      <div class="evidence-meta">来源：税票数据<br>数值：2275.98万元<br>对比：上年同期789.5万元，增长188.3%<br>采集时间：2026-06-25<br>置信度：95%</div>
+    </div>
+    <div class="evidence">
+      <div class="evidence-title">建材批发行业平均增速</div>
+      <div class="evidence-meta">来源：行业数据<br>数值：12.5%<br>解释：该企业增速为行业均值15倍，需要核实增长来源<br>采集时间：2026-06-20<br>置信度：88%</div>
+    </div>
+  </aside>
+
+  <script>
+    function openDrawer(name) {
+      document.getElementById('drawerTitle').textContent = name + ' · 证据链';
+      document.getElementById('drawer').classList.add('open');
+    }
+    function closeDrawer() {
+      document.getElementById('drawer').classList.remove('open');
+    }
+  </script>
+</body>
+</html>
