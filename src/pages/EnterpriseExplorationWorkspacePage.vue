@@ -15,52 +15,48 @@
     </header>
 
     <!-- 阶段 A：对话优先 -->
-    <div v-if="!workspaceActive" class="edw-chat-only" ref="chatRef">
-      <div class="edw-msg edw-msg--ai" v-if="!chatMessages.length && explorationPhase === 'idle'">
-        <div class="edw-msg-avatar edw-msg-avatar--ai">AI</div>
-        <div class="edw-msg-content">
-          <div class="edw-msg-bubble">你好！我是企业探查助手。你可以告诉我你想了解的企业，我会自动识别、检查数据覆盖、判断问题类型，然后给你探查结果。</div>
-        </div>
+    <div v-if="!workspaceActive" class="edw-chat-only ai-assistant-panel" ref="chatRef">
+      <div class="ai-message ai-message--ai" v-if="!chatMessages.length && explorationPhase === 'idle'">
+        <div class="ai-message__avatar">AI</div>
+        <div class="ai-message__bubble">你好！我是企业探查助手。你可以告诉我你想了解的企业，我会自动识别、检查数据覆盖、判断问题类型，然后给你探查结果。</div>
       </div>
-      <div v-for="(msg, i) in chatMessages" :key="i" class="edw-msg" :class="'edw-msg--' + msg.role">
+      <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' && msg.type !== 'engine' ? 'ai-message--ai' : (msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai')">
         <template v-if="msg.role === 'ai' || msg.type === 'engine'">
-          <div class="edw-msg-avatar edw-msg-avatar--ai">AI</div>
+          <div class="ai-message__avatar">AI</div>
         </template>
-        <div class="edw-msg-content">
-          <div v-if="msg.type === 'engine'" class="edw-engine-card">
-            <div class="edw-engine-card__header">
-              <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
+        <div class="ai-message__bubble" v-if="msg.type !== 'engine'" v-html="renderMd(msg.text)"></div>
+        <div v-if="msg.type === 'engine'" class="edw-engine-card">
+          <div class="edw-engine-card__header">
+            <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
+            <div>
+              <strong>AI 诊断引擎运行中</strong>
+              <p>{{ enterprise.name }}</p>
+            </div>
+          </div>
+          <div class="edw-engine-steps">
+            <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
+              <span class="edw-engine-step__icon">
+                <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
+                <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
+                <span v-else class="edw-engine-step__dot--pending"></span>
+              </span>
               <div>
-                <strong>AI 诊断引擎运行中</strong>
-                <p>{{ enterprise.name }}</p>
-              </div>
-            </div>
-            <div class="edw-engine-steps">
-              <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
-                <span class="edw-engine-step__icon">
-                  <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
-                  <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
-                  <span v-else class="edw-engine-step__dot--pending"></span>
-                </span>
-                <div>
-                  <strong>{{ step.title }}</strong>
-                  <p>{{ step.desc }}</p>
-                </div>
+                <strong>{{ step.title }}</strong>
+                <p>{{ step.desc }}</p>
               </div>
             </div>
           </div>
-          <div v-else class="edw-msg-bubble" v-html="renderMd(msg.text)"></div>
-          <div v-if="msg.role === 'ai' && msg.actions" class="edw-msg-actions">
-            <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
-          </div>
+        </div>
+        <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
+          <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
         </div>
         <template v-if="msg.role === 'user'">
-          <div class="edw-msg-avatar edw-msg-avatar--user">我</div>
+          <div class="ai-message__avatar">我</div>
         </template>
       </div>
-      <div class="edw-chat-only__input">
-        <input v-model="chatInput" class="edw-chat-field" placeholder="输入企业名称或统一社会信用代码，或直接提问…" @keydown.enter.prevent="sendChat" />
-        <el-button type="primary" size="small" @click="sendChat" :disabled="!chatInput.trim() || isExploring" :loading="isExploring">{{ isExploring ? '探查中' : '发送' }}</el-button>
+      <div class="edw-chat-only__input ai-assistant-panel__footer">
+        <input v-model="chatInput" class="edw-chat-field ai-assistant-panel__input" placeholder="输入企业名称或统一社会信用代码，或直接提问…" @keydown.enter.prevent="sendChat" />
+        <button class="ai-assistant-panel__send" @click="sendChat" :disabled="!chatInput.trim() || isExploring">{{ isExploring ? '探查中' : '发送' }}</button>
       </div>
     </div>
 
@@ -603,49 +599,47 @@
               </main>
 
               <!-- 右侧 AI 对话面板 -->
-      <aside class="edw-chat-panel">
-        <div class="edw-chat-header"><h3>AI 探查助手</h3></div>
-        <div class="edw-chat-messages" ref="chatRef">
-          <div v-for="(msg, i) in chatMessages" :key="i" class="edw-msg" :class="'edw-msg--' + msg.role">
+      <aside class="edw-chat-panel ai-assistant-panel">
+        <div class="edw-chat-header ai-assistant-panel__header"><h3 class="ai-assistant-panel__title">AI 探查助手</h3></div>
+        <div class="edw-chat-messages ai-assistant-panel__messages" ref="chatRef">
+          <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' && msg.type !== 'engine' ? 'ai-message--ai' : (msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai')">
             <template v-if="msg.role === 'ai' || msg.type === 'engine'">
-              <div class="edw-msg-avatar edw-msg-avatar--ai">AI</div>
+              <div class="ai-message__avatar">AI</div>
             </template>
-            <div class="edw-msg-content">
-              <div v-if="msg.type === 'engine'" class="edw-engine-card">
-                <div class="edw-engine-card__header">
-                  <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
-                  <div>
-                    <strong>AI 诊断引擎运行中</strong>
-                    <p>{{ enterprise.name }}</p>
-                  </div>
-                </div>
-                <div class="edw-engine-steps">
-                  <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
-                    <span class="edw-engine-step__icon">
-                      <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
-                      <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
-                      <span v-else class="edw-engine-step__dot--pending"></span>
-                    </span>
-                    <div>
-                      <strong>{{ step.title }}</strong>
-                      <p>{{ step.desc }}</p>
-                    </div>
-                  </div>
+            <div class="ai-message__bubble" v-if="msg.type !== 'engine'" v-html="renderMd(msg.text)"></div>
+            <div v-if="msg.type === 'engine'" class="edw-engine-card">
+              <div class="edw-engine-card__header">
+                <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
+                <div>
+                  <strong>AI 诊断引擎运行中</strong>
+                  <p>{{ enterprise.name }}</p>
                 </div>
               </div>
-              <div v-else class="edw-msg-bubble" v-html="renderMd(msg.text)"></div>
-              <div v-if="msg.role === 'ai' && msg.actions" class="edw-msg-actions">
-                <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
+              <div class="edw-engine-steps">
+                <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
+                  <span class="edw-engine-step__icon">
+                    <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
+                    <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
+                    <span v-else class="edw-engine-step__dot--pending"></span>
+                  </span>
+                  <div>
+                    <strong>{{ step.title }}</strong>
+                    <p>{{ step.desc }}</p>
+                  </div>
+                </div>
               </div>
             </div>
+            <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
+              <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
+            </div>
             <template v-if="msg.role === 'user'">
-              <div class="edw-msg-avatar edw-msg-avatar--user">我</div>
+              <div class="ai-message__avatar">我</div>
             </template>
           </div>
         </div>
-        <div class="edw-chat-input">
-          <input v-model="chatInput" class="edw-chat-field" placeholder="输入问题…" @keydown.enter.prevent="sendChat" />
-          <el-button type="primary" size="small" @click="sendChat" :disabled="!chatInput.trim() || isExploring" :loading="isExploring">{{ isExploring ? '探查中' : '发送' }}</el-button>
+        <div class="edw-chat-input ai-assistant-panel__footer">
+          <input v-model="chatInput" class="edw-chat-field ai-assistant-panel__input" placeholder="输入问题…" @keydown.enter.prevent="sendChat" />
+          <button class="ai-assistant-panel__send" @click="sendChat" :disabled="!chatInput.trim() || isExploring">{{ isExploring ? '探查中' : '发送' }}</button>
         </div>
       </aside>
     </div>
@@ -1470,13 +1464,14 @@ function goBack() { router.push('/enterprise-diagnosis') }
 
 <style scoped>
 /* ══ 阶段 A：对话优先 ══ */
-.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; }
-.edw-chat-only__input { display: flex; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border-divider); }
+.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; }
+.edw-chat-only .ai-assistant-panel__messages { padding: 14px 16px; }
+.edw-chat-only__input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-divider); }
 
 /* ══ 阶段 B：左右布局 ══ */
 .edw-workspace-layout { display: grid; grid-template-columns: 1fr 420px; gap: 20px; height: calc(100vh - 100px); }
 .edw-workspace-panel { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 12px; }
-.edw-chat-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); display: flex; flex-direction: column; overflow: hidden; position: sticky; top: 0; height: calc(100vh - 100px); }
+.edw-chat-panel { /* inherits .ai-assistant-panel from tokens */ }
 
 /* ══ 顶部信息栏 ══ */
 .edw-topbar { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-divider); margin-bottom: var(--space-md); }
@@ -1575,28 +1570,56 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-ev-body { font-size: var(--font-size-xs); color: var(--text-secondary); }
 .edw-ev-row { margin-bottom: 2px; }
 .edw-ev-label { color: var(--text-tertiary); display: inline; }
-.edw-chat { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 160px); max-height: none; position: sticky; top: 16px; }
-.edw-chat-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 100px); }
-.edw-chat-header { padding: 10px 12px; border-bottom: 1px solid var(--border-divider); }
-.edw-chat-header h3 { margin: 0; font-size: var(--font-size-sm); color: var(--text-primary); }
-.edw-chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.edw-msg { display: flex; gap: 8px; align-items: flex-start; }
+/* ── Unified chat panel ── */
+.edw-chat-only.ai-assistant-panel, .edw-chat-panel.ai-assistant-panel {
+  background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.edw-chat-only.ai-assistant-panel { height: calc(100vh - 160px); max-height: none; position: sticky; top: 16px; }
+.edw-chat-panel.ai-assistant-panel { height: calc(100vh - 100px); position: sticky; top: 0; }
+
+.edw-chat-header.ai-assistant-panel__header { height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-divider); flex-shrink: 0; }
+.edw-chat-header h3.ai-assistant-panel__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.edw-chat-messages.ai-assistant-panel__messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+
+/* Unified message items */
+.ai-message { display: flex; gap: 10px; align-items: flex-start; }
+.ai-message--ai { justify-content: flex-start; }
+.ai-message--user { justify-content: flex-end; flex-direction: row-reverse; }
+.ai-message__avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
+.ai-message--ai .ai-message__avatar { background: #2563eb; color: #fff; }
+.ai-message--user .ai-message__avatar { background: #dbeafe; color: #1d4ed8; }
+.ai-message__bubble { max-width: 82%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; word-break: break-word; }
+.ai-message--ai .ai-message__bubble { background: #f1f5f9; color: #344054; border-top-left-radius: 2px; }
+.ai-message--user .ai-message__bubble { background: var(--color-primary); color: #fff; border-top-right-radius: 2px; }
+.ai-message__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 42px; }
+
+.edw-chat-input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
+.edw-chat-only__input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
+.edw-chat-field.ai-assistant-panel__input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
+.edw-chat-field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
+
+/* Legacy alias: old edw-* message classes → unified ai-message */
+.edw-msg { display: flex; gap: 10px; align-items: flex-start; }
 .edw-msg--ai { justify-content: flex-start; }
-.edw-msg--user { justify-content: flex-end; }
+.edw-msg--user { justify-content: flex-end; flex-direction: row-reverse; }
 .edw-msg-content { display: flex; flex-direction: column; gap: 6px; max-width: calc(100% - 40px); }
 .edw-msg--ai .edw-msg-content { width: calc(100% - 40px); }
 .edw-msg--user .edw-msg-content { max-width: 78%; }
-.edw-msg-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-top: 2px; }
+.edw-msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
 .edw-msg-avatar--ai { background: #2563eb; color: #fff; }
-.edw-msg-avatar--user { background: #eef2ff; color: #1d4ed8; }
-.edw-msg-bubble { padding: 8px 12px; border-radius: 10px; font-size: var(--font-size-sm); line-height: 1.55; word-break: break-word; }
-.edw-msg--ai .edw-msg-bubble { background: var(--bg-subtle, #f1f5f9); color: var(--text-secondary); }
-.edw-msg--user .edw-msg-bubble { background: var(--color-primary, #3b82f6); color: #fff; }
-.edw-msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 0; }
-.edw-engine-card { width: 100%; max-width: 100%; background: #f8fbff; border: 1px solid #d1e3f7; border-radius: 8px; padding: 14px 16px; box-sizing: border-box; }
-.edw-chat-input { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--border-divider); }
-.edw-chat-field { flex: 1; padding: 6px 10px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: var(--font-size-sm); outline: none; }
-.edw-chat-field:focus { border-color: var(--color-primary); }
+.edw-msg-avatar--user { background: #dbeafe; color: #1d4ed8; }
+.edw-msg-bubble { max-width: 82%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; word-break: break-word; }
+.edw-msg--ai .edw-msg-bubble { background: #f1f5f9; color: #344054; border-top-left-radius: 2px; }
+.edw-msg--user .edw-msg-bubble { background: var(--color-primary); color: #fff; border-top-right-radius: 2px; }
+.edw-msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 42px; }
+.edw-chat { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 160px); max-height: none; position: sticky; top: 16px; }
+.edw-chat-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 100px); position: sticky; top: 0; }
+.edw-chat-header { height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-divider); flex-shrink: 0; }
+.edw-chat-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
+.edw-chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.edw-chat-input { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
+.edw-chat-field { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
 .edw-danger { color: #dc2626; }
 .edw-warning { color: #b45309; }
 .edw-success { color: #16a34a; }

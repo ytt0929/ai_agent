@@ -609,9 +609,10 @@ function handleChipAction(chip) {
 /* ── Chat restore ── */
 .chat-restore-bar { margin-bottom: var(--space-md); }
 
-/* ── 右侧 AI 面板 ── */
-.due-task__chat { background: var(--surface-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-.chat-panel-inner { flex: 1; overflow-y: auto; }
+/* ── 右侧 AI 面板 — unified ── */
+.due-task__chat { border: 1px solid var(--border-light); border-radius: var(--radius-md); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.chat-panel-inner { flex: 1; overflow: hidden; }
+.chat-panel-inner > .ai-assistant-panel { height: 100%; }
 .chat-collapse-bar { display: flex; justify-content: flex-end; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--border-light); }
 
 /* ── Empty ── */

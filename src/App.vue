@@ -8,13 +8,11 @@
         </transition>
       </router-view>
     </div>
-    <GlobalInputBar />
   </div>
 </template>
 
 <script setup>
 import AppSidebar from './components/AppSidebar.vue'
-import GlobalInputBar from './components/GlobalInputBar.vue'
 </script>
 
 <style scoped>

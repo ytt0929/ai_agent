@@ -265,7 +265,7 @@
                   <span class="ed-assistant__ctx--placeholder">请选择一个维度或指标开始分析</span>
                 </template>
               </div>
-              <div class="ed-chat" ref="chatListRef">
+              <div class="ed-chat ai-assistant-panel__messages" ref="chatListRef">
                 <div v-if="!store.chatMessages.length" class="ed-chat-empty">
                   <svg viewBox="0 0 48 48" width="36" height="36" fill="none">
                     <circle cx="24" cy="24" r="20" stroke="var(--border-default)" stroke-width="1.5" stroke-dasharray="4 3"/>
@@ -273,30 +273,25 @@
                   </svg>
                   <div class="ed-chat-empty__text">输入问题，AI 将基于当前诊断结果作答</div>
                 </div>
-                <div v-for="(msg, i) in store.chatMessages" :key="i" class="ed-bubble" :class="msg.role">
-                  <div class="ed-bubble__avatar">{{ msg.role === 'ai' ? 'AI' : '用户' }}</div>
-                  <div class="ed-bubble__content">
-                    <div class="ed-bubble__text" v-html="renderMarkdown(msg.text)"></div>
-                  </div>
+                <div v-for="(msg, i) in store.chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' ? 'ai-message--ai' : 'ai-message--user'">
+                  <div class="ai-message__avatar">{{ msg.role === 'ai' ? 'AI' : '我' }}</div>
+                  <div class="ai-message__bubble" v-html="renderMarkdown(msg.text)"></div>
                 </div>
-                <div v-if="store.isChatProcessing" class="ed-bubble ai">
-                  <div class="ed-bubble__avatar">AI</div>
-                  <div class="ed-bubble__content">
-                    <div class="ed-bubble__text ed-bubble__thinking">思考中…</div>
-                  </div>
+                <div v-if="store.isChatProcessing" class="ai-message ai-message--ai">
+                  <div class="ai-message__avatar">AI</div>
+                  <div class="ai-message__bubble ed-bubble__thinking">思考中…</div>
                 </div>
               </div>
-              <div class="ed-chat-quick">
+              <div class="ed-chat-quick ai-assistant-panel__quick">
                 <el-button size="small" text @click="handleExplainDeduction">解释扣分原因</el-button>
                 <el-button size="small" text @click="handleEvidenceAction">查看证据链</el-button>
                 <el-button size="small" text @click="handleGenerateSpecialNote">生成专项说明</el-button>
                 <el-button size="small" text @click="handleAddToReport">加入报告</el-button>
               </div>
-              <div class="ed-chat-input">
-                <input v-model="store.chatInput" class="ed-chat-input__field" placeholder="输入问题…"
+              <div class="ed-chat-input ai-assistant-panel__footer">
+                <input v-model="store.chatInput" class="ed-chat-input__field ai-assistant-panel__input" placeholder="输入问题…"
                        @keydown.enter="handleSendChat" />
-                <el-button type="primary" size="small" class="ed-chat-input__btn" @click="handleSendChat"
-                           :disabled="!store.chatInput.trim()">发送</el-button>
+                <button class="ai-assistant-panel__send" @click="handleSendChat" :disabled="!store.chatInput.trim()">发送</button>
               </div>
             </div>
           </aside>
@@ -908,24 +903,16 @@ function quickReDiagnose(h) {
 .ed-assistant__ctx--dim { color: var(--color-primary); font-weight: 600; }
 .ed-assistant__ctx--ind { color: var(--text-primary); font-weight: 600; }
 .ed-assistant__ctx--placeholder { color: var(--text-tertiary); font-style: italic; }
-.ed-chat { min-height: 260px; max-height: none; flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border-default); border-radius: 6px; padding: 12px; background: #fff; display: flex; flex-direction: column; }
+.ed-chat.ai-assistant-panel__messages { min-height: 260px; flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border-default); border-radius: 6px; padding: 12px; background: #fff; display: flex; flex-direction: column; }
 .ed-chat-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px 0; }
 .ed-chat-empty__text { font-size: 12px; color: var(--text-tertiary); text-align: center; }
-.ed-bubble { display: flex; gap: 8px; line-height: 1.6; margin-bottom: 10px; font-size: var(--font-size-sm); }
-.ed-bubble.ai { align-self: flex-start; }
-.ed-bubble.user { align-self: flex-end; flex-direction: row-reverse; }
-.ed-bubble__avatar { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
-.ed-bubble__content { max-width: calc(100% - 28px); }
-.ed-bubble.ai .ed-bubble__content { background: var(--color-primary-bg); border-radius: 6px 12px 12px 4px; padding: 8px 12px; }
-.ed-bubble.user .ed-bubble__content { background: var(--color-primary); color: #fff; border-radius: 12px 6px 4px 12px; padding: 8px 12px; }
-.ed-bubble.user .ed-bubble__text { color: #fff; }
-.ed-bubble .ed-bubble__text { color: #344054; }
+/* Legacy .ed-bubble removed - use unified .ai-message classes from tokens.css */
 .ed-bubble__thinking { color: var(--text-tertiary); font-style: italic; }
-.ed-chat-quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border-default); border-bottom: 1px solid var(--border-default); flex-shrink: 0; }
-.ed-chat-input { display: flex; gap: 6px; margin-top: 8px; flex-shrink: 0; }
-.ed-chat-input__field { flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: 6px 10px; font-size: var(--font-size-sm); outline: none; background: #fff; }
-.ed-chat-input__field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.08); }
-.ed-chat-input__btn { flex-shrink: 0; }
+.ed-chat-quick.ai-assistant-panel__quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border-default); border-bottom: 1px solid var(--border-default); flex-shrink: 0; }
+.ed-chat-input.ai-assistant-panel__footer { display: flex; gap: 8px; margin-top: 0; flex-shrink: 0; align-items: flex-end; }
+.ed-chat-input__field.ai-assistant-panel__input { flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: 8px 12px; font-size: 13px; outline: none; background: #fff; font-family: var(--font-family); }
+.ed-chat-input__field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+/* .ed-chat-input__btn removed - use .ai-assistant-panel__send from tokens.css */
 
 .ed-evidence { display: flex; flex-direction: column; gap: 12px; }
 .ed-evidence__title { font-size: 16px; font-weight: 600; margin: 0 0 8px; }

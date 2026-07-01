@@ -85,18 +85,19 @@
         </section>
 
         <!-- AI 证据链助手 -->
-        <section class="ede-card ede-aside-card ede-ai-card">
+        <section class="ede-card ede-aside-card ede-ai-card ai-assistant-panel">
           <h3 class="ede-section-title">AI 证据链助手</h3>
-          <div class="ede-ai-input-wrap">
-            <input v-model="aiInput" class="ede-ai-input" placeholder="输入问题…" @keydown.enter="sendAiMessage" />
-            <el-button type="primary" size="small" @click="sendAiMessage">发送</el-button>
+          <div class="ede-ai-input-wrap ai-assistant-panel__footer">
+            <input v-model="aiInput" class="ede-ai-input ai-assistant-panel__input" placeholder="输入问题…" @keydown.enter="sendAiMessage" />
+            <button class="ai-assistant-panel__send" @click="sendAiMessage">发送</button>
           </div>
-          <div class="ede-ai-messages" ref="aiMsgRef">
-            <div v-for="(msg, idx) in aiMessages" :key="idx" class="ede-ai-msg" :class="msg.role">
-              <div class="ede-ai-msg-bubble" v-html="renderMd(msg.text)"></div>
+          <div class="ede-ai-messages ai-assistant-panel__messages" ref="aiMsgRef">
+            <div v-for="(msg, idx) in aiMessages" :key="idx" class="ai-message" :class="msg.role === 'ai' ? 'ai-message--ai' : 'ai-message--user'">
+              <div class="ai-message__avatar">{{ msg.role === 'ai' ? 'AI' : '我' }}</div>
+              <div class="ai-message__bubble" v-html="renderMd(msg.text)"></div>
             </div>
           </div>
-          <div class="ede-ai-actions">
+          <div class="ede-ai-actions ai-assistant-panel__quick">
             <el-button size="small" text @click="addToReport">加入报告</el-button>
             <el-button size="small" text @click="generateNote">生成专项说明</el-button>
           </div>
@@ -264,8 +265,16 @@ function goBack() {
 .ede-actions-list { font-size: var(--font-size-sm); color: var(--text-secondary); padding-left: 18px; margin: 0; }
 .ede-actions-list li { margin-bottom: 4px; line-height: 1.5; }
 
-/* AI 助手 */
-.ede-ai-card {}
+/* AI 助手 — unified aliases */
+.ede-ai-card.ai-assistant-panel { padding: 12px; }
+.ede-ai-input-wrap.ai-assistant-panel__footer { display: flex; gap: 8px; margin-bottom: 10px; padding: 0; border-top: none; }
+.ede-ai-input.ai-assistant-panel__input { flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: 8px 12px; font-size: 13px; outline: none; font-family: var(--font-family); }
+.ede-ai-input.ai-assistant-panel__input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
+.ede-ai-messages.ai-assistant-panel__messages { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.ede-ai-actions.ai-assistant-panel__quick { display: flex; gap: 4px; border-top: 1px solid var(--border-default); padding-top: 8px; padding: 8px 0 0 0; }
+
+/* Legacy alias: old ede-ai-* classes → unified */
+.ede-ai-card { }
 .ede-ai-input-wrap { display: flex; gap: 6px; margin-bottom: 10px; }
 .ede-ai-input { flex: 1; border: 1px solid var(--border-default); border-radius: 6px; padding: 6px 10px; font-size: var(--font-size-sm); outline: none; }
 .ede-ai-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08); }
