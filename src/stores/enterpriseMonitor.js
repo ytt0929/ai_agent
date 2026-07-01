@@ -266,7 +266,7 @@ export const useMonitorStore = defineStore('monitor', () => {
     if (!task || !results.length) return null
 
     const abnormalResults = results.filter(r => r.status === 'abnormal')
-    const warnings = []
+    const generatedWarnings = []
 
     for (const r of abnormalResults) {
       const dim = task.dimensions.find(d => d.name === r.dimensionName)
@@ -300,24 +300,24 @@ export const useMonitorStore = defineStore('monitor', () => {
         actionLogs: [],
       }
       monitorWarnings.value.unshift(warning)
-      warnings.push(warning)
+      generatedWarnings.push(warning)
 
       // 也加到旧 warnings 列表，兼容现有功能
       warnings.value.unshift(warning)
     }
 
-    task.warningCount = warnings.length
+    task.warningCount = generatedWarnings.length
     task.lastScan = nowLabel()
-    task.latestWarning = warnings[0] || null
+    task.latestWarning = generatedWarnings[0] || null
 
     // 更新兼容 rule
     const compatRule = rules.value.find(r => r.name === task.name)
     if (compatRule) {
-      compatRule.triggerCount += warnings.length
+      compatRule.triggerCount += generatedWarnings.length
       compatRule.lastTrigger = nowLabel()
     }
 
-    return { task, warnings }
+    return { task, warnings: generatedWarnings }
   }
 
   // 从快速输入开始监测

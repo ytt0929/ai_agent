@@ -319,27 +319,29 @@
                   <div class="sr-sec-material-ref__title">资料依据</div>
                   <div v-for="mid in currentSection.relatedMaterialIds" :key="mid" class="sr-sec-material-ref__item"><span>{{ getMaterialName(mid) }}</span></div>
                 </div>
-                <!-- 章节证据链 -->
-                <section ref="sectionEvidenceRef" class="sr-section-evidence">
-                  <div class="sr-section-evidence__header">
-                    <h3>章节证据链</h3>
-                    <span>本节关联 {{ currentSectionMaterials.length }} 份资料</span>
-                  </div>
-                  <div v-if="currentSectionMaterials.length === 0" class="sr-section-evidence__empty">暂无关联资料</div>
-                  <div v-for="mat in currentSectionMaterials" :key="mat.id" class="sr-evidence-card">
-                    <div class="sr-evidence-card__header">
-                      <span class="sr-evidence-card__name">{{ mat.name }}</span>
-                      <el-tag size="small" :type="mat.status === '已关联' ? 'success' : mat.status === '缺失' ? 'danger' : 'info'">{{ mat.status }}</el-tag>
-                    </div>
-                    <div class="sr-evidence-card__meta"><span>来源：{{ mat.source }}</span></div>
-                    <div v-if="mat.extractedSummary" class="sr-evidence-card__summary">{{ mat.extractedSummary }}</div>
-                    <div class="sr-evidence-card__actions">
-                      <el-button link size="small" type="primary" @click="viewMaterialDetail(mat)">详情</el-button>
-                      <el-button link size="small" @click="editMaterialSummary(mat)">修改摘要</el-button>
-                      <el-button link size="small" type="warning" @click="uploadSupplement(mat)">补充</el-button>
-                      <el-button link size="small" type="warning" @click="ElMessage.success('已转入智能尽调补充任务')">转入尽调补充</el-button>
-                    </div>
-                  </div>
+                <!-- 每章正文下方：可展开证据链 -->
+                <section ref="sectionEvidenceRef" class="sr-section-evidence-collapsed">
+                  <el-collapse v-model="openEvidenceKeys">
+                    <el-collapse-item :title="`本章证据链（已关联 ${currentSectionMaterials.length} 份资料）`" :name="'evidence-' + currentSection.id">
+                      <div v-if="currentSectionMaterials.length === 0" class="sr-section-evidence__empty">
+                        本章暂无关联资料，建议补充资料或转入尽调补充。
+                      </div>
+                      <div v-for="mat in currentSectionMaterials" :key="mat.id" class="sr-evidence-card">
+                        <div class="sr-evidence-card__header">
+                          <span class="sr-evidence-card__name">{{ mat.name }}</span>
+                          <el-tag size="small" :type="mat.status === '已关联' ? 'success' : mat.status === '缺失' ? 'danger' : 'info'">{{ mat.status }}</el-tag>
+                        </div>
+                        <div class="sr-evidence-card__meta"><span>来源：{{ mat.source }}</span></div>
+                        <div v-if="mat.extractedSummary" class="sr-evidence-card__summary">{{ mat.extractedSummary }}</div>
+                        <div class="sr-evidence-card__actions">
+                          <el-button link size="small" type="primary" @click="viewMaterialDetail(mat)">详情</el-button>
+                          <el-button link size="small" @click="editMaterialSummary(mat)">修改摘要</el-button>
+                          <el-button link size="small" type="warning" @click="uploadSupplement(mat)">补充</el-button>
+                          <el-button link size="small" type="warning" @click="ElMessage.success('已转入智能尽调补充任务')">转入尽调补充</el-button>
+                        </div>
+                      </div>
+                    </el-collapse-item>
+                  </el-collapse>
                 </section>
               </template>
             </div>
@@ -366,9 +368,18 @@
                   <div class="ai-message__avatar">AI</div>
                   <div class="ai-message__bubble">
                     <template v-if="currentSection">
-                      当前章节是《{{ currentSection.title }}》，本节已生成，关联证据 {{ currentSectionMaterials.length }} 条。你可以让我改写正文、检查证据链、生成缺失说明或标记本节确认。
+                      <div class="sr-ai-first-msg__section-info">
+                        <span class="sr-ai-first-msg__name">《{{ currentSection.title }}》</span>
+                        <span class="sr-ai-first-msg__status">
+                          <el-tag size="small" :type="currentSection.status === '待确认' ? 'warning' : 'success'">{{ currentSection.status }}</el-tag>
+                        </span>
+                        <span class="sr-ai-first-msg__evidence">关联证据 {{ currentSectionMaterials.length }} 条</span>
+                      </div>
+                      <div class="sr-ai-first-msg__suggestion">
+                        <span class="sr-ai-first-msg__suggestion-label">AI 建议：</span>{{ getSectionAiSuggestion(currentSection) }}
+                      </div>
                     </template>
-                    <template v-else>我可以帮你查看当前章节、改写正文或检查材料完整性。</template>
+                    <template v-else>已打开报告，请选择左侧章节查看内容。</template>
                     <div class="sr-ai-quick-inline">
                       <el-button size="small" text type="primary" @click="handleAiSectionAction('改写')">改写当前章节</el-button>
                       <el-button size="small" text type="primary" @click="handleAiSectionAction('检查证据链')">检查证据链</el-button>
@@ -825,7 +836,14 @@ const currentSectionMaterials = computed(() => {
   return materialPackages[0].materials.filter(m => sec.relatedMaterialIds.includes(m.id))
 })
 
-function selectSection(id) { activeSectionId.value = id }
+const openEvidenceKeys = ref([])
+
+function selectSection(id) {
+  activeSectionId.value = id
+  openEvidenceKeys.value = ['evidence-' + id]
+  updateAiFirstMessage()
+  aiRewriteCard.value = null
+}
 
 function startEditSection() {
   if (!currentSection.value) return
@@ -955,8 +973,8 @@ function riskLevelClass(level) {
 function openReport(task) {
   activeReport.value = { ...task }
   activeSectionId.value = reportSections[0].id
-  aiMsgs.value = [{ role: 'ai', text: `已打开「${task.enterpriseName} - ${task.reportName}」，共 ${reportSections.length} 个章节。AI 助手已收起，如需修改请点击展开。` }]
-  assistantCollapsed.value = true
+  assistantCollapsed.value = false
+  updateAiFirstMessage()
   view.value = 'editor'
 }
 
@@ -1063,7 +1081,7 @@ const aiRewriteCard = ref(null)
 // ════════════════════════════════════════
 // AI 助手收起/展开
 // ════════════════════════════════════════
-const assistantCollapsed = ref(true)
+const assistantCollapsed = ref(false)
 
 function toggleAssistant() {
   assistantCollapsed.value = !assistantCollapsed.value
@@ -1083,6 +1101,31 @@ function getMissingMaterialCount() {
 function getTplName(id) {
   const t = reportTemplates.find(x => x.id === id)
   return t ? t.name : id
+}
+
+// ════════════════════════════════════════
+// 当前章节 AI 修改建议
+// ════════════════════════════════════════
+function getSectionAiSuggestion(section) {
+  if (!section) return ''
+  if (section.materialStatus === '资料不足' || section.materialStatus === '部分缺失') {
+    return '本节资料不完整，建议先补充关键资料，再生成正式表述。'
+  }
+  if (section.status === '待确认') {
+    return '本节存在待确认内容，建议重点核对事实依据、金额、时间和结论表述。'
+  }
+  return '本节结构基本完整，建议优化表述口径，补充资料来源和调查判断。'
+}
+
+function updateAiFirstMessage() {
+  const sec = currentSection.value
+  const matCount = currentSectionMaterials.value.length
+  if (!sec) {
+    aiMsgs.value = [{ role: 'ai', text: '已打开报告，请选择左侧章节查看内容。' }]
+    return
+  }
+  const suggestion = getSectionAiSuggestion(sec)
+  aiMsgs.value = [{ role: 'ai', text: `已打开《${activeReport.value?.enterpriseName || ''} - ${activeReport.value?.reportName || ''}》。当前章节为《${sec.title}》，本节已生成，关联证据 ${matCount} 条。AI 建议：${suggestion}` }]
 }
 
 function handleAiSectionAction(action) {
@@ -1286,7 +1329,7 @@ function viewEvidenceFromRewrite() {
 .sr-editor__top-pending { font-size: var(--font-size-xs); padding: 2px 6px; background: var(--color-warning-bg); color: var(--color-warning); border-radius: var(--radius-sm); }
 .sr-editor__actions { margin-left: auto; display: flex; gap: var(--space-xs); flex-wrap: wrap; }
 
-.sr-editor__body { display: grid; grid-template-columns: 240px minmax(0, 1fr) 360px; gap: var(--space-md); height: calc(100vh - 180px); overflow: hidden; min-height: 0; }
+.sr-editor__body { display: grid; grid-template-columns: 240px minmax(0, 1fr) 360px; gap: var(--space-md); flex: 1; min-height: 0; overflow: hidden; }
 
 /* 左：目录 */
 .sr-editor__toc { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow-y: auto; padding: var(--space-md) 0; min-height: 0; }
@@ -1374,6 +1417,14 @@ function viewEvidenceFromRewrite() {
 
 /* AI 内联快捷按钮 */
 .sr-ai-quick-inline { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-light); }
+
+/* AI 第一条消息 - 章节信息 */
+.sr-ai-first-msg__section-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.sr-ai-first-msg__name { font-weight: 600; color: var(--text-primary); font-size: 13px; }
+.sr-ai-first-msg__status { margin-left: 4px; }
+.sr-ai-first-msg__evidence { font-size: 12px; color: var(--text-tertiary); }
+.sr-ai-first-msg__suggestion { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 4px; }
+.sr-ai-first-msg__suggestion-label { color: var(--color-primary); font-weight: 600; }
 
 /* AI 改写气泡 */
 .sr-ai-rewrite-bubble { margin-top: 4px; }
@@ -1549,6 +1600,25 @@ function viewEvidenceFromRewrite() {
 
 /* ═══ 章节证据链（中间正文下方） ═══ */
 .sr-section-evidence { margin-top: 24px; padding: 16px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+.sr-section-evidence-collapsed { margin-top: 24px; }
+.sr-section-evidence-collapsed :deep(.el-collapse) { border: none; }
+.sr-section-evidence-collapsed :deep(.el-collapse-item__header) {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.sr-section-evidence-collapsed :deep(.el-collapse-item__wrap) {
+  border: 1px solid var(--border-default);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--surface-card);
+}
+.sr-section-evidence-collapsed :deep(.el-collapse-item__content) { padding: 12px 16px; }
 .sr-section-evidence__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .sr-section-evidence__header h3 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0; }
 .sr-section-evidence__header span { font-size: 12px; color: var(--text-tertiary); }
