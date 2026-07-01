@@ -15,7 +15,7 @@
     </header>
 
     <!-- 阶段 A：对话优先 -->
-    <div v-if="!workspaceActive" class="edw-chat-only ai-assistant-panel" ref="chatRef">
+    <div v-if="!workspaceActive" class="edw-chat-only" ref="chatRef">
       <div class="ai-message ai-message--ai" v-if="!chatMessages.length && explorationPhase === 'idle'">
         <div class="ai-message__avatar">AI</div>
         <div class="ai-message__bubble">你好！我是企业探查助手。你可以告诉我你想了解的企业，我会自动识别、检查数据覆盖、判断问题类型，然后给你探查结果。</div>
@@ -54,14 +54,14 @@
           <div class="ai-message__avatar">我</div>
         </template>
       </div>
-      <div class="edw-chat-only__input ai-assistant-panel__footer">
-        <input v-model="chatInput" class="edw-chat-field ai-assistant-panel__input" placeholder="输入企业名称或统一社会信用代码，或直接提问…" @keydown.enter.prevent="sendChat" />
-        <button class="ai-assistant-panel__send" @click="sendChat" :disabled="!chatInput.trim() || isExploring">{{ isExploring ? '探查中' : '发送' }}</button>
+      <div class="edw-chat-only__input">
+        <input v-model="chatInput" class="edw-chat-field" placeholder="输入企业名称或统一社会信用代码，或直接提问…" @keydown.enter.prevent="sendChat" />
+        <button class="edw-chat-send-btn" @click="sendChat" :disabled="!chatInput.trim() || isExploring">{{ isExploring ? '探查中' : '发送' }}</button>
       </div>
     </div>
 
     <!-- 阶段 B：结构化结果（左右布局） -->
-    <div v-else class="edw-workspace-layout">
+    <div v-else class="edw-workspace-layout" :class="{ collapsed: chatPanelCollapsed }">
       <main class="edw-workspace-panel">
         <div class="edw-view-header">
           <h2 class="edw-view-title">{{ currentViewTitle }}</h2>
@@ -1475,12 +1475,12 @@ function goBack() { router.push('/enterprise-diagnosis') }
 <style scoped>
 /* ══ 阶段 A：轻量 AI 对话流 ══ */
 .edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; background: transparent; border: none; border-radius: 0; overflow: visible; }
-.edw-chat-only .ai-message--ai .ai-message__bubble { background: #fff; border: 1px solid var(--border-default); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.edw-chat-only .ai-assistant-panel__messages { padding: 14px 16px; }
+.edw-chat-only .ai-message--ai .ai-message__bubble { background: #f1f5f9; border: none; box-shadow: none; }
 .edw-chat-only__input { display: flex; gap: 8px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin: 0 16px; box-shadow: 0 -1px 4px rgba(0,0,0,0.03); }
 
 /* ══ 阶段 B：左右布局 ══ */
-.edw-workspace-layout { display: grid; grid-template-columns: 1fr 420px; gap: 20px; height: calc(100vh - 100px); }
+.edw-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; height: calc(100vh - 100px); }
+.edw-workspace-layout.collapsed { grid-template-columns: minmax(0, 1fr) 56px; }
 .edw-workspace-panel { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 12px; }
 .edw-chat-panel { /* inherits .ai-assistant-panel from tokens */ }
 
@@ -1582,11 +1582,10 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-ev-row { margin-bottom: 2px; }
 .edw-ev-label { color: var(--text-tertiary); display: inline; }
 /* ── Unified chat panel ── */
-.edw-chat-only.ai-assistant-panel, .edw-chat-panel.ai-assistant-panel {
+.edw-chat-panel.ai-assistant-panel {
   background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px;
   display: flex; flex-direction: column; overflow: hidden;
 }
-.edw-chat-only.ai-assistant-panel { height: calc(100vh - 160px); max-height: none; position: sticky; top: 16px; }
 .edw-chat-panel.ai-assistant-panel { height: calc(100vh - 100px); position: sticky; top: 0; }
 
 .edw-chat-header.ai-assistant-panel__header { height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-divider); flex-shrink: 0; }
@@ -1598,6 +1597,9 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-chat-only__input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
 .edw-chat-field.ai-assistant-panel__input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
 .edw-chat-field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
+.edw-chat-send-btn { padding: 8px 16px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 13px; cursor: pointer; font-family: var(--font-family); white-space: nowrap; }
+.edw-chat-send-btn:hover { background: #2563eb; }
+.edw-chat-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Legacy alias: old edw-* message classes → unified ai-message (tokens.css) */
 .edw-msg { display: flex; gap: 10px; align-items: flex-start; }

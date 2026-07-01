@@ -4,119 +4,154 @@
       <!-- 顶部标题区 -->
       <div class="sr-home__header">
         <div>
-          <h1 class="sr-home__title">智能报告工作台</h1>
-          <p class="sr-home__subtitle">按模板生成报告和材料，确认尽调报告证据链，检查缺失资料并导出交付</p>
+          <h1 class="sr-home__title">智能报告</h1>
+          <p class="sr-home__subtitle">查询企业报告状态，继续修改报告，或按模板重新生成可交付报告</p>
         </div>
-        <button class="sr-btn sr-btn--sm" @click="handleStartTemplate">模板中心</button>
       </div>
 
       <!-- 主体两栏 -->
       <div class="sr-workspace">
         <div class="sr-workspace__main">
 
-          <!-- 三张开始方式卡 -->
-          <section class="sr-section">
-            <h2 class="sr-section__title">你想怎么开始？</h2>
-            <div class="sr-start-grid">
-              <div class="sr-start-card">
-                <div class="sr-start-card__icon">1</div>
-                <h3 class="sr-start-card__title">处理尽调报告</h3>
-                <p class="sr-start-card__desc">继续处理来自智能尽调的授信调查报告，确认章节、证据链和待补资料。</p>
-                <div class="sr-start-card__actions">
-                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartProcess">处理待确认报告</button>
-                  <button class="sr-btn sr-btn--sm" @click="handleStartMissing">查看待补资料</button>
-                </div>
-              </div>
-              <div class="sr-start-card">
-                <div class="sr-start-card__icon">2</div>
-                <h3 class="sr-start-card__title">按模板生成报告和材料</h3>
-                <p class="sr-start-card__desc">选择已有报告、资料包或尽调结果，按指定模板生成新报告、材料清单和附件包。</p>
-                <div class="sr-start-card__actions">
-                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartGenerate">按模板生成</button>
-                  <button class="sr-btn sr-btn--sm" @click="handleStartGenerate">检查材料完整性</button>
-                </div>
-              </div>
-              <div class="sr-start-card">
-                <div class="sr-start-card__icon">3</div>
-                <h3 class="sr-start-card__title">维护报告模板</h3>
-                <p class="sr-start-card__desc">维护不同银行/分行的报告模板、章节规则、资料要求和禁用词。</p>
-                <div class="sr-start-card__actions">
-                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartTemplate">进入模板中心</button>
-                  <button class="sr-btn sr-btn--sm" @click="handleStartUploadTemplate">上传新模板</button>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- AI 输入区 -->
+          <!-- AI 报告入口区 -->
           <section class="sr-section sr-ai-box">
-            <h2 class="sr-section__title">告诉 AI 你要交付哪份报告</h2>
-            <p class="sr-ai-box__desc">AI 会先生成报告交付任务卡，确认报告、模板、资料包和下一步动作，不会直接跳转。</p>
+            <h2 class="sr-section__title">你想处理哪家企业的报告？</h2>
+            <p class="sr-ai-box__desc">可以查询报告状态、继续修改报告，或按新模板重新生成报告和材料。</p>
             <div class="sr-input-row">
-              <input v-model="aiTaskInput" class="sr-input-row__input" placeholder="例如：把明达精工报告按浙江分行 V2024 模板生成新报告和材料包" @keydown.enter.exact.prevent="handleAiTask" />
-              <button class="sr-btn sr-btn--primary" :disabled="!aiTaskInput.trim()" @click="handleAiTask">生成任务卡</button>
+              <el-input v-model="aiTaskInput" class="sr-input-row__input" placeholder="例如：明达精工现在报告到哪一步了？或者把明达精工报告按浙江分行 V2024 模板重新生成" @keydown.enter.exact.prevent="handleAiTask" clearable />
+              <el-button type="primary" :disabled="!aiTaskInput.trim()" @click="handleAiTask">询问 AI</el-button>
             </div>
             <div class="sr-suggestions">
-              <button v-for="(chip, ci) in aiSuggestions" :key="ci" class="sr-chip" @click="handleAiTask(chip)">{{ chip }}</button>
+              <el-button v-for="(chip, ci) in aiSuggestions" :key="ci" size="small" plain round @click="handleAiTask(chip)">{{ chip }}</el-button>
             </div>
           </section>
 
-          <!-- 待处理报告交付任务 -->
+          <!-- 核心功能区 -->
           <section class="sr-section">
-            <h2 class="sr-section__title">待处理报告交付任务</h2>
-            <div class="sr-task-list">
-              <div v-for="task in pendingDeliveryTasks" :key="task.id" class="sr-pending-task-card">
-                <div class="sr-pending-task-card__body">
-                  <h3 class="sr-pending-task-card__title">{{ task.title }}</h3>
-                  <p class="sr-pending-task-card__desc">{{ task.desc }}</p>
-                  <div class="sr-pending-task-card__meta">
-                    <span class="sr-tag">来源：{{ task.source }}</span>
-                    <span class="sr-tag" :class="task.tagClass">{{ task.tag }}</span>
-                    <span>下一步：{{ task.nextStep }}</span>
-                  </div>
-                </div>
-                <button class="sr-btn sr-btn--primary sr-btn--sm" @click="task.action()">{{ task.actionLabel }}</button>
+            <h2 class="sr-section__title">智能报告可以帮你完成</h2>
+            <div class="sr-func-grid">
+              <div class="sr-func-item" @click="startTaskDialog('继续修改明达精工授信调查报告')">
+                <div class="sr-func-item__icon">&#128196;</div>
+                <h3 class="sr-func-item__title">处理尽调报告</h3>
+                <p class="sr-func-item__desc">确认智能尽调生成的报告草稿、章节证据链和待补材料。</p>
+                <el-button type="primary" size="small" plain>继续修改</el-button>
+              </div>
+              <div class="sr-func-item" @click="startTaskDialog('按浙江分行 V2024 模板重新生成明达精工报告')">
+                <div class="sr-func-item__icon">&#128203;</div>
+                <h3 class="sr-func-item__title">按模板生成报告</h3>
+                <p class="sr-func-item__desc">用已有报告、资料包或尽调结果，生成新版报告和材料清单。</p>
+                <el-button type="primary" size="small" plain>按模板生成</el-button>
+              </div>
+              <div class="sr-func-item" @click="startTaskDialog('查询明达精工报告状态')">
+                <div class="sr-func-item__icon">&#128269;</div>
+                <h3 class="sr-func-item__title">查询报告状态</h3>
+                <p class="sr-func-item__desc">查询企业报告进度、待确认章节、缺失材料和导出状态。</p>
+                <el-button type="primary" size="small" plain>查询状态</el-button>
+              </div>
+              <div class="sr-func-item" @click="startTaskDialog('打开模板中心')">
+                <div class="sr-func-item__icon">&#9881;</div>
+                <h3 class="sr-func-item__title">维护报告模板</h3>
+                <p class="sr-func-item__desc">维护银行模板、章节规则、资料要求、禁用词和导出规则。</p>
+                <el-button type="primary" size="small" plain>模板中心</el-button>
               </div>
             </div>
           </section>
-        </div>
 
-        <!-- 右侧上下文 -->
-        <aside class="sr-context">
-          <div class="sr-context-card">
-            <h3 class="sr-context-card__title">今日待办</h3>
-            <div class="sr-todo-list">
-              <div class="sr-todo-row"><span>待确认报告</span><strong>{{ pendingReportCount }} 份</strong></div>
-              <div class="sr-todo-row"><span>资料缺失</span><strong>{{ missingMaterialCount }} 份</strong></div>
-              <div class="sr-todo-row"><span>可导出</span><strong>{{ exportableCount }} 份</strong></div>
-              <div class="sr-todo-row"><span>模板待维护</span><strong>{{ draftTplCount }} 个</strong></div>
-            </div>
-          </div>
-          <div class="sr-context-card">
-            <h3 class="sr-context-card__title">最近报告</h3>
-            <div class="sr-todo-list">
-              <div class="sr-todo-row" v-for="task in reportTasks.slice(0, 3)" :key="task.id" @click="openReport(task)" style="cursor:pointer">
-                <span>{{ task.enterpriseName }}</span>
-                <span class="sr-tag" :class="task.status.includes('待确认') ? 'sr-tag--warn' : task.status.includes('缺失') ? 'sr-tag--danger' : 'sr-tag--success'">{{ task.status }}</span>
+          <!-- 最近报告轻量列表 -->
+          <section class="sr-section">
+            <h2 class="sr-section__title">最近报告</h2>
+            <div class="sr-recent-list">
+              <div v-for="task in reportTasks.slice(0, 3)" :key="task.id" class="sr-recent-list__row">
+                <span class="sr-recent-list__name">{{ task.enterpriseName }}</span>
+                <span class="sr-recent-list__type">{{ task.reportName }}</span>
+                <el-tag size="small" :type="task.status.includes('待确认') ? 'warning' : task.status.includes('缺失') ? 'danger' : 'success'">{{ task.status }}</el-tag>
+                <span class="sr-recent-list__next">{{ task.nextStep }}</span>
+                <el-button size="small" type="primary" plain @click="openReport(task)">打开</el-button>
               </div>
             </div>
-          </div>
-          <div class="sr-context-card">
-            <h3 class="sr-context-card__title">模板库</h3>
-            <div class="sr-facts">
-              <div class="sr-fact"><span>模板总数</span><strong>{{ reportTemplates.length }}</strong></div>
-              <div class="sr-fact"><span>默认模板</span><strong>{{ defaultTemplateName }}</strong></div>
-              <div class="sr-fact"><span>草稿模板</span><strong>{{ draftTplCount }} 个</strong></div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 任务识别/确认页面 -->
+    <div v-if="view === 'taskDialog'" class="sr-task-dialog">
+      <div class="sr-task-dialog__header">
+        <el-button size="small" text @click="view = 'home'">
+          <el-icon><ArrowLeft /></el-icon> 返回首页
+        </el-button>
+        <div class="sr-task-dialog__header-title">
+          <h2>AI 正在识别报告任务</h2>
+          <p>请确认 AI 理解的企业、报告、模板、资料包和下一步动作</p>
+        </div>
+      </div>
+      <div class="sr-task-dialog__body">
+        <!-- 左侧对话区 -->
+        <div class="sr-task-dialog__chat">
+          <div v-for="(msg, mi) in taskDialogMessages" :key="mi" class="sr-task-dialog__msg" :class="`sr-task-dialog__msg--${msg.role}`">
+            <div class="sr-task-dialog__msg-avatar">{{ msg.role === 'user' ? '&#25105;' : 'AI' }}</div>
+            <div class="sr-task-dialog__msg-bubble">
+              <span v-if="msg.status === 'thinking'" class="sr-task-dialog__thinking">正在识别...</span>
+              <span v-else>{{ msg.text }}</span>
             </div>
           </div>
-          <div class="sr-context-card">
-            <h3 class="sr-context-card__title">资料包</h3>
-            <div class="sr-facts">
-              <div class="sr-fact"><span>资料包总数</span><strong>{{ materialPackages.length }}</strong></div>
-              <div class="sr-fact"><span>缺失资料包</span><strong>{{ missingPkgCount }} 个</strong></div>
-            </div>
+          <div v-if="taskDialogInput" class="sr-task-dialog__re-input">
+            <el-input v-model="taskDialogInput" size="small" placeholder="调整任务描述..." @keydown.enter.exact.prevent="startTaskDialog(taskDialogInput)" clearable />
+            <el-button size="small" @click="startTaskDialog(taskDialogInput)">重新识别</el-button>
           </div>
-        </aside>
+        </div>
+        <!-- 右侧任务确认面板 -->
+        <div class="sr-task-dialog__confirm" v-if="recognizedTask">
+          <el-card shadow="never" class="sr-task-confirm-card">
+            <template #header>
+              <div class="sr-task-confirm-card__header">
+                <span class="sr-task-confirm-card__title">任务确认面板</span>
+                <el-tag size="small" type="primary">{{ recognizedTask.type }}</el-tag>
+              </div>
+            </template>
+            <el-descriptions :column="1" size="small" border>
+              <el-descriptions-item label="任务类型">
+                <el-tag size="small" type="primary">{{ recognizedTask.type }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="企业">
+                {{ recognizedTask.enterprise || '明达精工有限公司' }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.targetReportId" label="关联报告">
+                <el-tag size="small" type="info">{{ getTaskCardReportName(recognizedTask.targetReportId) }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.currentStatus" label="当前状态">
+                <el-tag size="small" :type="recognizedTask.currentStatus.includes('待确认') ? 'warning' : 'info'">{{ recognizedTask.currentStatus }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.currentTpl" label="当前模板">
+                {{ recognizedTask.currentTpl }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.targetTpl" label="目标模板">
+                <el-tag size="small" type="primary">{{ recognizedTask.targetTpl }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.source" label="来源资料">
+                {{ recognizedTask.source }}
+              </el-descriptions-item>
+              <el-descriptions-item v-if="recognizedTask.outputs" label="下一步动作">
+                {{ recognizedTask.outputs }}
+              </el-descriptions-item>
+            </el-descriptions>
+            <el-divider style="margin:12px 0" />
+            <div v-if="recognizedTask.pendingItems.length" class="sr-task-confirm-card__section">
+              <span class="sr-task-confirm-card__label">待确认章节：</span>
+              <el-tag v-for="(item, pi) in recognizedTask.pendingItems" :key="pi" size="small" type="warning" style="margin:0 4px 4px 0">{{ item }}</el-tag>
+            </div>
+            <div v-if="recognizedTask.missingItems.length" class="sr-task-confirm-card__section sr-task-confirm-card__missing">
+              <span class="sr-task-confirm-card__label">缺失材料：</span>
+              <el-tag v-for="(item, mi) in recognizedTask.missingItems" :key="mi" size="small" type="danger" style="margin:0 4px 4px 0">{{ item }}</el-tag>
+            </div>
+          </el-card>
+          <div class="sr-task-confirm-card__actions">
+            <el-button type="primary" @click="confirmRecognizedTask">确认创建任务</el-button>
+            <el-button plain @click="adjustRecognizedTask">调整识别结果</el-button>
+            <el-button text @click="view = 'home'">返回首页</el-button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -197,11 +232,11 @@
           <span class="sr-badge" :class="statusBadgeClass(activeReport?.status)">{{ activeReport?.status }}</span>
         </div>
         <div class="sr-editor__actions">
-          <button class="sr-btn" @click="handleSaveDraft">保存草稿</button>
-          <button class="sr-btn" @click="handleRegenerateByTemplate">按新模板生成</button>
-          <button class="sr-btn" @click="handleExportReport">导出报告</button>
-          <button class="sr-btn sr-btn--primary" @click="handleExportAll">导出报告和资料包</button>
-          <button class="sr-btn sr-btn--primary" @click="handleSubmitConfirm">提交确认</button>
+          <el-button size="small" @click="handleSaveDraft">保存草稿</el-button>
+          <el-button size="small" @click="handleRegenerateByTemplate">按新模板生成</el-button>
+          <el-button size="small" @click="handleExportReport">导出报告</el-button>
+          <el-button size="small" type="primary" plain @click="handleExportAll">导出报告和资料包</el-button>
+          <el-button size="small" type="primary" @click="handleSubmitConfirm">提交确认</el-button>
         </div>
       </div>
       <div class="sr-editor__body">
@@ -210,8 +245,9 @@
           <div v-for="sec in reportSections" :key="sec.id" class="sr-toc__item" :class="{ active: activeSectionId === sec.id, pending: sec.status === '待确认', missing: sec.materialStatus === '部分缺失' || sec.materialStatus === '资料不足' }" @click="selectSection(sec.id)">
             <span class="sr-toc__num">{{ sec.no }}</span>
             <span class="sr-toc__text">{{ sec.title }}</span>
-            <span v-if="sec.status === '待确认'" class="sr-toc__dot sr-toc__dot--warn"></span>
-            <span v-if="sec.materialStatus === '部分缺失' || sec.materialStatus === '资料不足'" class="sr-toc__dot sr-toc__dot--miss"></span>
+            <el-tag v-if="sec.status === '待确认'" size="small" type="warning" class="sr-toc__tag">待确认</el-tag>
+            <el-tag v-else-if="sec.materialStatus === '部分缺失' || sec.materialStatus === '资料不足'" size="small" type="danger" class="sr-toc__tag">资料不足</el-tag>
+            <el-tag v-else-if="sec.status === '已生成'" size="small" type="success" class="sr-toc__tag">已完成</el-tag>
           </div>
         </aside>
         <main class="sr-editor__content">
@@ -221,18 +257,15 @@
               <span class="sr-badge" :class="statusBadgeClass(currentSection.status)">{{ currentSection.status }}</span>
               <span class="sr-sec-header__mat" v-if="currentSection.materialStatus !== '完整'">资料：{{ currentSection.materialStatus }}</span>
             </div>
-            <div v-if="currentSection.aiNote" class="sr-sec-ai-note">
-              <span>&#128161;</span>
-              <span>{{ currentSection.aiNote }}</span>
-            </div>
-            <div v-if="currentSection.status === '待确认'" class="sr-sec-pending-note">
-              <span>&#9888;&#65039;</span>
-              <span>本节有待确认内容，请审阅后确认或修改</span>
-            </div>
-            <div v-if="currentSection.materialStatus === '部分缺失' || currentSection.materialStatus === '资料不足'" class="sr-sec-missing-note">
-              <span>&#128193;</span>
-              <span>当前章节资料不足，可能影响结论准确性</span>
-            </div>
+            <el-alert v-if="currentSection.aiNote" type="info" :closable="false" show-icon class="sr-sec-alert">
+              <template #title>{{ currentSection.aiNote }}</template>
+            </el-alert>
+            <el-alert v-if="currentSection.status === '待确认'" type="warning" :closable="false" show-icon class="sr-sec-alert">
+              <template #title>本节有待确认内容，请审阅后确认或修改</template>
+            </el-alert>
+            <el-alert v-if="currentSection.materialStatus === '部分缺失' || currentSection.materialStatus === '资料不足'" type="error" :closable="false" show-icon class="sr-sec-alert">
+              <template #title>当前章节资料不足，可能影响结论准确性</template>
+            </el-alert>
             <div class="sr-sec-body">
               <div v-if="editingSectionId === currentSection.id" class="sr-sec-edit">
                 <textarea v-model="editText" class="sr-sec-edit__textarea" rows="12"></textarea>
@@ -267,123 +300,185 @@
               </template>
             </div>
             <div v-if="editingSectionId !== currentSection.id" class="sr-sec-actions">
-              <button class="sr-btn" @click="startEditSection">修改本节</button>
-              <button class="sr-btn" @click="handleRegenerateSection">根据资料包重新生成本节</button>
+              <el-button size="small" @click="startEditSection">修改本节</el-button>
+              <el-button size="small" @click="handleRegenerateSection">根据资料包重新生成本节</el-button>
             </div>
           </template>
         </main>
         <aside class="sr-editor__sidebar">
           <div class="sr-sidebar__materials">
-            <div class="sr-sidebar__section-title">本章资料包</div>
+            <div class="sr-sidebar__section-title">章节证据链</div>
             <div v-if="currentSectionMaterials.length === 0" class="sr-sidebar__empty">暂无关联资料</div>
             <div v-for="mat in currentSectionMaterials" :key="mat.id" class="sr-mat-card" :class="{ modified: mat.status === '已修改' }">
-              <div class="sr-mat-card__name">{{ mat.name }}</div>
-              <div class="sr-mat-card__meta"><span>{{ mat.source }}</span><span class="sr-mat-card__status" :class="matStatusClass(mat.status)">{{ mat.status }}</span></div>
+              <div class="sr-mat-card__header">
+                <span class="sr-mat-card__name">{{ mat.name }}</span>
+                <el-tag size="small" :type="mat.status === '已关联' ? 'success' : mat.status === '缺失' ? 'danger' : 'info'">{{ mat.status }}</el-tag>
+              </div>
+              <div class="sr-mat-card__meta"><span>{{ mat.source }}</span></div>
               <div v-if="mat.extractedSummary" class="sr-mat-card__summary">{{ mat.extractedSummary }}</div>
               <div class="sr-mat-card__actions">
-                <button class="sr-mat-card__link" @click="viewMaterialDetail(mat)">详情</button>
-                <button class="sr-mat-card__link" @click="editMaterialSummary(mat)">修改摘要</button>
-                <button class="sr-mat-card__link" @click="uploadSupplement(mat)">补充</button>
+                <el-button link size="small" type="primary" @click="viewMaterialDetail(mat)">详情</el-button>
+                <el-button link size="small" @click="editMaterialSummary(mat)">修改摘要</el-button>
+                <el-button link size="small" type="warning" @click="uploadSupplement(mat)">补充</el-button>
               </div>
             </div>
           </div>
           <div class="sr-sidebar__assistant ai-assistant-panel">
-            <div class="ai-assistant-panel__header"><span class="ai-assistant-panel__title">AI 报告交付助手</span></div>
-            <div class="ai-assistant-panel__body">
-              <div class="sr-ai-subtitle">改写正文、补充资料、重排模板并打包导出</div>
-              <div class="sr-ai-quick">
-                <button v-for="a in aiDeliveryActions" :key="a" class="sr-ai-quick-btn" @click="handleAiDeliveryAction(a)">{{ a }}</button>
-              </div>
-              <div class="sr-ai-msgs">
-                <div v-for="(m, i) in aiMsgs" :key="i" class="ai-message" :class="m.role === 'ai' ? 'ai-message--ai' : 'ai-message--user'">
-                  <div class="ai-message__avatar">{{ m.role === 'ai' ? 'AI' : '&#25105;' }}</div>
-                  <div class="ai-message__bubble" v-html="renderMd(m.text)"></div>
-                </div>
-                <div v-if="aiBusy" class="ai-message ai-message--ai">
-                  <div class="ai-message__avatar">AI</div>
-                  <div class="ai-message__bubble sr-ai-msg__thinking">思考中&#8230;</div>
-                </div>
-              </div>
-              <div class="ai-assistant-panel__footer">
-                <input v-model="aiInput" class="ai-assistant-panel__input" placeholder="告诉我想如何修改报告，或需要补充哪些资料..." @keydown.enter="sendAiMessage" />
-                <button class="ai-assistant-panel__send" @click="sendAiMessage" :disabled="!aiInput.trim() || aiBusy">发送</button>
-              </div>
+            <div v-if="assistantCollapsed" class="sr-assistant-toggle" @click="toggleAssistant">
+              <span class="sr-assistant-toggle__title">AI 写作助手</span>
+              <span class="sr-assistant-toggle__desc">可帮你改写章节、检查证据链、生成缺失说明</span>
+              <el-button size="small" text>展开</el-button>
             </div>
+            <template v-else>
+              <div class="ai-assistant-panel__header">
+                <span class="ai-assistant-panel__title">AI 写作助手</span>
+                <el-button size="small" text @click="toggleAssistant">收起</el-button>
+              </div>
+              <div class="ai-assistant-panel__body">
+                <!-- 当前章节任务卡 -->
+                <div v-if="currentSection" class="sr-ai-section-card">
+                  <div class="sr-ai-section-card__title">当前章节任务</div>
+                  <div class="sr-ai-section-card__meta">
+                    <span>{{ currentSection.no }}、{{ currentSection.title }}</span>
+                    <el-tag size="small" :type="statusTagType(currentSection.status)">{{ currentSection.status }}</el-tag>
+                  </div>
+                  <div class="sr-ai-section-card__stats">
+                    <span>关联证据 {{ currentSectionMaterials.length }} 条</span>
+                    <span v-if="currentSection.materialStatus !== '完整'" class="sr-ai-section-card__warn">缺失 {{ getMissingMaterialCount() }} 项</span>
+                  </div>
+                  <div class="sr-ai-section-card__actions">
+                    <el-button size="small" type="primary" plain @click="handleAiSectionAction('改写')">改写当前章节</el-button>
+                    <el-button size="small" plain @click="handleAiSectionAction('检查证据链')">检查证据链</el-button>
+                    <el-button size="small" plain @click="handleAiSectionAction('缺失说明')">生成缺失说明</el-button>
+                    <el-button size="small" type="success" plain @click="handleAiSectionAction('确认')">标记本节确认</el-button>
+                    <el-button size="small" type="warning" plain @click="handleAiSectionAction('尽调')">转入尽调补充</el-button>
+                  </div>
+                  <!-- AI 改写建议卡 -->
+                  <div v-if="aiRewriteCard" class="sr-ai-rewrite-card">
+                    <div class="sr-ai-rewrite-card__title">AI 改写建议</div>
+                    <div class="sr-ai-rewrite-card__summary"><strong>原文摘要：</strong>{{ aiRewriteCard.summary }}</div>
+                    <div class="sr-ai-rewrite-card__suggestion"><strong>改写建议：</strong>{{ aiRewriteCard.suggestion }}</div>
+                    <div class="sr-ai-rewrite-card__evidence"><strong>引用证据：</strong>{{ aiRewriteCard.evidence }}</div>
+                    <div class="sr-ai-rewrite-card__actions">
+                      <el-button size="small" type="primary" @click="applyAiRewrite">应用修改</el-button>
+                      <el-button size="small" @click="aiRewriteCard = null">继续调整</el-button>
+                      <el-button size="small" plain @click="viewEvidenceFromRewrite">查看证据</el-button>
+                    </div>
+                  </div>
+                </div>
+                <div class="sr-ai-subtitle">改写正文、补充资料、重排模板并打包导出</div>
+                <div class="sr-ai-quick">
+                  <el-button v-for="a in aiDeliveryActions" :key="a" size="small" plain round @click="handleAiDeliveryAction(a)">{{ a }}</el-button>
+                </div>
+                <div class="sr-ai-msgs">
+                  <div v-for="(m, i) in aiMsgs" :key="i" class="ai-message" :class="m.role === 'ai' ? 'ai-message--ai' : 'ai-message--user'">
+                    <div class="ai-message__avatar">{{ m.role === 'ai' ? 'AI' : '&#25105;' }}</div>
+                    <div class="ai-message__bubble" v-html="renderMd(m.text)"></div>
+                  </div>
+                  <div v-if="aiBusy" class="ai-message ai-message--ai">
+                    <div class="ai-message__avatar">AI</div>
+                    <div class="ai-message__bubble sr-ai-msg__thinking">思考中&#8230;</div>
+                  </div>
+                </div>
+                <div class="ai-assistant-panel__footer">
+                  <el-input v-model="aiInput" class="ai-assistant-panel__input" placeholder="告诉我想如何修改报告，或需要补充哪些资料..." @keydown.enter="sendAiMessage" clearable />
+                  <el-button type="primary" size="small" @click="sendAiMessage" :disabled="!aiInput.trim() || aiBusy">发送</el-button>
+                </div>
+              </div>
+            </template>
           </div>
         </aside>
       </div>
     </div>
 
-    <div v-if="showMaterialDetail" class="sr-modal-overlay" @click.self="showMaterialDetail = false">
-      <div class="sr-modal">
-        <div class="sr-modal__header">
-          <h3>{{ selectedMaterial?.name }}</h3>
-          <el-icon class="sr-modal__close" @click="showMaterialDetail = false"><Close /></el-icon>
-        </div>
-        <div class="sr-modal__body" v-if="selectedMaterial">
-          <div class="sr-modal__row"><span class="sr-modal__label">类型</span><span>{{ selectedMaterial.type }}</span></div>
-          <div class="sr-modal__row"><span class="sr-modal__label">来源</span><span>{{ selectedMaterial.source }}</span></div>
-          <div class="sr-modal__row"><span class="sr-modal__label">状态</span><span class="sr-badge" :class="matStatusClass(selectedMaterial.status)">{{ selectedMaterial.status }}</span></div>
-          <div class="sr-modal__row"><span class="sr-modal__label">关联章节</span><span>{{ (selectedMaterial.relatedSections || []).join('、') || '无' }}</span></div>
-          <div class="sr-modal__row"><span class="sr-modal__label">识别摘要</span><span>{{ selectedMaterial.extractedSummary || '无' }}</span></div>
-          <div class="sr-modal__row"><span class="sr-modal__label">识别摘要（编辑）</span><textarea v-model="editingSummary" class="sr-modal__edit" rows="3" placeholder="修改资料识别摘要..."></textarea></div>
-        </div>
-        <div class="sr-modal__footer">
-          <button class="sr-btn" @click="showMaterialDetail = false">关闭</button>
-          <button class="sr-btn sr-btn--primary" @click="saveMaterialSummary">保存摘要</button>
-        </div>
-      </div>
-    </div>
+    <!-- 资料详情弹窗 -->
+    <el-dialog v-model="showMaterialDetail" :title="selectedMaterial?.name || '资料详情'" width="520px" destroy-on-close>
+      <el-form v-if="selectedMaterial" label-position="top" class="sr-dialog-form">
+        <el-form-item label="类型"><span>{{ selectedMaterial.type }}</span></el-form-item>
+        <el-form-item label="来源"><span>{{ selectedMaterial.source }}</span></el-form-item>
+        <el-form-item label="状态">
+          <el-tag size="small" :type="selectedMaterial.status === '已关联' ? 'success' : selectedMaterial.status === '缺失' ? 'danger' : 'info'">{{ selectedMaterial.status }}</el-tag>
+        </el-form-item>
+        <el-form-item label="关联章节"><span>{{ (selectedMaterial.relatedSections || []).join('、') || '无' }}</span></el-form-item>
+        <el-form-item label="识别摘要"><span>{{ selectedMaterial.extractedSummary || '无' }}</span></el-form-item>
+        <el-form-item label="修改摘要">
+          <el-input v-model="editingSummary" type="textarea" :rows="3" placeholder="修改资料识别摘要..." />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showMaterialDetail = false">关闭</el-button>
+        <el-button type="primary" @click="saveMaterialSummary">保存摘要</el-button>
+      </template>
+    </el-dialog>
 
-    <div v-if="showExportDialog" class="sr-modal-overlay" @click.self="showExportDialog = false">
-      <div class="sr-modal">
-        <div class="sr-modal__header">
-          <h3>批量导出报告和资料包</h3>
-          <el-icon class="sr-modal__close" @click="showExportDialog = false"><Close /></el-icon>
-        </div>
-        <div class="sr-modal__body">
-          <div class="sr-modal__label" style="margin-bottom: 8px">选择导出内容：</div>
-          <div v-for="opt in exportOptions" :key="opt.key" class="sr-modal__checkbox" @click="opt.checked = !opt.checked">
-            <span class="sr-modal__cb-box">{{ opt.checked ? '&#9745;' : '&#9744;' }}</span>
-            <span>{{ opt.label }}</span>
-          </div>
-        </div>
-        <div class="sr-modal__footer">
-          <button class="sr-btn" @click="showExportDialog = false">取消</button>
-          <button class="sr-btn sr-btn--primary" @click="doExportAll">确认导出</button>
-        </div>
+    <!-- 导出弹窗 -->
+    <el-dialog v-model="showExportDialog" title="批量导出报告和资料包" width="420px" destroy-on-close>
+      <div class="sr-export-options">
+        <el-checkbox-group v-model="selectedExportKeys">
+          <el-checkbox v-for="opt in exportOptions" :key="opt.key" :label="opt.key" :value="opt.key">
+            {{ opt.label }}
+          </el-checkbox>
+        </el-checkbox-group>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="showExportDialog = false">取消</el-button>
+        <el-button type="primary" @click="doExportAll">确认导出</el-button>
+      </template>
+    </el-dialog>
 
-    <div v-if="showRegenDialog" class="sr-modal-overlay" @click.self="showRegenDialog = false">
-      <div class="sr-modal">
-        <div class="sr-modal__header">
-          <h3>按新模板重新生成报告</h3>
-          <el-icon class="sr-modal__close" @click="showRegenDialog = false"><Close /></el-icon>
-        </div>
-        <div class="sr-modal__body">
-          <div class="sr-modal__label" style="margin-bottom: 8px">选择目标模板：</div>
-          <div v-for="tpl in reportTemplates" :key="tpl.id" class="sr-modal__radio" :class="{ on: regenTplId === tpl.id }" @click="regenTplId = tpl.id">
-            <span>{{ tpl.name }}</span>
-            <span class="sr-modal__radio-desc">{{ tpl.sectionsCount }} 章 &#183; 需 {{ tpl.requiredMaterials }} 份资料</span>
-          </div>
-          <div v-if="regenTplId" class="sr-modal__mapping">
-            <div class="sr-modal__mapping-title">章节映射提示：</div>
-            <p class="sr-modal__mapping-text">模板「{{ getRegenTplName() }}」共 {{ getRegenTplSections() }} 章。生成时将保留已有章节内容，新增章节将根据资料包自动生成。</p>
-          </div>
-        </div>
-        <div class="sr-modal__footer">
-          <button class="sr-btn" @click="showRegenDialog = false">取消</button>
-          <button class="sr-btn sr-btn--primary" @click="doRegenerate" :disabled="!regenTplId">确认生成</button>
-        </div>
+    <!-- 按新模板生成弹窗 -->
+    <el-dialog v-model="showRegenDialog" title="按新模板重新生成报告" width="520px" destroy-on-close>
+      <div class="sr-regen-tpl-list">
+        <div class="sr-modal__label" style="margin-bottom: 8px">选择目标模板：</div>
+        <el-radio-group v-model="regenTplId" class="sr-regen-radio-group">
+          <el-radio v-for="tpl in reportTemplates" :key="tpl.id" :value="tpl.id" border class="sr-regen-radio-item">
+            <div class="sr-regen-radio-item__name">{{ tpl.name }}</div>
+            <div class="sr-regen-radio-item__desc">{{ tpl.sectionsCount }} 章 · 需 {{ tpl.requiredMaterials }} 份资料</div>
+          </el-radio>
+        </el-radio-group>
+        <el-alert v-if="regenTplId" type="info" :closable="false" show-icon style="margin-top:12px">
+          <template #title>章节映射提示</template>
+          <template #default>模板「{{ getRegenTplName() }}」共 {{ getRegenTplSections() }} 章。生成时将保留已有章节内容，新增章节将根据资料包自动生成。</template>
+        </el-alert>
       </div>
-    </div>
+      <template #footer>
+        <el-button @click="showRegenDialog = false">取消</el-button>
+        <el-button type="primary" :disabled="!regenTplId" @click="doRegenerate">确认生成</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 提交前检查弹窗 -->
+    <el-dialog v-model="showPreSubmitCheck" title="提交前检查" width="560px" destroy-on-close>
+      <el-table :data="preSubmitCheckResult" border size="small" class="sr-check-table">
+        <el-table-column prop="title" label="检查项" width="140" />
+        <el-table-column prop="detail" label="详情" />
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.status === 'pass' ? 'success' : row.status === 'warn' ? 'warning' : 'danger'">
+              {{ row.status === 'pass' ? '通过' : row.status === 'warn' ? '警告' : '待处理' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-alert v-if="hasPreSubmitBlocker" type="error" :closable="false" show-icon style="margin-top:12px">
+        <template #title>存在阻断项，需处理后才能提交</template>
+      </el-alert>
+      <el-alert v-else-if="hasPreSubmitWarn" type="warning" :closable="false" show-icon style="margin-top:12px">
+        <template #title>存在警告项，请评估风险后决定是否提交</template>
+      </el-alert>
+      <template #footer>
+        <el-button @click="generateMissingListFromCheck">生成缺失清单</el-button>
+        <el-button @click="showPreSubmitCheck = false">返回修改</el-button>
+        <el-button :type="hasPreSubmitBlocker ? 'info' : 'warning'" :disabled="hasPreSubmitBlocker" @click="doForceSubmit">仍然提交</el-button>
+        <el-button v-if="!hasPreSubmitBlocker && !hasPreSubmitWarn" type="primary" @click="doPreSubmitCheck">确认提交</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup>
 import { ref, computed } from 'vue'
-import { ArrowLeft, Upload, CircleCheck, Close } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ArrowLeft, Upload, CircleCheck, Close, Document } from '@element-plus/icons-vue'
+import { ElMessage, ElDialog } from 'element-plus'
 import {
   reportTasks,
   reportTemplates,
@@ -393,6 +488,8 @@ import {
   pendingConfirmations,
   aiDeliveryActions,
   exportPackages,
+  aiTaskCardPresets,
+  deliveryCheckItems,
 } from '../data/mockSmartReport.js'
 
 const view = ref('home')
@@ -401,35 +498,170 @@ const activeSectionId = ref('')
 const editingSectionId = ref('')
 const editText = ref('')
 
+// ════════════════════════════════════════
+// AI 报告交付任务卡
+// ════════════════════════════════════════
+const activeAiTaskCard = ref(null)
+
+function buildTaskCard(type, overrides = {}) {
+  const preset = aiTaskCardPresets.find(p => p.type === type)
+  const defaults = preset ? { ...preset } : { type, steps: [], actions: [], result: null, status: 'planned' }
+  return { ...defaults, ...overrides }
+}
+
+// ════════════════════════════════════════
+// AI 任务识别/确认页面
+// ════════════════════════════════════════
+const taskDialogInput = ref('')
+const taskDialogMessages = ref([])
+const recognizedTask = ref(null)
+
+function startTaskDialog(text) {
+  taskDialogInput.value = text
+  recognizedTask.value = null
+  taskDialogMessages.value = [
+    { role: 'user', text },
+    { role: 'ai', text: '正在识别任务类型、关联报告和所需资料...', status: 'thinking' },
+  ]
+  setTimeout(() => {
+    taskDialogMessages.value = [
+      { role: 'user', text },
+      { role: 'ai', text: '识别完成，请确认以下信息。' },
+    ]
+    recognizedTask.value = buildRecognizedTask(text)
+  }, 600)
+}
+
+function buildRecognizedTask(text) {
+  // 意图识别（模拟，不接后端）
+
+  // 1. 查询状态
+  if (text.includes('状态') || text.includes('到哪一步') || text.includes('进度')) {
+    return {
+      type: '查询报告状态',
+      enterprise: '明达精工有限公司',
+      targetReportId: 'RPT-001',
+      currentStatus: '待确认',
+      source: '智能尽调报告草稿',
+      currentTpl: '总行通用版 V2021',
+      targetTpl: null,
+      outputs: '查看待确认章节和缺失材料',
+      pendingItems: ['收入真实性', '主要风险分析', '授信方案'],
+      missingItems: ['银行流水'],
+    }
+  }
+  // 2. 继续修改
+  if (text.includes('继续修改') || text.includes('修改报告') || text.includes('处理')) {
+    return {
+      type: '继续修改报告',
+      enterprise: '明达精工有限公司',
+      targetReportId: 'RPT-001',
+      currentStatus: '待确认',
+      source: '智能尽调报告草稿',
+      currentTpl: '总行通用版 V2021',
+      targetTpl: null,
+      outputs: '打开报告详情，继续编辑和确认章节',
+      pendingItems: ['收入真实性', '主要风险分析'],
+      missingItems: [],
+    }
+  }
+  // 3. 按模板重排/重生成
+  if (text.includes('模板') && (text.includes('重排') || text.includes('重新生成') || text.includes('V2024') || text.includes('按'))) {
+    return {
+      type: '按模板重新生成报告',
+      enterprise: '明达精工有限公司',
+      targetReportId: 'RPT-001',
+      currentStatus: '待确认',
+      source: '旧版报告 + 智能尽调证据包',
+      currentTpl: '总行通用版 V2021',
+      targetTpl: '浙江分行 V2024',
+      outputs: '确认生成新报告版本',
+      pendingItems: ['收入真实性', '主要风险分析', '授信方案'],
+      missingItems: ['银行流水', '征信授权'],
+    }
+  }
+  // 4. 检查缺失材料
+  if (text.includes('缺失材料') || text.includes('缺哪些') || text.includes('检查') || text.includes('宁波天合')) {
+    return {
+      type: '检查缺失材料',
+      enterprise: '宁波天合新材料有限公司',
+      targetReportId: 'RPT-002',
+      currentStatus: '资料缺失',
+      source: '资料包 MAT-002',
+      currentTpl: '总行通用版 V2021',
+      targetTpl: null,
+      outputs: '查看缺失材料清单，决定补充方式',
+      pendingItems: [],
+      missingItems: ['银行流水', '征信授权'],
+    }
+  }
+  // 5. 维护模板
+  if (text.includes('模板中心') || text.includes('上传模板') || text.includes('维护')) {
+    return {
+      type: '维护报告模板',
+      enterprise: null,
+      targetReportId: null,
+      currentStatus: null,
+      source: '用户上传模板',
+      currentTpl: null,
+      targetTpl: '浙江分行 V2024',
+      outputs: '进入模板维护流程',
+      pendingItems: [],
+      missingItems: [],
+    }
+  }
+  // 兜底
+  return {
+    type: '查询报告',
+    enterprise: reportTasks[0]?.enterpriseName || '明达精工有限公司',
+    targetReportId: reportTasks[0]?.id || 'RPT-001',
+    currentStatus: reportTasks[0]?.status || '待确认',
+    source: '自动匹配',
+    currentTpl: '总行通用版 V2021',
+    targetTpl: null,
+    outputs: '打开报告详情并查看状态',
+    pendingItems: [],
+    missingItems: [],
+  }
+}
+
+function confirmRecognizedTask() {
+  if (!recognizedTask.value) return
+  const card = recognizedTask.value
+  assistantCollapsed.value = true
+  // 维护模板不走 editor
+  if (card.type === '维护报告模板') {
+    ElMessage.info('已进入模板维护流程')
+    view.value = 'home'
+    return
+  }
+  // 其他类型都进入报告详情
+  ElMessage.info('任务已创建，正在打开报告详情...')
+  if (reportTasks.length) openReport(reportTasks[0])
+}
+
+function adjustRecognizedTask() {
+  taskDialogMessages.value.push(
+    { role: 'user', text: '需要调整识别结果' },
+    { role: 'ai', text: '你可以补充目标模板、报告名称或资料包范围，我会重新识别。也可以直接在左侧输入框中重新输入。' },
+  )
+}
+
 const aiTaskInput = ref('')
 const aiSuggestions = [
-  '处理明达精工待确认授信调查报告',
-  '把旧版报告按浙江分行 V2024 模板重排',
-  '检查宁波天合报告缺哪些模板必填材料',
-  '上传浙江分行新版模板并生成章节规则',
-  '生成杭州智造企业全景报告交付包',
+  '查询明达精工报告状态',
+  '继续修改明达精工授信调查报告',
+  '按浙江分行 V2024 模板重排报告',
+  '检查宁波天合报告缺失材料',
+  '打开模板中心',
 ]
-const quickTasks = [
-  { label: '从尽调产物生成报告' },
-  { label: '上传资料附件生成报告' },
-  { label: '按新模板重新生成' },
-  { label: '修改待确认内容' },
-  { label: '查看章节资料包' },
-  { label: '批量导出报告和附件' },
-]
-
 function handleAiTask(label) {
   const text = label || aiTaskInput.value.trim()
   if (!text) return
   aiTaskInput.value = ''
-  if (text === '上传资料附件生成报告') { view.value = 'upload'; return }
-  if (text === '批量导出报告和附件' || text === '批量导出') { showExportDialog.value = true; return }
-  if (text === '修改待确认内容') { if (reportTasks.length) openReport(reportTasks[0]); return }
-  if (text === '查看章节资料包') { view.value = 'editor'; if (!activeReport.value && reportTasks.length) openReport(reportTasks[0]); return }
-  if (text === '按新模板重新生成') { view.value = 'editor'; if (!activeReport.value && reportTasks.length) openReport(reportTasks[0]); setTimeout(() => { showRegenDialog.value = true }, 300); return }
-  if (text === '从尽调产物生成报告') { openReport(reportTasks[0]); return }
-  ElMessage.info(`AI 收到：「${text}」，将自动匹配最近报告处理`)
-  if (reportTasks.length) openReport(reportTasks[0])
+  // 进入任务识别页，不在首页显示任务卡
+  view.value = 'taskDialog'
+  startTaskDialog(text)
 }
 
 const statCards = [
@@ -477,25 +709,28 @@ const pendingDeliveryTasks = computed(() => [
 ])
 
 function handleStartProcess() {
-  if (reportTasks.length) openReport(reportTasks[0])
+  view.value = 'taskDialog'
+  startTaskDialog('处理明达精工待确认授信调查报告')
 }
 
 function handleStartMissing() {
-  ElMessage.info('正在生成缺失材料检查任务…')
-  if (reportTasks.length) openReport(reportTasks[0])
+  view.value = 'taskDialog'
+  startTaskDialog('检查宁波天合报告缺哪些模板必填材料')
 }
 
 function handleStartGenerate() {
-  ElMessage.info('正在生成报告交付任务卡…')
-  if (reportTasks.length) openReport(reportTasks[0])
+  view.value = 'taskDialog'
+  startTaskDialog('把明达精工报告按浙江分行 V2024 模板生成新报告和材料包')
 }
 
 function handleStartTemplate() {
-  ElMessage.info('正在进入模板维护…')
+  view.value = 'taskDialog'
+  startTaskDialog('上传浙江分行新版模板并生成章节规则')
 }
 
 function handleStartUploadTemplate() {
-  ElMessage.info('模板上传功能已就绪，请选择模板文件。')
+  view.value = 'taskDialog'
+  startTaskDialog('上传浙江分行新版模板并生成章节规则')
 }
 
 // 右侧上下文 computed
@@ -675,7 +910,8 @@ function riskLevelClass(level) {
 function openReport(task) {
   activeReport.value = { ...task }
   activeSectionId.value = reportSections[0].id
-  aiMsgs.value = [{ role: 'ai', text: `已打开「${task.enterpriseName} - ${task.reportName}」，共 ${reportSections.length} 个章节。可以查看章节资料包，或用对话方式修改报告。` }]
+  aiMsgs.value = [{ role: 'ai', text: `已打开「${task.enterpriseName} - ${task.reportName}」，共 ${reportSections.length} 个章节。AI 助手已收起，如需修改请点击展开。` }]
+  assistantCollapsed.value = true
   view.value = 'editor'
 }
 
@@ -689,6 +925,10 @@ const regenTplId = ref('')
 function handleRegenerateByTemplate() { showRegenDialog.value = true; regenTplId.value = '' }
 function getRegenTplName() { const t = reportTemplates.find(x => x.id === regenTplId.value); return t ? t.name : '' }
 function getRegenTplSections() { const t = reportTemplates.find(x => x.id === regenTplId.value); return t ? t.sectionsCount : 0 }
+function getTaskCardReportName(id) {
+  const t = reportTasks.find(x => x.id === id)
+  return t ? `${t.enterpriseName} - ${t.reportName}` : id
+}
 
 function doRegenerate() {
   if (!regenTplId.value) return
@@ -703,32 +943,147 @@ function handleRegenerateSection() {
 
 const showExportDialog = ref(false)
 const exportOptions = ref(exportPackages.map(p => ({ ...p })))
+const selectedExportKeys = ref(exportPackages.filter(p => p.checked).map(p => p.key))
 
 function handleExportReport() { ElMessage.success('报告已导出为 Word 文档') }
 function handleExportAll() { showExportDialog.value = true }
 function doExportAll() {
-  const items = exportOptions.value.filter(o => o.checked).map(o => o.label).join('、')
+  const items = exportOptions.value.filter(o => selectedExportKeys.value.includes(o.key)).map(o => o.label).join('、')
   ElMessage.success(`已导出：${items || '无'}，文件已生成`)
   showExportDialog.value = false
 }
 
+const showPreSubmitCheck = ref(false)
+
 function handleSubmitConfirm() {
-  const pending = pendingConfirmations.filter(p => !p.confirmed)
-  if (pending.length) { ElMessage.warning(`仍有 ${pending.length} 项待确认内容，暂不能提交`); return }
-  const missing = materialPackages[0].missingCount
-  if (missing > 0) { ElMessage.warning(`仍有 ${missing} 项资料缺失，建议补充后再提交`); return }
+  showPreSubmitCheck.value = true
+}
+
+function doPreSubmitCheck() {
+  showPreSubmitCheck.value = false
+  const hasBlocker = preSubmitCheckResult.value.some(r => r.status === 'fail' && r.level === 'block')
+  if (hasBlocker) {
+    ElMessage.error('存在阻断项，不能提交，请先处理')
+    return
+  }
   ElMessage.success('报告已完成确认，可导出交付')
 }
 
-function handleUseTemplate(tpl) {
-  ElMessage.success(`已选择「${tpl.name}」，请上传资料或从尽调产物生成报告`)
-  if (reportTasks.length) openReport(reportTasks[0])
+function doForceSubmit() {
+  showPreSubmitCheck.value = false
+  ElMessage.warning('已强制提交，请确保风险事项已评估')
 }
 
-function openMaterialPkg(pkg) {
-  ElMessage.info(`资料包「${pkg.packageName}」共 ${pkg.materialCount} 份资料${pkg.missingCount ? '，' + pkg.missingCount + ' 份缺失' : ''}`)
-  if (reportTasks.length) openReport(reportTasks[0])
+function generateMissingListFromCheck() {
+  ElMessage.success('缺失材料清单已生成')
+  showPreSubmitCheck.value = false
 }
+
+const preSubmitCheckResult = computed(() => [
+  {
+    id: 'sc1', title: '待确认章节', level: 'block',
+    detail: `${pendingConfirmations.filter(p => !p.confirmed).length} 项待确认`,
+    status: pendingConfirmations.some(p => !p.confirmed) ? 'fail' : 'pass',
+  },
+  {
+    id: 'sc2', title: '缺失材料', level: 'warn',
+    detail: `${materialPackages[0]?.missingCount || 0} 份资料缺失`,
+    status: (materialPackages[0]?.missingCount || 0) > 0 ? 'warn' : 'pass',
+  },
+  {
+    id: 'sc3', title: '禁用词检查', level: 'warn',
+    detail: '未发现禁用词',
+    status: 'pass',
+  },
+  {
+    id: 'sc4', title: '无证据结论', level: 'block',
+    detail: '未发现无证据结论',
+    status: 'pass',
+  },
+  {
+    id: 'sc5', title: '附件清单完整性', level: 'info',
+    detail: '附件清单已归集 5 项',
+    status: 'pass',
+  },
+])
+
+const hasPreSubmitBlocker = computed(() => preSubmitCheckResult.value.some(r => r.status === 'fail' && r.level === 'block'))
+const hasPreSubmitWarn = computed(() => preSubmitCheckResult.value.some(r => r.status === 'warn'))
+
+// ════════════════════════════════════════
+// 右侧 AI 助手：章节任务卡 & 改写建议
+// ════════════════════════════════════════
+const aiRewriteCard = ref(null)
+
+// ════════════════════════════════════════
+// AI 助手收起/展开
+// ════════════════════════════════════════
+const assistantCollapsed = ref(true)
+
+function toggleAssistant() {
+  assistantCollapsed.value = !assistantCollapsed.value
+}
+
+function statusTagType(s) {
+  if (s.includes('待确认')) return 'warning'
+  if (s.includes('缺失') || s.includes('证据不足') || s.includes('资料不足')) return 'danger'
+  if (s.includes('已确认')) return 'success'
+  return 'info'
+}
+
+function getMissingMaterialCount() {
+  return currentSectionMaterials.value.filter(m => m.status === '缺失').length
+}
+
+function getTplName(id) {
+  const t = reportTemplates.find(x => x.id === id)
+  return t ? t.name : id
+}
+
+function handleAiSectionAction(action) {
+  const secTitle = currentSection.value ? `${currentSection.value.no}、${currentSection.value.title}` : '当前章节'
+  aiMsgs.value.push({ role: 'user', text: `[快捷操作] ${action}` })
+  aiBusy.value = true
+  setTimeout(() => {
+    if (action === '改写') {
+      aiRewriteCard.value = {
+        summary: `${secTitle} 当前内容侧重于数据罗列，缺乏分析视角`,
+        suggestion: '建议将数据与行业基准对比，突出异常点。改写后将补充 2 处数据引用和 1 处风险提示，使逻辑链更完整。',
+        evidence: `引用 ${currentSectionMaterials.value.length} 份关联资料`,
+      }
+    } else if (action === '检查证据链') {
+      const linked = currentSectionMaterials.value.filter(m => m.status === '已关联').length
+      const missing = getMissingMaterialCount()
+      aiMsgs.value.push({ role: 'ai', text: `${secTitle} 证据链检查结果：\n\n✅ ${linked} 份资料已关联\n❌ ${missing} 份资料缺失\n\n${missing > 0 ? '⚠️ 建议补充缺失资料后再确认本节' : '✅ 证据链完整，可以确认本节'}` })
+    } else if (action === '缺失说明') {
+      const missing = currentSectionMaterials.value.filter(m => m.status === '缺失').map(m => m.name)
+      aiMsgs.value.push({ role: 'ai', text: `${secTitle} 缺失资料说明：\n\n缺失资料：${missing.join('、') || '无'}\n影响：可能导致本节结论缺乏充分证据支撑\n建议：点击右侧资料包"补充"按钮上传缺失资料` })
+    } else if (action === '确认') {
+      ElMessage.success(`${secTitle} 已标记为确认`)
+      aiMsgs.value.push({ role: 'ai', text: `${secTitle} 已标记为确认。` })
+    } else if (action === '尽调') {
+      ElMessage.success('已创建补充尽调任务')
+      aiMsgs.value.push({ role: 'ai', text: '已创建补充尽调任务，尽调完成后结果将同步至本节。' })
+    }
+    aiBusy.value = false
+  }, 800)
+}
+
+function applyAiRewrite() {
+  if (aiRewriteCard.value && currentSection.value) {
+    const existing = (currentSection.value.body || []).join('\n\n')
+    currentSection.value.body = [existing, '（AI 改写已应用：调整表述结构，补充数据引用和风险提示）'].filter(Boolean)
+    ElMessage.success('改写已应用到当前章节')
+  }
+  aiRewriteCard.value = null
+}
+
+function viewEvidenceFromRewrite() {
+  ElMessage.info('已定位到关联资料，请在右侧证据链中查看')
+  aiRewriteCard.value = null
+}
+
+
 </script>
 <style scoped>
 .sr-page { padding: 28px 34px; max-width: 1440px; margin: 0 auto; }
@@ -749,13 +1104,26 @@ function openMaterialPkg(pkg) {
 .sr-section { margin-bottom: 18px; }
 .sr-section__title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 14px; }
 
-/* 三张开始方式卡 */
-.sr-start-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.sr-start-card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.sr-start-card__icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--color-primary-bg); color: var(--color-primary); font-weight: 700; font-size: 15px; margin-bottom: 8px; }
-.sr-start-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px; }
-.sr-start-card__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); margin: 0; line-height: 1.6; flex: 1; }
-.sr-start-card__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+/* 核心功能区 - 轻量功能列表 */
+.sr-func-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sr-func-item { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: border-color .15s; }
+.sr-func-item:hover { border-color: var(--color-primary); }
+.sr-func-item__icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: var(--color-primary-bg); font-size: 16px; margin-bottom: 4px; }
+.sr-func-item__title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.sr-func-item__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); margin: 0; line-height: 1.5; flex: 1; }
+
+/* 最近报告轻量列表 */
+.sr-recent-list { display: grid; gap: 6px; }
+.sr-recent-list__row { display: grid; grid-template-columns: 1fr 1fr auto auto auto; gap: 10px; align-items: center; padding: 10px 14px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; }
+.sr-recent-list__name { color: var(--text-primary); font-weight: 500; }
+.sr-recent-list__type { color: var(--text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-recent-list__next { color: var(--text-tertiary); font-size: 12px; }
+
+/* 旧待处理列表（兼容保留，已不再使用） */
+.sr-task-list-lite { display: grid; gap: 6px; }
+.sr-task-list-lite__row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 10px 14px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; }
+.sr-task-list-lite__name { color: var(--text-primary); font-weight: 500; }
+.sr-task-list-lite__next { color: var(--text-tertiary); font-size: 12px; }
 
 /* AI 输入区 */
 .sr-ai-box { padding: 18px; border-color: var(--color-primary); }
@@ -767,7 +1135,7 @@ function openMaterialPkg(pkg) {
 .sr-chip { border: 1px solid var(--border-default); border-radius: 999px; padding: 7px 10px; color: var(--text-secondary); background: var(--bg-page); font-size: 13px; cursor: pointer; transition: all .15s; }
 .sr-chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-bg); }
 
-/* 待处理报告交付任务 */
+/* 待处理报告交付任务（保留旧兼容，轻量行替代） */
 .sr-task-list { display: grid; gap: 10px; }
 .sr-pending-task-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 14px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
 .sr-pending-task-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px; }
@@ -959,12 +1327,156 @@ function openMaterialPkg(pkg) {
 .sr-modal__mapping-text { margin: 0; line-height: 1.5; }
 
 @media (max-width: 1200px) {
-  .sr-workspace { grid-template-columns: 1fr; }
-  .sr-context { position: static; }
-  .sr-start-grid { grid-template-columns: 1fr; }
-  .sr-pending-task-card { grid-template-columns: 1fr; }
+  .sr-func-grid { grid-template-columns: repeat(2, 1fr); }
+  .sr-recent-list__row { grid-template-columns: 1fr; }
   .sr-editor__body { grid-template-columns: 1fr; }
   .sr-editor__toc { max-height: 200px; }
   .sr-editor__sidebar { max-height: 400px; }
+}
+
+/* ═══ 新增：Element Plus 适配 & 任务卡样式 ═══ */
+
+/* el-card 扁平化覆盖 */
+:deep(.el-card--flat.sr-start-card), :deep(.el-card.el-card--flat.sr-pending-task-card) {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+}
+:deep(.el-card--flat .el-card__body) {
+  padding: 16px;
+}
+
+/* el-input 覆盖 */
+:deep(.sr-input-row__input .el-input__wrapper) {
+  height: 44px;
+}
+
+/* 建议按钮 */
+:deep(.sr-suggestions .el-button) {
+  margin: 0 4px 4px 0;
+  font-size: 13px;
+}
+
+/* 任务卡区 */
+.sr-task-card-section { margin-bottom: 18px; }
+.sr-task-card-header { display: flex; justify-content: space-between; align-items: center; }
+.sr-task-card-header .sr-section__title { display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.sr-task-card { border: 1px solid var(--color-primary); }
+.sr-task-card__title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.sr-task-card__goal { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+.sr-task-card__meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.sr-task-card__meta-item { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.sr-task-card__label { color: var(--text-tertiary); white-space: nowrap; }
+.sr-task-card__expect { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+.sr-task-card__pending, .sr-task-card__missing { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; }
+.sr-task-card__actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-light); }
+
+/* 待处理任务卡片 */
+.sr-pending-task-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+.sr-pending-task-card__body { min-width: 0; }
+.sr-pending-task-card__next { font-size: 12px; color: var(--text-tertiary); }
+
+/* 右侧目录 tag */
+.sr-toc__tag { font-size: 10px; padding: 0 4px; height: 18px; line-height: 18px; }
+
+/* 正文 alert 替代 */
+.sr-sec-alert { margin-bottom: 12px; }
+.sr-sec-alert :deep(.el-alert__title) { font-size: var(--font-size-sm); }
+
+/* 章节任务卡 */
+.sr-ai-section-card { background: var(--bg-page); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 10px 12px; margin: 0 var(--space-md) var(--space-sm); }
+.sr-ai-section-card__title { font-size: 12px; font-weight: 600; color: var(--text-tertiary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sr-ai-section-card__meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 13px; color: var(--text-primary); }
+.sr-ai-section-card__stats { font-size: 12px; color: var(--text-tertiary); display: flex; gap: 12px; margin-bottom: 8px; }
+.sr-ai-section-card__warn { color: var(--color-danger); }
+.sr-ai-section-card__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* AI 改写建议卡 */
+.sr-ai-rewrite-card { background: var(--surface-card); border: 1px solid var(--color-primary); border-radius: var(--radius-md); padding: 12px; margin-top: 8px; }
+.sr-ai-rewrite-card__title { font-size: 12px; font-weight: 600; color: var(--color-primary); margin-bottom: 8px; }
+.sr-ai-rewrite-card__summary, .sr-ai-rewrite-card__suggestion, .sr-ai-rewrite-card__evidence { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 6px; }
+.sr-ai-rewrite-card__actions { display: flex; gap: 4px; margin-top: 8px; }
+
+/* 证据链资料卡 */
+.sr-mat-card__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+
+/* 快捷按钮 */
+:deep(.sr-ai-quick .el-button) {
+  margin: 0 4px 4px 0;
+  font-size: 11px;
+}
+
+/* AI footer input */
+:deep(.ai-assistant-panel__input .el-input__wrapper) {
+  background: var(--bg-page);
+}
+:deep(.ai-assistant-panel__footer) {
+  display: flex; gap: 6px; padding: var(--space-sm) var(--space-md);
+}
+
+/* 资料详情弹窗 */
+.sr-dialog-form { padding: 0 4px; }
+
+/* 导出选项 */
+.sr-export-options { padding: 4px 0; }
+:deep(.sr-export-options .el-checkbox) {
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* 按新模板生成模板列表 */
+.sr-regen-tpl-list { padding: 0 4px; }
+.sr-regen-radio-group { display: flex; flex-direction: column; gap: 8px; }
+.sr-regen-radio-item { margin: 0; width: 100%; padding: 10px 14px; }
+:deep(.sr-regen-radio-item .el-radio__label) { width: 100%; }
+.sr-regen-radio-item__name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.sr-regen-radio-item__desc { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* 提交前检查表 */
+.sr-check-table { width: 100%; }
+
+/* ═══ AI 任务识别/确认页面 ═══ */
+.sr-task-dialog { max-width: 1200px; margin: 0 auto; }
+.sr-task-dialog__header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+.sr-task-dialog__header-title h2 { font-size: 20px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.sr-task-dialog__header-title p { font-size: 13px; color: var(--text-tertiary); margin: 0; }
+.sr-task-dialog__body { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; align-items: start; }
+
+/* 任务对话区 */
+.sr-task-dialog__chat { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; min-height: 300px; display: flex; flex-direction: column; gap: 12px; }
+.sr-task-dialog__msg { display: flex; gap: 10px; }
+.sr-task-dialog__msg--user { flex-direction: row-reverse; }
+.sr-task-dialog__msg-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+.sr-task-dialog__msg--ai .sr-task-dialog__msg-avatar { background: var(--color-primary-bg); color: var(--color-primary); }
+.sr-task-dialog__msg--user .sr-task-dialog__msg-avatar { background: var(--bg-page); color: var(--text-secondary); }
+.sr-task-dialog__msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; line-height: 1.6; }
+.sr-task-dialog__msg--ai .sr-task-dialog__msg-bubble { background: var(--bg-page); color: var(--text-primary); }
+.sr-task-dialog__msg--user .sr-task-dialog__msg-bubble { background: var(--color-primary); color: #fff; }
+.sr-task-dialog__thinking { color: var(--text-tertiary); font-style: italic; }
+.sr-task-dialog__re-input { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border-light); }
+
+/* 任务确认面板 */
+.sr-task-dialog__confirm { align-self: start; }
+.sr-task-confirm-card :deep(.el-card__header) { padding: 12px 16px; border-bottom: 1px solid var(--border-light); }
+.sr-task-confirm-card__header { display: flex; justify-content: space-between; align-items: center; }
+.sr-task-confirm-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.sr-task-confirm-card__section { margin-top: 12px; font-size: 13px; }
+.sr-task-confirm-card__label { color: var(--text-tertiary); font-weight: 500; }
+.sr-task-confirm-card__missing { color: var(--color-danger); }
+.sr-task-confirm-card__actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* ═══ AI 助手收起/展开 ═══ */
+.sr-assistant-toggle { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; color: var(--text-tertiary); font-size: 12px; transition: all .15s; }
+.sr-assistant-toggle:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.sr-assistant-toggle__title { font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.sr-assistant-toggle__desc { flex: 1; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-assistant-panel__header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border-light); }
+.ai-assistant-panel__title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); }
+
+@media (max-width: 1200px) {
+  .sr-task-dialog__body { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 1200px) {
+  .sr-task-dialog__body { grid-template-columns: 1fr; }
 }
 </style>
