@@ -2,6 +2,7 @@
   <div class="wb-business-panel">
     <component
       :is="artifactComponent"
+      :key="tool || 'empty'"
       :data="data"
       @explore="$emit('explore', $event)"
       @select-template="$emit('select-template', $event)"

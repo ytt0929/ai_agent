@@ -56,6 +56,13 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   const selectedDueTemplate = ref(null)
   const leftPanelData = reactive({})
 
+/** 统一设置左侧面板数据源 */
+function setLeftPanel(tool, payload = {}) {
+  activeTool.value = tool
+  Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
+  Object.assign(leftPanelData, payload)
+}
+
   // === Mock: 深圳软件企业 ===
   const shenzhenSoftwareEnterprises = [
     { id: 'sz001', name: '深圳市科创软件有限公司', region: '广东省·深圳市', industry: '软件业', risk: '低', progress: '可转尽调', tags: ['纳税A级', '无诉讼'], revenue: '320万', match: 96, reason: '纳税A级，无诉讼记录，经营稳定' },
@@ -173,6 +180,17 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     if (stage) stage.status = status
   }
 
+/** 阶段 upsert：保证 flowStages 中 id 唯一 */
+  function upsertStage(stage) {
+    const existing = flowStages.find(s => s.id === stage.id)
+    if (existing) {
+      Object.assign(existing, stage)
+      return existing
+    }
+    flowStages.push(stage)
+    return stage
+  }
+
   function setActiveStage(id) {
     activeStageId.value = id
     Object.keys(artifactData).forEach(k => delete artifactData[k])
@@ -183,6 +201,9 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     currentArtifactType.value = id
     Object.assign(artifactData, stage.artifactData || {})
 
+    layoutMode.value = 'workspace'
+
+    // Sync activeTool based on stage id — needed for left panel component switching
     const stageToolMap = {
       screen: 'screening',
       explore: 'exploration',
@@ -195,17 +216,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       deliverables: 'deliverables',
       reportEditor: 'reportEditor',
     }
-
     const mappedTool = stageToolMap[id]
     if (mappedTool) {
-      layoutMode.value = 'workspace'
       activeTool.value = mappedTool
-
-      const data = stage.artifactData || {}
-      if (Object.keys(data).length) {
-        Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
-        Object.assign(leftPanelData, data)
-      }
+      // Sync leftPanelData from stage artifactData (source of truth)
+      Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
+      Object.assign(leftPanelData, stage.artifactData || {})
     }
   }
 
@@ -279,7 +295,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     // 添加筛客阶段
     const stage = { id: 'screen', label: '智能筛客', icon: '🔍', status: 'active', artifactData: {} }
-    flowStages.push(stage)
+    upsertStage(stage)
     setActiveStage('screen')
 
     await pushStep('screen', '解析筛选条件', 'done', filters.map(f => ({ label: '条件', value: f })))
@@ -345,7 +361,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     activeTool.value = 'exploration'
 
     const stage = { id: 'explore', label: '企业探查', icon: '🏢', status: 'active', artifactData: {} }
-    flowStages.push(stage)
+    upsertStage(stage)
     setActiveStage('explore')
 
     await withThinking('正在探查企业信息', async () => {
@@ -415,7 +431,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     layoutMode.value = 'workspace'
 
     const stage = { id: 'monitor', label: '加入监控', icon: '📡', status: 'active', artifactData: {} }
-    flowStages.push(stage)
+    upsertStage(stage)
     setActiveStage('monitor')
 
     await withThinking('正在创建监控任务', async () => {
@@ -469,10 +485,14 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     activeTool.value = 'dueDiligence'
     layoutMode.value = 'workspace'
 
+    upsertStage({ id: 'dueDiligence', label: '新建尽调', icon: '📋', status: 'active', artifactData: {} })
+    setActiveStage('dueDiligence')
+
     Object.assign(leftPanelData, {
       enterprise: ent,
       templates: dueDiligenceTemplates,
       selectedTemplateId: null,
+      selectedTemplate: null,
       step: 'template-selection',
     })
 
@@ -484,6 +504,19 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   // ===================== 确认尽调模板 → 进入尽调流程 =====================
   async function confirmDueTemplate(template) {
     selectedDueTemplate.value = template
+
+    // Update existing dueDiligence stage (do NOT create duplicate)
+    const ddStage = flowStages.find(s => s.id === 'dueDiligence')
+    if (ddStage) {
+      ddStage.status = 'done'
+      ddStage.artifactData = {
+        ...ddStage.artifactData,
+        enterprise: selectedEnterprise.value,
+        template,
+        status: '已创建',
+      }
+    }
+
     leftPanelData.selectedTemplateId = template.id
     leftPanelData.selectedTemplate = template
     leftPanelData.step = 'task-created'
@@ -491,9 +524,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     await pushMessage('user', `选择模板「${template.name}」`)
     await delay(300)
 
-    // 创建尽调阶段
-    const stage = { id: 'dueDiligence', label: '新建尽调', icon: '📋', status: 'active', artifactData: {} }
-    flowStages.push(stage)
     setActiveStage('dueDiligence')
 
     await pushStep('dueDiligence', '创建尽调任务', 'done', [
@@ -502,15 +532,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       { label: '预计耗时', value: template.estimatedDays + '天' },
     ])
 
-    updateStageStatus('dueDiligence', 'done')
-    stage.artifactData = {
-      steps: stage.artifactData.steps || [],
-      enterprise: selectedEnterprise.value,
-      template,
-      status: '已创建',
-    }
     currentArtifactType.value = 'dueDiligence'
-    Object.assign(artifactData, stage.artifactData)
+    Object.assign(artifactData, ddStage ? ddStage.artifactData : {})
 
     await pushStreamingMessage('已创建尽调任务。正在进入智能尽调流程。')
     await delay(500)
@@ -521,8 +544,11 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
   // ===================== 工商校验 =====================
   async function runBusinessVerification() {
+    layoutMode.value = 'workspace'
+    activeTool.value = 'business'
+
     const stage = { id: 'business', label: '工商校验', icon: '🏛', status: 'active', artifactData: {} }
-    flowStages.push(stage)
+    upsertStage(stage)
     setActiveStage('business')
 
     await withThinking('正在校验工商信息', async () => {
@@ -567,11 +593,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
   // ===================== 税票采集 =====================
   async function runTaxCollectionStep() {
-    const stage = { id: 'tax', label: '税票采集', icon: '🎫', status: 'active', artifactData: {} }
-    flowStages.push(stage)
-    setActiveStage('tax')
-
+    layoutMode.value = 'workspace'
     activeTool.value = 'tax'
+
+    const stage = { id: 'tax', label: '税票采集', icon: '🎫', status: 'active', artifactData: {} }
+    upsertStage(stage)
+    setActiveStage('tax')
     Object.assign(leftPanelData, {
       customer: selectedEnterprise.value,
       chain: '生成授权链接 → 企业扫码授权 → RPA采集 → 数据入库',
@@ -627,7 +654,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       { time: '—', desc: '等待企业扫码授权', status: 'waiting' },
     ]
     Object.assign(artifactData, stage.artifactData)
-    Object.assign(leftPanelData, { linkStatus: '已发送', authStatus: '等待授权' })
+    Object.assign(leftPanelData, stage.artifactData)
 
     await pushStreamingMessage('采集链接已发送。等待企业线下扫码授权完成后，点击"模拟企业已授权"继续。')
     currentFlowStatus.value = 'waiting_tax_auth'
@@ -669,14 +696,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       { time: '10:51', desc: '数据入库完成', status: 'done' },
     ]
     Object.assign(artifactData, stage.artifactData)
-    Object.assign(leftPanelData, {
-      linkStatus: '已使用',
-      authStatus: '已授权',
-      input: stage.artifactData.input,
-      output: stage.artifactData.output,
-      filing: stage.artifactData.filing,
-      autoLog: stage.artifactData.autoLog,
-    })
+    Object.assign(leftPanelData, stage.artifactData)
 
     await pushStreamingMessage('税票数据采集完成，开始资料收集。')
     await delay(500)
@@ -685,11 +705,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
   // ===================== 资料收集 =====================
   async function runMaterialCollectionStep() {
-    const stage = { id: 'materials', label: '资料收集', icon: '📁', status: 'active', artifactData: {} }
-    flowStages.push(stage)
-    setActiveStage('materials')
-
+    layoutMode.value = 'workspace'
     activeTool.value = 'materials'
+
+    const stage = { id: 'materials', label: '资料收集', icon: '📁', status: 'active', artifactData: {} }
+    upsertStage(stage)
+    setActiveStage('materials')
     const materials = [
       { name: '财务报表', status: '已收集' },
       { name: '银行流水', status: '已收集' },
@@ -723,11 +744,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
   // ===================== 风险诊断 =====================
   async function runRiskDiagnosisStep() {
-    const stage = { id: 'riskDiagnosis', label: '风险诊断', icon: '🧠', status: 'active', artifactData: {} }
-    flowStages.push(stage)
-    setActiveStage('riskDiagnosis')
-
+    layoutMode.value = 'workspace'
     activeTool.value = 'riskDiagnosis'
+
+    const stage = { id: 'riskDiagnosis', label: '风险诊断', icon: '🧠', status: 'active', artifactData: {} }
+    upsertStage(stage)
+    setActiveStage('riskDiagnosis')
 
     await withThinking('正在进行风险诊断', async () => {
       await delay(600)
@@ -756,11 +778,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
   // ===================== 产物生成 =====================
   async function generateDeliverables() {
-    const stage = { id: 'deliverables', label: '产物生成', icon: '📦', status: 'active', artifactData: {} }
-    flowStages.push(stage)
-    setActiveStage('deliverables')
-
+    layoutMode.value = 'workspace'
     activeTool.value = 'deliverables'
+
+    const stage = { id: 'deliverables', label: '产物生成', icon: '📦', status: 'active', artifactData: {} }
+    upsertStage(stage)
+    setActiveStage('deliverables')
 
     await pushStep('deliverables', '生成产物清单', 'done', [
       { label: '尽调资料包', value: '18份' },
@@ -789,7 +812,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     await delay(300)
 
     const stage = { id: 'reportEditor', label: '报告编辑', icon: '📝', status: 'active', artifactData: {} }
-    flowStages.push(stage)
+    upsertStage(stage)
     setActiveStage('reportEditor')
 
     const sections = [
@@ -1024,7 +1047,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     currentFlowStatus, currentStageId, flowStartedAt, flowCompletedAt,
     isThinking, thinkingText,
     processSteps, sidebarMode, contextSuggestions,
-    sendMessage, reset, setActiveStage,
+    sendMessage, reset, setActiveStage, setLeftPanel,
     // 三态布局
     layoutMode, activeTool, selectedEnterprise, selectedDueTemplate, leftPanelData,
     startFromWorkbenchInput, runIntentRecognition,

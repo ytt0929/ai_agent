@@ -676,7 +676,7 @@ html, body {
 .ai-assistant-panel {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   height: 100%;

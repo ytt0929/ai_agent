@@ -1832,6 +1832,9 @@ function viewEvidenceFromRewrite() {
   max-width: 1440px;
   margin: 0 auto;
   overflow-y: auto;
+  /* 设为 flex 容器，让 .sr-template-center / .sr-template-upload 的 flex: 1 生效 */
+  display: flex;
+  flex-direction: column;
 }
 
 /* ═══ 首页 ═══ */
@@ -2420,7 +2423,7 @@ function viewEvidenceFromRewrite() {
   padding: 16px;
   overflow-y: auto;
   min-height: 0;
-  height: 100%;
+  max-height: calc(100vh - 280px);
 }
 .sr-tc-detail__info-card {
   margin-bottom: 16px;
@@ -2586,6 +2589,8 @@ function viewEvidenceFromRewrite() {
   grid-template-columns: 380px 1fr;
   gap: 20px;
   align-items: start;
+  flex: 1;
+  min-height: 0;
 }
 .sr-tu__upload-zone {
   display: flex;

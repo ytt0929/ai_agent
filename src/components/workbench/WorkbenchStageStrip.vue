@@ -1,8 +1,8 @@
 <template>
   <div class="stage-strip">
     <el-button
-      v-for="stage in stages"
-      :key="stage.id"
+      v-for="(stage, index) in stages"
+      :key="`${stage.id}-${index}`"
       :class="['stage-tab', stage.status, { active: stage.id === activeStageId }]"
       :disabled="stage.status === 'pending'"
       size="small"

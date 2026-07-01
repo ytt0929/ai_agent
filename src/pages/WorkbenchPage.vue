@@ -12,76 +12,68 @@
         </el-badge>
       </header>
 
-      <div class="wb-home__grid">
-        <section class="wb-card wb-card--wide">
-          <h2 class="wb-card__title">今日待办 <el-tag size="small" round type="info">{{ todos.length }}</el-tag></h2>
-          <div class="wb-todo-list">
-            <div v-for="todo in todos" :key="todo.id" class="wb-todo" :class="{ 'wb-todo--urgent': todo.level === 'danger' }">
-              <span class="wb-todo__dot" :class="`wb-todo__dot--${todo.level}`"></span>
-              <span class="wb-todo__text"><strong>{{ todo.enterprise }}</strong> · {{ todo.desc }}</span>
-              <el-button size="small" type="primary" link @click="go(todo.route)">{{ todo.action }}</el-button>
-            </div>
-          </div>
+      <!-- ══ 第一屏：AI Copilot 主输入面板 ══ -->
+      <section class="wb-ai-hero">
+        <div class="wb-ai-hero__head">
+          <div class="wb-ai-hero__eye">AI Copilot</div>
+          <h2 class="wb-ai-hero__title">用一句话开始客户经营</h2>
+          <p class="wb-ai-hero__desc">可以自然语言筛客、探索企业、发起尽调、查风险、生成报告。</p>
+        </div>
+        <div class="wb-ai-hero__example">
+          <span class="wb-ai-hero__example-label">查询示例</span>
+          <el-button link type="primary" size="small" class="wb-ai-hero__example-btn" @click="fillDemoQuery">
+            筛选浙江省制造业、低风险、近一年有开票记录、适合转尽调的客户
+          </el-button>
+          <el-button type="primary" plain size="small" @click="sendDemoQuery">直接发送</el-button>
+        </div>
+        <el-input
+          v-model="dialogInputLocal"
+          placeholder="例如：筛选浙江省制造业、低风险、近一年有开票记录、适合转尽调的客户"
+          clearable
+          size="large"
+          @keyup.enter="handleNormalSend"
+          class="wb-ai-hero__input"
+        >
+          <template #prefix><el-icon><ChatDotRound /></el-icon></template>
+          <template #append><el-button type="primary" @click="handleNormalSend"><el-icon><Promotion /></el-icon></el-button></template>
+        </el-input>
+      </section>
 
-          <div class="wb-ai-tip">
-            <div class="wb-ai-tip__header"><el-icon><MagicStick /></el-icon> 推荐下一步</div>
-            <p>优先处理「宁波天合新材料」税票超时事项；杭州智造装备证据已齐，可进入报告确认。</p>
-            <div class="wb-ai-tip__actions">
-              <el-button size="small" type="primary" plain @click="handleAdopt">采纳建议</el-button>
-              <el-button size="small" plain @click="handleIgnore">稍后处理</el-button>
-            </div>
-          </div>
+      <!-- ══ 第二层：推荐下一步 ══ -->
+      <section class="wb-ai-recommend">
+        <div class="wb-ai-recommend__header"><el-icon><MagicStick /></el-icon> 推荐下一步</div>
+        <p class="wb-ai-recommend__text">优先处理「宁波天合新材料」税票超时事项；杭州智造装备证据已齐，可进入报告确认。</p>
+      </section>
 
-          <div class="wb-home__composer">
-            <div class="wb-home__composer-label"><el-icon><Promotion /></el-icon> 下一步让 AI 处理</div>
-            <el-input v-model="dialogInputLocal" placeholder="例如：帮我筛选深圳的软件企业，看看工商风险和进度" clearable @keyup.enter="handleNormalSend" size="large">
-              <template #prefix><el-icon><ChatDotRound /></el-icon></template>
-              <template #append><el-button type="primary" @click="handleNormalSend"><el-icon><Promotion /></el-icon></el-button></template>
-            </el-input>
-            <div class="wb-home__chips">
-              <button class="wb-chip" @click="handleNormalSendWith('处理税票')"><el-icon><Tickets /></el-icon>处理税票</button>
-              <button class="wb-chip" @click="handleNormalSendWith('查看证据')"><el-icon><Picture /></el-icon>查看证据</button>
-              <button class="wb-chip" @click="handleNormalSendWith('帮我筛选深圳的软件企业，看看工商风险和进度')"><el-icon><Search /></el-icon>发起筛客</button>
-              <button class="wb-chip" @click="handleNormalSendWith('生成报告摘要')"><el-icon><DocumentChecked /></el-icon>生成报告摘要</button>
-            </div>
+      <!-- ══ 第三层：今日待办 ══ -->
+      <section class="wb-card wb-card--wide wb-todos-section">
+        <h2 class="wb-card__title">今日待办 <el-tag size="small" round type="info">{{ todos.length }}</el-tag></h2>
+        <div class="wb-todo-list">
+          <div v-for="todo in todos" :key="todo.id" class="wb-todo" :class="{ 'wb-todo--urgent': todo.level === 'danger' }">
+            <span class="wb-todo__dot" :class="`wb-todo__dot--${todo.level}`"></span>
+            <span class="wb-todo__text"><strong>{{ todo.enterprise }}</strong> · {{ todo.desc }}</span>
+            <el-button size="small" type="primary" link @click="go(todo.route)">{{ todo.action }}</el-button>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section class="wb-card wb-card--narrow">
-          <h2 class="wb-card__title wb-card__title--sm">本周进度</h2>
-          <div class="wb-stats">
-            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--color-success)">3</span><span class="wb-stat__label">本周完成尽调</span></div>
-            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--color-warning)">5</span><span class="wb-stat__label">在途</span></div>
-            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--text-tertiary)">12</span><span class="wb-stat__label">监测企业</span></div>
-          </div>
-        </section>
-
-        <section class="wb-card wb-card--narrow">
-          <h2 class="wb-card__title wb-card__title--sm">快捷操作</h2>
-          <div class="wb-quick">
-            <el-button v-for="qa in quickActions" :key="qa.label" class="wb-quick-btn" @click="go(qa.route)">
-              <el-icon><component :is="iconMap[qa.icon]" /></el-icon><span>{{ qa.label }}</span>
-            </el-button>
-          </div>
-        </section>
-
-        <section class="wb-card wb-card--wide">
-          <h2 class="wb-card__title wb-card__title--sm">我的任务</h2>
-          <el-table :data="tasks" stripe size="small">
-            <el-table-column prop="name" label="企业名称" min-width="140" />
-            <el-table-column prop="type" label="类型" width="70" align="center" />
-            <el-table-column label="进度" width="160">
-              <template #default="{ row }"><el-progress :percentage="row.progress" :status="pStatus(row.progress)" :stroke-width="8" /></template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="80" align="center">
-              <template #default="{ row }"><el-tag :type="sTag(row.status)" size="small" round>{{ row.status }}</el-tag></template>
-            </el-table-column>
-            <el-table-column label="下一步" width="120" align="center">
-              <template #default="{ row }"><el-button size="small" type="primary" link @click="go(row.route)">{{ row.next }}</el-button></template>
-            </el-table-column>
-          </el-table>
-        </section>
-      </div>
+      <!-- ══ 第四层：我的任务 ══ -->
+      <section class="wb-card wb-card--wide">
+        <h2 class="wb-card__title wb-card__title--sm">我的任务</h2>
+        <el-table :data="tasks" stripe size="small">
+          <el-table-column prop="name" label="企业名称" min-width="140" />
+          <el-table-column prop="type" label="类型" width="70" align="center" />
+          <el-table-column label="进度" width="160">
+            <template #default="{ row }"><el-progress :percentage="row.progress" :status="pStatus(row.progress)" :stroke-width="8" /></template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="80" align="center">
+            <template #default="{ row }"><el-tag :type="sTag(row.status)" size="small" round>{{ row.status }}</el-tag></template>
+          </el-table-column>
+          <el-table-column label="下一步" width="120" align="center">
+            <template #default="{ row }"><el-button size="small" type="primary" link @click="go(row.route)">{{ row.next }}</el-button></template>
+          </el-table-column>
+        </el-table>
+      </section>
     </div>
 
     <!-- ==================== AI Copilot 二级页 ==================== -->
@@ -123,6 +115,11 @@
                 class="wb-composer__input"
               />
               <el-button type="primary" :icon="Promotion" @click="sendMsg" />
+            </div>
+            <div class="wb-quick-row">
+              <button class="wb-quick-sm" v-for="qa in quickActions" :key="qa.label" @click="go(qa.route)">
+                <el-icon><component :is="iconMap[qa.icon]" /></el-icon><span>{{ qa.label }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -197,6 +194,11 @@
               />
               <el-button type="primary" size="default" class="ai-assistant-panel__send" @click="sendMsg">发送</el-button>
             </div>
+            <div class="ai-assistant-panel__quick-actions">
+              <button class="wb-quick-sm" v-for="qa in quickActions" :key="qa.label" @click="go(qa.route)">
+                <el-icon><component :is="iconMap[qa.icon]" /></el-icon><span>{{ qa.label }}</span>
+              </button>
+            </div>
           </aside>
         </div>
       </div>
@@ -237,6 +239,17 @@ const quickActions = [
   { label: '识别文件', icon: 'Picture', route: '/doc-recognition' },
 ]
 const iconMap = { Plus, Search, Tickets, Picture }
+
+const demoQuery = '筛选浙江省制造业、低风险、近一年有开票记录、适合转尽调的客户'
+
+function fillDemoQuery() {
+  dialogInputLocal.value = demoQuery
+}
+
+function sendDemoQuery() {
+  dialogInputLocal.value = demoQuery
+  handleNormalSend()
+}
 
 const greeting = computed(() => { const h = new Date().getHours(); return h < 6 ? '夜深了' : h < 9 ? '早上好' : h < 12 ? '上午好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好' })
 const formattedDate = computed(() => { const d = new Date(); const days = ['周日','周一','周二','周三','周四','周五','周六']; return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${days[d.getDay()]}` })
@@ -315,6 +328,7 @@ function clearChat() { assistant.reset() }
 .wb-home__grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
 .wb-card { background: var(--bg-card, #fff); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color, #dbe7f5); }
 .wb-card--wide { grid-column: 1 / -1; }
+.wb-todos-section { max-width: 100%; }
 .wb-card__title { font-size: 16px; font-weight: 600; color: var(--text-primary, #1a1a2e); margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
 .wb-card__title--sm { font-size: 14px; margin-bottom: 12px; }
 
@@ -329,16 +343,65 @@ function clearChat() { assistant.reset() }
 .wb-todo__dot--info { background: var(--text-tertiary, #94a3b8); }
 .wb-todo__text { flex: 1; font-size: 14px; color: var(--text-primary, #1a1a2e); }
 
-.wb-ai-tip { margin-top: 16px; padding: 16px; background: var(--bg-card-hover, #f7faff); border-radius: 8px; border: 1px solid var(--border-color-light, #e5eaf2); }
-.wb-ai-tip__header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-primary, #1a1a2e); }
-.wb-ai-tip__header .el-icon { color: var(--color-primary, #2563eb); }
-.wb-ai-tip p { font-size: 13px; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0 0 10px; }
-.wb-ai-tip__actions { display: flex; gap: 8px; }
+.wb-ai-recommend { background: var(--surface-card, #fff); border: 1px solid var(--border-color-light, #e5eaf2); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 16px; }
+.wb-ai-recommend__header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--text-primary, #1a1a2e); }
+.wb-ai-recommend__header .el-icon { color: var(--color-primary, #2563eb); }
+.wb-ai-recommend__text { font-size: 13px; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0 0 8px; }
+.wb-ai-recommend__actions { display: flex; gap: 8px; }
 
-.wb-home__composer { margin-top: 20px; padding: 16px; background: var(--bg-card-hover, #f7faff); border-radius: 8px; border: 1px solid var(--border-color-light, #e5eaf2); }
-.wb-home__composer-label { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary, #1a1a2e); }
-.wb-home__composer-label .el-icon { color: var(--color-primary, #2563eb); font-size: 14px; }
-.wb-home__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* ══ AI Hero 主输入面板 ══ */
+.wb-ai-hero {
+  background: var(--surface-card, #fff);
+  border: 1px solid var(--border-color, #dbe7f5);
+  border-radius: var(--radius-lg, 12px);
+  padding: 24px 28px;
+  margin-bottom: 16px;
+}
+.wb-ai-hero__head { margin-bottom: 16px; }
+.wb-ai-hero__eye {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+  background: var(--color-primary-bg, #eef2ff);
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-full, 9999px);
+  margin-bottom: 8px;
+}
+.wb-ai-hero__title {
+  font-size: var(--font-size-workbench-title, 24px);
+  font-weight: 700;
+  color: var(--text-primary, #1a1a2e);
+  margin: 0 0 6px;
+}
+.wb-ai-hero__desc {
+  font-size: 14px;
+  color: var(--text-secondary, #64748b);
+  margin: 0;
+}
+.wb-ai-hero__example {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  padding: 10px 12px;
+  background: var(--surface-page, #f7faff);
+  border: 1px solid var(--border-color-divider, #f1f5f9);
+  border-radius: var(--radius-md, 8px);
+}
+.wb-ai-hero__example-label {
+  font-size: 12px;
+  color: var(--text-tertiary, #94a3b8);
+  flex-shrink: 0;
+}
+.wb-ai-hero__example-btn {
+  font-size: 13px;
+  padding: 0;
+  height: auto;
+}
+.wb-ai-hero__input { width: 100%; }
+.wb-ai-hero__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .wb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--border-color, #dbe7f5); border-radius: 20px; background: var(--bg-card, #fff); color: var(--text-secondary, #64748b); font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .wb-chip:hover { border-color: var(--color-primary, #2563eb); color: var(--color-primary, #2563eb); background: var(--color-primary-bg, #eef2ff); }
 .wb-chip .el-icon { font-size: 14px; }
@@ -506,6 +569,32 @@ function clearChat() { assistant.reset() }
 }
 .wb-composer-row .el-input { flex: 1; }
 .wb-composer-row .el-button { flex-shrink: 0; }
+
+/* 快捷小入口行 */
+.wb-quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color-divider, #f1f5f9);
+}
+.wb-quick-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-color-light, #e5eaf2);
+  border-radius: 16px;
+  background: var(--surface-card, #fff);
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.wb-quick-sm:hover { border-color: var(--color-primary, #2563eb); color: var(--color-primary, #2563eb); background: var(--color-primary-bg, #eef2ff); }
+.wb-quick-sm .el-icon { font-size: 13px; }
 
 /* 居中态 composer 建议按钮 */
 .wb-composer .wb-sug {

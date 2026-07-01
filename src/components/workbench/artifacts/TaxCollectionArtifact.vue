@@ -1,30 +1,27 @@
 <template>
   <div class="artifact-tax">
-    <el-card shadow="never" class="artifact-card">
-      <template #header>
-        <div class="artifact-card__header">
-          <span class="artifact-card__title">税票采集</span>
-          <el-tag :type="statusTag" size="small">{{ currentStatus }}</el-tag>
-        </div>
-      </template>
+    <!-- 标题行 -->
+    <div class="artifact-tax__header-row">
+      <span class="artifact-tax__title">税票采集</span>
+      <el-tag :type="statusTag" size="small" effect="plain">{{ currentStatus }}</el-tag>
+    </div>
 
-      <el-descriptions :column="2" size="small" border>
-        <el-descriptions-item label="授权状态">
-          <el-tag :type="authStatus === '已授权' ? 'success' : 'warning'" size="small">{{ authStatus }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="链接状态">
-          <el-tag :type="linkStatus === '已使用' ? 'info' : linkStatus === '已发送' ? 'warning' : 'danger'" size="small">{{ linkStatus }}</el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
+    <!-- 授权/链接状态 -->
+    <div class="artifact-tax__status-row">
+      <div class="artifact-tax__status-cell">
+        <span class="artifact-tax__status-label">授权状态</span>
+        <el-tag :type="authStatus === '已授权' ? 'success' : 'warning'" size="small" effect="plain">{{ authStatus }}</el-tag>
+      </div>
+      <div class="artifact-tax__status-cell">
+        <span class="artifact-tax__status-label">链接状态</span>
+        <el-tag :type="linkStatus === '已使用' ? 'info' : linkStatus === '已发送' ? 'warning' : 'danger'" size="small" effect="plain">{{ linkStatus }}</el-tag>
+      </div>
+    </div>
 
-    <el-card shadow="never" class="artifact-card">
-      <template #header><span class="artifact-card__title">采集进度</span></template>
-      <el-steps :active="currentStep" finish-status="success" size="small">
-        <el-step v-for="(s, i) in steps" :key="i" :title="s.title" :status="s.status" />
-      </el-steps>
-    </el-card>
+    <!-- 采集进度标题 -->
+    <div class="artifact-tax__section-title">采集进度</div>
 
+    <!-- 采集进度卡片 -->
     <el-row :gutter="12" class="artifact-metric-row">
       <el-col :span="8">
         <el-card shadow="never" class="artifact-metric-card">
@@ -89,6 +86,19 @@ function logStatusText(s) { return { done: '✅', waiting: '⏳', running: '🔄
 
 <style scoped>
 .artifact-tax { display: flex; flex-direction: column; gap: 12px; }
+
+/* 标题行 */
+.artifact-tax__header-row { display: flex; align-items: center; gap: 8px; }
+.artifact-tax__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+/* 状态行 */
+.artifact-tax__status-row { display: flex; gap: 12px; }
+.artifact-tax__status-cell { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-card, #f8fafc); border-radius: 6px; font-size: 13px; }
+.artifact-tax__status-label { color: var(--text-secondary); }
+
+/* 区块标题 */
+.artifact-tax__section-title { font-size: 13px; font-weight: 600; color: var(--text-primary); padding: 4px 0; border-bottom: 1px solid var(--border-color-divider); }
+
 .artifact-card :deep(.el-card__header) { padding: 12px 16px; }
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
 .artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
