@@ -1,0 +1,561 @@
+<template>
+  <div class="page">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">企业监测</h1>
+        <p class="page-subtitle">用一句话告诉 AI 监测哪家企业、哪些风险，AI 自动建立监测并生成预警</p>
+      </div>
+    </div>
+
+    <!-- ====== Phase 1: 发起监测 ====== -->
+    <section v-if="monitorView === 'launch'" class="monitor-launch card-animate">
+      <!-- AI 入口区 -->
+      <div class="launch-card">
+        <div class="launch-eyebrow">
+          <el-icon><MagicStick /></el-icon>
+          <span>AI 创建监测</span>
+        </div>
+        <h2 class="launch-title">告诉 AI 要监测哪家企业、哪些风险变化</h2>
+        <div class="launch-input-wrap">
+          <textarea
+            v-model="store.quickMonitorInput"
+            class="launch-input"
+            placeholder="例：监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我"
+          ></textarea>
+          <div class="launch-actions">
+            <el-button type="primary" size="large" @click="handleCreateMonitor">
+              <el-icon><MagicStick /></el-icon>
+              开始监测
+            </el-button>
+            <el-button plain size="large" @click="handleManualMonitor">手工添加</el-button>
+          </div>
+        </div>
+
+        <!-- AI 识别结果 -->
+        <div v-if="store.parsedQuickMonitor" class="recognized-block">
+          <div class="recognized-title">AI 已理解你的监测要求</div>
+          <div class="recognized-items">
+            <div class="recognized-item">
+              <div class="ri-label">被监测企业</div>
+              <div class="ri-value">{{ store.parsedQuickMonitor.enterprises.join('、') }}</div>
+            </div>
+            <div v-for="d in store.parsedQuickMonitor.dimensions" :key="d.name" class="recognized-item">
+              <div class="ri-label">
+                <el-tag size="small" :type="dimTagType(d.level)" effect="plain">{{ d.name }}</el-tag>
+              </div>
+              <div class="ri-value">{{ d.condition }}</div>
+              <div class="ri-meta">风险等级：{{ dimLevelText(d.level) }}</div>
+            </div>
+          </div>
+          <div class="recognized-suggestion">
+            <el-icon><InfoFilled /></el-icon>
+            <span>建议动作：生成预警提醒 → 客户经理确认 → 可推送尽调</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 快捷示例 -->
+      <div class="launch-examples">
+        <div class="examples-label">💡 试试这样说：</div>
+        <div class="examples-list">
+          <div class="example-chip" @click="useExample(0)">监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我</div>
+          <div class="example-chip" @click="useExample(1)">帮我盯着浙江新源动力，法人变更和股权出质时通知我</div>
+          <div class="example-chip" @click="useExample(2)">关注杭州锐思软件，征信报告过期或审计到期时通知我</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== Phase 2: AI 正在工作 ====== -->
+    <section v-else-if="monitorView === 'running'" class="monitor-running card-animate">
+      <div class="running-user-query">
+        <span class="running-user-label">你的监测要求</span>
+        <span class="running-user-text">「{{ runningText }}」</span>
+      </div>
+
+      <div v-if="store.parsedQuickMonitor" class="running-recognized">
+        <div class="running-recognized-label">AI 识别结果</div>
+        <div class="running-recognized-items">
+          <span class="running-ent-tag">{{ store.parsedQuickMonitor.enterprises.join('、') }}</span>
+          <span v-for="d in store.parsedQuickMonitor.dimensions" :key="d.name" class="running-dim-tag">
+            {{ d.name }}：{{ d.condition }}
+          </span>
+        </div>
+      </div>
+
+      <div class="running-progress">
+        <div v-for="(step, idx) in runningSteps" :key="step.label" class="running-progress-step" :class="step.status">
+          <div class="rps-line"></div>
+          <div class="rps-dot">
+            <span v-if="step.status === 'done'">✓</span>
+            <span v-else-if="step.status === 'active'" class="rps-spinner"></span>
+            <span v-else>{{ idx + 1 }}</span>
+          </div>
+          <div>
+            <div class="rps-label">{{ step.label }}</div>
+            <div class="rps-desc">{{ step.status === 'done' ? step.result : step.loadingText }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== Phase 3: 结果 ====== -->
+    <div v-else class="monitor-results">
+      <!-- 结果顶部 -->
+      <div class="results-header card-animate">
+        <div>
+          <div class="results-eyebrow">AI 已完成首轮扫描</div>
+          <div class="results-title">监测已建立，以下是发现</div>
+        </div>
+        <div class="results-header-actions">
+          <el-button plain @click="goLaunch">
+            <el-icon><Plus /></el-icon>
+            新建监测
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 新创建的监测任务 -->
+      <section v-if="store.createdMonitorResult" class="created-card card-animate">
+        <div class="created-icon-wrap">
+          <el-icon class="created-icon"><CircleCheckFilled /></el-icon>
+        </div>
+        <div class="created-body">
+          <div class="created-name">{{ store.createdMonitorResult.rule.name }}</div>
+          <div class="created-dims">
+            <span v-for="d in store.createdMonitorResult.rule.dimensions" :key="d.name" class="created-dim-tag">
+              {{ d.name }} → {{ d.condition }}
+            </span>
+          </div>
+          <div class="created-status">AI 已模拟触发 <strong>1 条预警</strong>，请确认处置。</div>
+        </div>
+        <div class="created-actions">
+          <el-button size="small" type="primary" @click="store.openDetail(store.createdMonitorResult.warning)">查看预警</el-button>
+          <el-button size="small" plain @click="handlePushWarning(store.createdMonitorResult.warning)">推送尽调</el-button>
+        </div>
+      </section>
+
+      <!-- AI 摘要：需要我关注的 -->
+      <section class="ai-brief-section card-animate">
+        <div class="section-head">
+          <div>
+            <div class="section-title">🤖 AI 摘要：需要你关注的变化</div>
+            <div class="section-subtitle">按风险级别和处置状态自动排序，高优先级的排在前面</div>
+          </div>
+        </div>
+        <div class="decision-list">
+          <div v-for="item in store.decisionQueue" :key="item.id" class="decision-item" @click="store.openDetail(item)">
+            <div class="decision-dot" :class="item.level"></div>
+            <div class="decision-main">
+              <div class="decision-row">
+                <span class="decision-enterprise">{{ item.enterprise.name }}</span>
+                <span class="decision-title">{{ item.title }}</span>
+              </div>
+              <div class="decision-explain">{{ item.suggestion.next }}</div>
+              <div class="decision-tags">
+                <span v-for="tag in item.reasonTags" :key="tag">{{ tag }}</span>
+              </div>
+            </div>
+            <div class="decision-action" @click.stop>
+              <el-button size="small" type="primary" plain @click="handleRecommendedAction(item)">{{ item.recommendedAction.label }}</el-button>
+            </div>
+          </div>
+          <div v-if="!store.decisionQueue.length" class="decision-empty">AI 暂未发现需要接管的变化。</div>
+        </div>
+      </section>
+
+      <!-- 正在监控的规则列表 -->
+      <section class="monitored-section card-animate">
+        <div class="section-head">
+          <div>
+            <div class="section-title">正在监控</div>
+            <div class="section-subtitle">所有已建立的监测任务和预警计数</div>
+          </div>
+          <el-button text type="primary" @click="store.setActiveTab('rules')">管理全部规则</el-button>
+        </div>
+        <div class="monitor-rule-list">
+          <div v-for="rule in store.monitoredRules.slice(0, 4)" :key="rule.id" class="monitor-rule-card">
+            <div class="monitor-rule-main">
+              <div class="monitor-rule-title">{{ rule.name }}</div>
+              <div class="monitor-rule-meta">
+                <span>{{ rule.source }}</span>
+                <span>监测 {{ rule.enterprises.join('、') }}</span>
+                <span>{{ rule.status === 'running' ? '监测中' : '已暂停' }}</span>
+              </div>
+              <div class="monitor-rule-dims">
+                <span v-for="d in rule.dimensions" :key="d.name">{{ d.name }}：{{ d.condition }}</span>
+              </div>
+            </div>
+            <div class="monitor-rule-side">
+              <div class="monitor-rule-count">{{ rule.warningCount }}</div>
+              <div class="monitor-rule-label">提醒</div>
+              <el-button v-if="rule.latestWarning" size="small" text type="primary" @click="store.openDetail(rule.latestWarning)">查看最新</el-button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI 概览 -->
+      <div class="kpi-row card-animate">
+        <div class="kpi-card"><div class="kpi-value">{{ store.kpi.monitored }}</div><div class="kpi-label">监测企业</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:var(--color-warning)">{{ store.kpi.todayWarnings }}</div><div class="kpi-label">今日预警</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:var(--color-primary)">{{ store.kpi.unread }}</div><div class="kpi-label">未读</div></div>
+        <div class="kpi-card"><div class="kpi-value" style="color:var(--color-danger)">{{ store.kpi.expired }}</div><div class="kpi-label">资料过期</div></div>
+      </div>
+
+      <!-- Tab 切换 -->
+      <div class="tab-bar card-animate">
+        <div class="tab-item" :class="{ active: store.activeTab === 'warnings' }" @click="store.setActiveTab('warnings')">
+          预警明细 <span class="tab-count">{{ store.warnings.filter(w=>w.type==='enterprise').length }}</span>
+        </div>
+        <div class="tab-item" :class="{ active: store.activeTab === 'compliance' }" @click="store.setActiveTab('compliance')">
+          合规监测 <span class="tab-count">{{ store.complianceWarnings.length }}</span>
+        </div>
+        <div class="tab-item" :class="{ active: store.activeTab === 'rules' }" @click="store.setActiveTab('rules')">
+          我的规则 <span class="tab-count">{{ store.rules.length }}</span>
+        </div>
+      </div>
+
+      <!-- Tab: 预警明细 -->
+      <div v-if="store.activeTab === 'warnings'" class="tab-content card-animate">
+        <div class="filter-row">
+          <div class="filter-chips">
+            <div class="filter-chip" :class="{ active: store.warningFilter === 'all' }" @click="store.setWarningFilter('all')">全部 {{ store.warnings.filter(w=>w.type==='enterprise').length }}</div>
+            <div class="filter-chip danger" :class="{ active: store.warningFilter === 'high' }" @click="store.setWarningFilter('high')">🔴 高 {{ store.warnings.filter(w=>w.type==='enterprise'&&w.level==='high').length }}</div>
+            <div class="filter-chip warning" :class="{ active: store.warningFilter === 'medium' }" @click="store.setWarningFilter('medium')">🟡 中 {{ store.warnings.filter(w=>w.type==='enterprise'&&w.level==='medium').length }}</div>
+            <div class="filter-chip info" :class="{ active: store.warningFilter === 'low' }" @click="store.setWarningFilter('low')">🟢 低 {{ store.warnings.filter(w=>w.type==='enterprise'&&w.level==='low').length }}</div>
+            <div class="filter-chip" :class="{ active: store.warningFilter === 'unread' }" @click="store.setWarningFilter('unread')">未读</div>
+          </div>
+        </div>
+        <div class="warning-list">
+          <div v-for="w in store.filteredWarnings.filter(w=>w.type==='enterprise')" :key="w.id" class="warning-item" :class="{ unread: !w.read }" @click="store.openDetail(w)">
+            <div class="warning-level-dot" :class="w.level"></div>
+            <div class="warning-main">
+              <div class="warning-enterprise">{{ w.enterprise.name }}</div>
+              <div class="warning-title">{{ w.title }}</div>
+              <div class="warning-summary">{{ w.summary }}</div>
+              <div class="warning-meta">
+                <span class="warning-rule">触发规则：{{ w.ruleName }}</span>
+                <span v-if="w.pushedToDueDiligence" class="action-tag action-tag--due">已推送尽调</span>
+                <span v-if="w.focused" class="action-tag action-tag--focus">重点关注</span>
+              </div>
+            </div>
+            <div class="warning-side">
+              <div class="warning-time">{{ w.time }}</div>
+              <div class="warning-status" :class="w.read ? 'read' : 'unread'">{{ w.read ? '已读' : '未读' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: 合规监测 -->
+      <div v-if="store.activeTab === 'compliance'" class="tab-content card-animate">
+        <div class="filter-row">
+          <div class="filter-chips">
+            <div class="filter-chip" :class="{ active: store.complianceFilter === 'all' }" @click="store.setComplianceFilter('all')">全部</div>
+            <div class="filter-chip danger" :class="{ active: store.complianceFilter === 'expired' }" @click="store.setComplianceFilter('expired')">🔴 已过期</div>
+            <div class="filter-chip warning" :class="{ active: store.complianceFilter === 'expiring' }" @click="store.setComplianceFilter('expiring')">🟡 即将过期</div>
+          </div>
+        </div>
+        <div class="warning-list">
+          <div v-for="w in store.complianceWarnings" :key="w.id" class="warning-item compliance-item" :class="{ unread: !w.read }" @click="store.openDetail(w)">
+            <div class="warning-level-dot" :class="w.level"></div>
+            <div class="warning-main">
+              <div class="warning-enterprise">{{ w.enterprise.name }}</div>
+              <div class="warning-title">{{ w.docType }} — {{ w.title }}</div>
+              <div class="warning-summary">{{ w.summary }}</div>
+              <div class="warning-meta">
+                <span v-if="w.pushedToDueDiligence" class="action-tag action-tag--due">已推送尽调</span>
+                <span v-if="w.focused" class="action-tag action-tag--focus">重点关注</span>
+              </div>
+            </div>
+            <div class="warning-side">
+              <div class="warning-time">{{ w.time }}</div>
+              <div class="warning-status" :class="w.read ? 'read' : 'unread'">{{ w.read ? '已读' : '未读' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: 我的规则 -->
+      <div v-if="store.activeTab === 'rules'" class="tab-content card-animate">
+        <div v-if="store.runningRules.length" class="rule-group">
+          <div class="rule-group-header">运行中（{{ store.runningRules.length }}条）</div>
+          <div v-for="r in store.runningRules" :key="r.id" class="rule-item">
+            <div class="rule-name">{{ r.name }}</div>
+            <div class="rule-dims">{{ r.dimensions.map(d => d.name).join(' / ') }}</div>
+            <div class="rule-meta"><span>触发 {{ r.triggerCount }}次</span><span class="rule-dot">·</span><span>最近：{{ r.lastTrigger }}</span></div>
+            <div class="rule-actions">
+              <el-button size="small" text type="primary" @click="store.toggleRuleStatus(r.id)">暂停</el-button>
+              <el-button size="small" text type="danger" @click="store.deleteRule(r.id)">删除</el-button>
+            </div>
+          </div>
+        </div>
+        <div v-if="store.pausedRules.length" class="rule-group">
+          <div class="rule-group-header" style="color:#94a3b8">已暂停（{{ store.pausedRules.length }}条）</div>
+          <div v-for="r in store.pausedRules" :key="r.id" class="rule-item" style="opacity:0.6">
+            <div class="rule-name">⏸️ {{ r.name }}</div>
+            <div class="rule-dims">{{ r.dimensions.map(d => d.name).join(' / ') }}</div>
+            <div class="rule-meta"><span>触发 {{ r.triggerCount }}次</span><span class="rule-dot">·</span><span>暂停于：{{ r.pausedAt }}</span></div>
+            <div class="rule-actions">
+              <el-button size="small" text type="success" @click="store.toggleRuleStatus(r.id)">启用</el-button>
+              <el-button size="small" text type="danger" @click="store.deleteRule(r.id)">删除</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 侧滑：预警详情 ====== -->
+    <transition name="drawer">
+      <div v-if="store.detailOpen" class="drawer-overlay" @click.self="store.closeDetail()">
+        <div class="drawer-panel">
+          <div class="drawer-header">
+            <el-icon class="drawer-back" @click="store.closeDetail()"><ArrowLeft /></el-icon>
+            <span class="drawer-title">预警详情</span>
+          </div>
+          <div v-if="store.detailWarning" class="drawer-body">
+            <div class="dw-header">
+              <div class="dw-level" :class="store.detailWarning.level">{{ levelLabel(store.detailWarning.level) }}</div>
+              <div class="dw-title-text">{{ store.detailWarning.title }}</div>
+              <div class="dw-ent-name">{{ store.detailWarning.enterprise.name }}</div>
+              <div v-if="store.detailWarning.ruleName" class="dw-rule">触发规则：{{ store.detailWarning.ruleName }}</div>
+            </div>
+            <div class="dw-section">
+              <div class="dw-section-title">📌 触发原因</div>
+              <div class="dw-section-body">{{ store.detailWarning.triggerReason || store.detailWarning.summary }}</div>
+            </div>
+            <div class="dw-section">
+              <div class="dw-section-title">AI 处置建议</div>
+              <div class="suggest-card">
+                <div class="suggest-primary">{{ monitorSuggestion.primary }}</div>
+                <div class="suggest-text">{{ monitorSuggestion.next }}</div>
+                <div class="suggest-impact">{{ monitorSuggestion.impact }}</div>
+              </div>
+            </div>
+            <div v-if="store.detailWarning.trendData && store.detailWarning.trendData.length" class="dw-section">
+              <div class="dw-section-title">📊 趋势对比</div>
+              <div class="trend-chart">
+                <div v-for="d in store.detailWarning.trendData" :key="d.month" class="trend-bar" :class="{ abnormal: d.abnormal }">
+                  <div class="trend-label">{{ d.month }}</div>
+                  <div class="trend-fill-wrap"><div class="trend-fill" :style="{ width: (d.value / 2000 * 100) + '%' }"></div></div>
+                  <div class="trend-value">{{ d.value }}万</div>
+                </div>
+                <div v-if="store.detailWarning.industryAvg" class="trend-industry">行业均值：{{ store.detailWarning.industryAvg }}</div>
+              </div>
+            </div>
+            <div v-if="store.detailWarning.impactAssessment" class="dw-section">
+              <div class="dw-section-title">💡 影响评估</div>
+              <div class="dw-section-body">
+                <div v-for="(item, i) in store.detailWarning.impactAssessment" :key="i" class="impact-item">· {{ item }}</div>
+              </div>
+            </div>
+            <div v-if="store.detailWarning.historyWarnings && store.detailWarning.historyWarnings.length" class="dw-section">
+              <div class="dw-section-title">📜 历史预警（{{ store.detailWarning.historyWarnings.length }}条）</div>
+              <div v-for="hw in store.detailWarning.historyWarnings" :key="hw.date" class="history-item">
+                <span class="hw-date">{{ hw.date }}</span>
+                <span class="hw-title">{{ hw.title }}</span>
+                <span class="hw-level" :class="hw.level">{{ levelShort(hw.level) }}</span>
+              </div>
+            </div>
+            <div class="dw-section">
+              <div class="dw-section-title">处置进展</div>
+              <div class="action-status-card" :class="{ active: store.detailWarning.pushedToDueDiligence || store.detailWarning.focused }">
+                <div class="action-status-title">{{ store.detailWarning.dispositionStatus || '待处置' }}</div>
+                <div v-if="store.detailWarning.dueTaskName" class="action-status-text">
+                  已生成尽调核查项：{{ store.detailWarning.dueTaskName }}，当前进度 {{ store.detailWarning.dueTaskProgress }}%
+                </div>
+                <div v-else class="action-status-text">可推送到智能尽调，或加入重点关注等待下次数据刷新。</div>
+              </div>
+              <div v-if="store.detailWarning.actionLogs && store.detailWarning.actionLogs.length" class="action-log-list">
+                <div v-for="log in store.detailWarning.actionLogs" :key="log.time + log.title" class="action-log-item">
+                  <div class="action-log-time">{{ log.time }}</div>
+                  <div class="action-log-main">
+                    <div class="action-log-title">{{ log.title }}</div>
+                    <div class="action-log-detail">{{ log.detail }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-footer">
+            <el-button size="small" type="primary" :disabled="store.detailWarning?.pushedToDueDiligence" @click="handlePushToDueDiligence">
+              {{ store.detailWarning?.pushedToDueDiligence ? '已推送尽调' : '推送到尽调' }}
+            </el-button>
+            <el-button size="small" plain :disabled="store.detailWarning?.focused" @click="handleAddFocus">
+              {{ store.detailWarning?.focused ? '已重点关注' : '加入重点关注' }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- ====== 侧滑：创建规则 ====== -->
+    <transition name="drawer">
+      <div v-if="store.createRuleOpen" class="drawer-overlay" @click.self="store.closeCreateRule()">
+        <div class="drawer-panel drawer-panel-wide">
+          <div class="drawer-header">
+            <el-icon class="drawer-back" @click="store.closeCreateRule()"><ArrowLeft /></el-icon>
+            <span class="drawer-title">创建监测规则</span>
+          </div>
+          <div class="drawer-body">
+            <div class="nl-section">
+              <div class="nl-label">方式一：用自然语言创建</div>
+              <textarea v-model="store.nlInput" class="nl-textarea" placeholder="例：帮我盯着浙江XX制造，税票下降或新增被执行就通知我"></textarea>
+              <el-button type="primary" class="nl-btn" :loading="store.nlParsing" @click="store.parseNLRules()">{{ store.nlParsing ? '解析中...' : '开始解析 ▶' }}</el-button>
+            </div>
+            <div class="nl-divider">— 或 —</div>
+            <div class="form-section">
+              <div class="nl-label">方式二：手动配置</div>
+              <div class="form-field"><label>监测企业</label><input class="input-sm" placeholder="搜索企业名称" /></div>
+              <div class="form-field"><label>监测维度</label>
+                <div class="dim-checks">
+                  <label><input type="checkbox" checked /> 税票波动</label>
+                  <label><input type="checkbox" checked /> 司法风险</label>
+                  <label><input type="checkbox" /> 工商变更</label>
+                  <label><input type="checkbox" /> 经营指标</label>
+                </div>
+              </div>
+            </div>
+            <div v-if="store.nlParsed" class="parse-result">
+              <div class="parse-title">系统已识别你的监测要求：</div>
+              <div class="parse-card">
+                <div class="parse-field"><div class="parse-label">规则名称</div><div class="parse-value">{{ store.nlParsed.name }}</div></div>
+                <div class="parse-field"><div class="parse-label">监测企业</div><div v-for="e in store.nlParsed.enterprises" :key="e" class="parse-ent">{{ e }}</div></div>
+                <div class="parse-field"><div class="parse-label">监测维度</div>
+                  <div v-for="d in store.nlParsed.dimensions" :key="d.name" class="parse-dim"><span class="dim-level" :class="d.level">{{ levelShort(d.level) }}</span> {{ d.name }} → {{ d.condition }}</div>
+                </div>
+              </div>
+              <div class="parse-actions">
+                <el-button plain @click="store.nlParsed = null">调整</el-button>
+                <el-button type="primary" @click="store.confirmCreateRule()">确认创建</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref, onUnmounted } from 'vue'
+import { MagicStick, ArrowLeft, InfoFilled, Plus, CircleCheckFilled } from '@element-plus/icons-vue'
+import { useMonitorStore } from '../stores/enterpriseMonitor.js'
+import { ElMessage } from 'element-plus'
+
+const store = useMonitorStore()
+const monitorSuggestion = computed(() => store.buildMonitorSuggestion(store.detailWarning) || {})
+const monitorView = ref('launch')
+const runningText = ref('')
+const pendingCreateMode = ref('ai')
+const runningTimers = []
+
+const exampleTexts = [
+  '监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我',
+  '帮我盯着浙江新源动力，法人变更和股权出质时通知我',
+  '关注杭州锐思软件，征信报告过期或审计到期时通知我',
+]
+
+const runningSteps = ref([
+  { label: '识别企业主体', status: 'pending', loadingText: '正在识别企业名称和统一社会信用代码...', result: '已识别企业主体' },
+  { label: '拆解监测指标', status: 'pending', loadingText: '正在理解监测维度和触发条件...', result: '已识别监测指标和触发条件' },
+  { label: '接入数据源', status: 'pending', loadingText: '正在接入工商、司法、税票、资料有效期数据...', result: '已接入数据源' },
+  { label: '建立监测规则', status: 'pending', loadingText: '正在创建监测规则并加入监测列表...', result: '已加入监测列表' },
+  { label: '扫描首轮风险', status: 'pending', loadingText: '正在扫描首轮风险变化...', result: '已生成首轮扫描结果' },
+  { label: '生成预警提醒', status: 'pending', loadingText: '正在生成预警提醒...', result: '已生成预警，可查看详情并处置' },
+])
+
+function dimTagType(level) {
+  return { high: 'danger', medium: 'warning', low: 'info' }[level] || 'info'
+}
+function dimLevelText(level) {
+  return { high: '高', medium: '中', low: '低' }[level] || '低'
+}
+function levelLabel(l) { return { high: '红色预警', medium: '橙色预警', low: '蓝色预警' }[l] || '' }
+function levelShort(l) { return { high: '🔴 高', medium: '🟡 中', low: '🟢 低' }[l] || '' }
+
+function useExample(idx) {
+  store.quickMonitorInput = exampleTexts[idx]
+}
+
+function handleCreateMonitor() {
+  if (!store.quickMonitorInput.trim()) return
+  pendingCreateMode.value = 'ai'
+  runningText.value = store.quickMonitorInput
+  runMonitorWorkflow()
+}
+
+function handleManualMonitor() {
+  pendingCreateMode.value = 'manual'
+  runningText.value = '手工添加企业，监测工商变更和资料有效期'
+  runMonitorWorkflow()
+}
+
+function handlePushWarning(warning) {
+  if (!warning) return
+  const result = store.pushToDueDiligence(warning.id)
+  if (result) ElMessage.success(`已生成尽调核查项：${result.dueTaskName}`)
+}
+
+function handlePushToDueDiligence() {
+  if (!store.detailWarning) return
+  const warning = store.pushToDueDiligence(store.detailWarning.id)
+  if (warning) ElMessage.success(`已生成尽调核查项：${warning.dueTaskName}`)
+}
+
+function handleAddFocus() {
+  if (!store.detailWarning) return
+  const warning = store.addFocus(store.detailWarning.id)
+  if (warning) ElMessage.success(`已将「${warning.enterprise.name}」加入重点关注`)
+}
+
+function handleRecommendedAction(warning) {
+  if (!warning) return
+  if (warning.recommendedAction?.type === 'focus') {
+    const result = store.addFocus(warning.id)
+    if (result) ElMessage.success(`已将「${result.enterprise.name}」加入重点关注`)
+    return
+  }
+  const result = store.pushToDueDiligence(warning.id)
+  if (result) ElMessage.success(`已生成尽调核查项：${result.dueTaskName}`)
+}
+
+function resetRunningSteps() {
+  runningTimers.splice(0).forEach(timer => clearTimeout(timer))
+  runningSteps.value = runningSteps.value.map((step, index) => ({
+    ...step,
+    status: index === 0 ? 'active' : 'pending',
+  }))
+}
+
+function runMonitorWorkflow() {
+  resetRunningSteps()
+  monitorView.value = 'running'
+  const stepDelays = [600, 1200, 1800, 2400, 3100, 3800]
+  for (let i = 0; i < stepDelays.length; i++) {
+    runningTimers.push(setTimeout(() => {
+      if (i > 0) runningSteps.value[i - 1].status = 'done'
+      runningSteps.value[i].status = 'active'
+    }, stepDelays[i]))
+  }
+  runningTimers.push(setTimeout(() => {
+    runningSteps.value[runningSteps.value.length - 1].status = 'done'
+    const result = pendingCreateMode.value === 'manual'
+      ? store.createManualMonitor()
+      : store.createMonitorFromQuickInput()
+    if (result) ElMessage.success(`已加入监测：${result.rule.name}`)
+    monitorView.value = 'results'
+  }, 4600))
+}
+
+function goLaunch() {
+  monitorView.value = 'launch'
+  resetRunningSteps()
+}
+
+onUnmounted(() => {
+  runningTimers.splice(0).forEach(timer => clearTimeout(timer))
+})
+</script>
+
+<style scoped>

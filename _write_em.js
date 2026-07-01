@@ -1,13 +1,20 @@
-<template>
+const fs = require('fs');
+
+// Read the template content from the task instruction
+// Build the complete EnterpriseMonitorPage.vue content
+const parts = [];
+
+parts.push(`<template>
   <div class="page">
     <div class="page-header">
       <div>
         <h1 class="page-title">企业监测</h1>
         <p class="page-subtitle">用一句话告诉 AI 要监测哪家企业、哪些风险变化，AI 自动建立监测并生成预警</p>
       </div>
-    </div>
+    </div>`);
 
-    <!-- 阶段 1：发起监测 -->
+// ====== Phase 1: launch ======
+parts.push(`
     <section v-if="store.monitorView === 'launch'" class="monitor-launch card-animate">
       <div class="launch-card">
         <div class="launch-eyebrow"><el-icon><MagicStick /></el-icon><span>AI 创建监测</span></div>
@@ -45,9 +52,10 @@
           <span v-for="(ex, idx) in exampleTexts" :key="idx" class="example-chip" @click="useExample(idx)">{{ ex }}</span>
         </div>
       </div>
-    </section>
+    </section>`);
 
-    <!-- 阶段 2：AI 正在工作 -->
+// ====== Phase 2: running ======
+parts.push(`
     <section v-else-if="store.monitorView === 'running'" class="monitor-running card-animate">
       <div class="running-header">
         <el-icon class="running-icon spin"><Loading /></el-icon>
@@ -77,9 +85,10 @@
           </div>
         </div>
       </div>
-    </section>
+    </section>`);
 
-    <!-- 阶段 3：监测任务结果 -->
+// ====== Phase 3: results ======
+parts.push(`
     <div v-else class="monitor-results">
       <div class="results-header card-animate">
         <div>
@@ -165,9 +174,10 @@
           </div>
         </div>
       </section>
-    </div>
+    </div>`);
 
-    <!-- 侧滑：预警详情 -->
+// ====== Drawer: warning detail ======
+parts.push(`
     <transition name="drawer">
       <div v-if="store.detailOpen" class="drawer-overlay" @click.self="store.closeDetail()">
         <div class="drawer-panel">
@@ -228,8 +238,10 @@
       </div>
     </transition>
   </div>
-</template>
+</template>`);
 
+// ====== Script ======
+parts.push(`
 <script setup>
 import { computed, ref, onUnmounted } from 'vue'
 import { MagicStick, ArrowLeft, InfoFilled, Plus, CircleCheckFilled, CircleCheck, Select, Loading, Document } from '@element-plus/icons-vue'
@@ -342,8 +354,10 @@ function runMonitorWorkflow() {
 
 function goLaunch() { store.resetMonitorFlow(); resetRunningSteps() }
 onUnmounted(() => { runningTimers.splice(0).forEach(t => clearTimeout(t)) })
-</script>
+<\/script>`);
 
+// ====== Style ======
+parts.push(`
 <style scoped>
 .page{padding:var(--space-2xl) 32px;max-width:1120px;margin:0 auto}
 .page-header{margin-bottom:var(--space-2xl)}
@@ -446,65 +460,4 @@ onUnmounted(() => { runningTimers.splice(0).forEach(t => clearTimeout(t)) })
 .task-meta{display:flex;flex-wrap:wrap;gap:var(--space-xs);font-size:var(--font-size-caption);color:var(--text-tertiary);margin-bottom:var(--space-xs)}
 .task-dot{margin:0 4px;color:var(--text-disabled)}
 .task-dims{display:flex;flex-wrap:wrap;gap:var(--space-xs)}
-.task-dims span{font-size:var(--font-size-caption);color:var(--text-secondary);background:var(--color-primary-bg);border-radius:var(--radius-sm);padding:2px 8px}
-.task-side{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-xs);flex-shrink:0}
-.task-status{font-size:var(--font-size-caption);font-weight:600;padding:2px 9px;border-radius:var(--radius-sm)}
-.status-running{background:var(--color-success-bg);color:var(--color-success)}
-.status-paused{background:var(--border-divider);color:var(--text-tertiary)}
-.task-count{font-size:var(--font-size-sm);font-weight:700;color:var(--text-primary)}
-
-/* Drawer */
-.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:1000;display:flex;justify-content:flex-end}
-.drawer-panel{width:440px;background:var(--surface-card);height:100vh;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.08);display:flex;flex-direction:column}
-.drawer-enter-active,.drawer-leave-active{transition:opacity .3s}
-.drawer-enter-from,.drawer-leave-to{opacity:0}
-.drawer-enter-active .drawer-panel,.drawer-leave-active .drawer-panel{transition:transform .3s ease-out}
-.drawer-enter-from .drawer-panel,.drawer-leave-to .drawer-panel{transform:translateX(100%)}
-.drawer-header{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-xl) 24px;border-bottom:1px solid var(--border-divider)}
-.drawer-back{font-size:var(--font-size-page-title);cursor:pointer;color:var(--text-secondary)}
-.drawer-back:hover{color:var(--text-primary)}
-.drawer-title{font-size:var(--font-size-xl);font-weight:600;color:var(--text-primary)}
-.drawer-body{flex:1;padding:var(--space-xl) 24px;overflow-y:auto}
-.drawer-footer{padding:var(--space-lg) 24px;border-top:1px solid var(--border-divider);display:flex;gap:var(--space-sm)}
-.dw-header{margin-bottom:var(--space-xl)}
-.dw-level{display:inline-block;padding:2px 12px;border-radius:var(--radius-sm);font-size:var(--font-size-sm);font-weight:600;margin-bottom:var(--space-sm)}
-.dw-level.high{background:var(--color-danger-bg);color:var(--color-danger)}
-.dw-level.medium{background:var(--color-warning-bg);color:var(--color-warning)}
-.dw-level.low{background:var(--color-success-bg);color:var(--color-success)}
-.dw-title-text{font-size:var(--font-size-assist);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.dw-ent-name{font-size:var(--font-size-sm);color:var(--text-secondary);margin-bottom:var(--space-xs)}
-.dw-rule{font-size:var(--font-size-caption);color:#8b5cf6}
-.dw-section{margin-bottom:var(--space-xl)}
-.dw-section-title{font-size:var(--font-size-body);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-sm)}
-.dw-section-body{font-size:var(--font-size-body);color:var(--text-primary);line-height:1.6}
-.suggest-card{background:var(--color-primary-bg);border:1px solid var(--color-primary-border);border-radius:var(--radius-md);padding:var(--space-lg) 16px}
-.suggest-primary{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.suggest-text{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.6;margin-bottom:var(--space-sm)}
-.suggest-impact{font-size:var(--font-size-caption);color:var(--color-primary);line-height:1.5}
-.impact-item{margin-bottom:var(--space-xs);font-size:12.5px;color:var(--text-secondary);line-height:1.5}
-.trend-chart{display:flex;flex-direction:column;gap:var(--space-sm);background:var(--bg-table-header);border-radius:var(--radius-md);padding:var(--space-lg) 16px}
-.trend-bar{display:flex;align-items:center;gap:var(--space-sm)}
-.trend-label{width:30px;font-size:var(--font-size-caption);color:var(--text-tertiary);flex-shrink:0}
-.trend-fill-wrap{flex:1;height:18px;background:var(--border-light);border-radius:var(--radius-sm);overflow:hidden}
-.trend-fill{height:100%;background:var(--color-primary);border-radius:var(--radius-sm);transition:width .3s}
-.trend-bar.abnormal .trend-fill{background:var(--color-danger)}
-.trend-value{width:50px;font-size:var(--font-size-caption);color:var(--text-primary);font-weight:500;text-align:right;flex-shrink:0}
-.trend-bar.abnormal .trend-value{color:var(--color-danger)}
-.trend-industry{font-size:var(--font-size-caption);color:var(--text-tertiary);padding-top:6px;border-top:1px solid var(--border-light)}
-.action-status-card{border:1px solid var(--border-default);background:var(--bg-table-header);border-radius:var(--radius-md);padding:var(--space-md) 14px;margin-bottom:var(--space-sm)}
-.action-status-card.active{background:var(--color-success-bg);border-color:var(--color-success-light)}
-.action-status-title{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.action-status-text{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5}
-.fade-enter-active,.fade-leave-active{transition:opacity .25s}
-.fade-enter-from,.fade-leave-to{opacity:0}
-@media (max-width:768px){
-  .monitor-launch{max-width:100%}
-  .monitor-running{max-width:100%;margin:0 var(--space-lg)}
-  .task-card{flex-direction:column;align-items:flex-start}
-  .task-side{flex-direction:row;align-items:center;width:100%;justify-content:flex-start}
-  .created-card{flex-direction:column;align-items:flex-start}
-  .created-actions{width:100%;justify-content:flex-start}
-  .results-header{flex-direction:column}
-  .drawer-panel{width:100%}
-}
-</style>
+.task-dims span{font-size:var(--font-size-caption);color:var(--text-secondary);background:var
