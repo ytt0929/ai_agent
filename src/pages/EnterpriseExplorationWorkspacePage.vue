@@ -1582,30 +1582,19 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-chat-header h3.ai-assistant-panel__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .edw-chat-messages.ai-assistant-panel__messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 
-/* Unified message items */
-.ai-message { display: flex; gap: 10px; align-items: flex-start; }
-.ai-message--ai { justify-content: flex-start; }
-.ai-message--user { justify-content: flex-end; flex-direction: row-reverse; }
-.ai-message__avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
-.ai-message--ai .ai-message__avatar { background: #2563eb; color: #fff; }
-.ai-message--user .ai-message__avatar { background: #dbeafe; color: #1d4ed8; }
-.ai-message__bubble { max-width: 82%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; word-break: break-word; }
-.ai-message--ai .ai-message__bubble { background: #f1f5f9; color: #344054; border-top-left-radius: 2px; }
-.ai-message--user .ai-message__bubble { background: var(--color-primary); color: #fff; border-top-right-radius: 2px; }
-.ai-message__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 42px; }
-
+/* Unified message items — delegated to tokens.css */
 .edw-chat-input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
 .edw-chat-only__input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
 .edw-chat-field.ai-assistant-panel__input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
 .edw-chat-field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
 
-/* Legacy alias: old edw-* message classes → unified ai-message */
+/* Legacy alias: old edw-* message classes → unified ai-message (tokens.css) */
 .edw-msg { display: flex; gap: 10px; align-items: flex-start; }
 .edw-msg--ai { justify-content: flex-start; }
-.edw-msg--user { justify-content: flex-end; flex-direction: row-reverse; }
+.edw-msg--user { justify-content: flex-end; }
 .edw-msg-content { display: flex; flex-direction: column; gap: 6px; max-width: calc(100% - 40px); }
 .edw-msg--ai .edw-msg-content { width: calc(100% - 40px); }
-.edw-msg--user .edw-msg-content { max-width: 78%; }
+.edw-msg--user .edw-msg-content { max-width: 76%; }
 .edw-msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
 .edw-msg-avatar--ai { background: #2563eb; color: #fff; }
 .edw-msg-avatar--user { background: #dbeafe; color: #1d4ed8; }

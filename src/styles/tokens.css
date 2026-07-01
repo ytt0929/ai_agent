@@ -803,7 +803,24 @@ html, body {
 /* User message */
 .ai-message--user {
   justify-content: flex-end;
-  flex-direction: row-reverse;
+}
+
+.ai-message--ai .ai-message__avatar {
+  order: 0;
+}
+
+.ai-message--ai .ai-message__bubble {
+  order: 1;
+  max-width: 82%;
+}
+
+.ai-message--user .ai-message__bubble {
+  order: 0;
+  max-width: 76%;
+}
+
+.ai-message--user .ai-message__avatar {
+  order: 1;
 }
 
 /* Avatar */

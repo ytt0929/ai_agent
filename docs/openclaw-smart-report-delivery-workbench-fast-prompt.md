@@ -48,9 +48,10 @@ AI 报告交付工作台
    - 问数据、算指标、找异常、解释评分不应该放在智能报告。
    - 这些能力应属于【企业探查】。
 
-3. 当前代码存在乱码和潜在编译风险
-   - `SmartReportPage.vue` 和 `mockSmartReport.js` 可能存在中文乱码、半截字符串、注释吞掉 `const/export` 等问题。
-   - 不要局部修补乱码，直接重写允许修改的文件。
+3. 当前代码存在潜在实现风险
+   - 请先阅读现有 `SmartReportPage.vue` 和 `mockSmartReport.js`，判断当前结构是否支撑新定位。
+   - 保持项目现有文件风格和编码习惯。
+   - 如发现实际页面显示、源码或 `npm run build` 存在问题，再做必要修复。
 
 4. mock 数据结构不支撑新定位
    - 需要补充模板、资料包、章节资料关联、待确认事项、导出包等数据。
@@ -228,9 +229,9 @@ AI 报告交付工作台
 
 ## 5. 修改建议
 
-### 5.1 重写 mockSmartReport.js
+### 5.1 调整 mockSmartReport.js
 
-请用 UTF-8 正常中文重写 `src/data/mockSmartReport.js`。
+请根据新产品定位调整 `src/data/mockSmartReport.js`。可以在现有文件上重构，也可以在必要时整体改写，但要保持项目现有文件风格。
 
 必须导出新数据：
 
@@ -416,9 +417,9 @@ AI 报告交付助手快捷动作：
 - 发起尽调核验
 - 批量导出报告和资料包
 
-### 5.2 重写 SmartReportPage.vue
+### 5.2 调整 SmartReportPage.vue
 
-请用 Vue3 + Element Plus 重写 `src/pages/SmartReportPage.vue`。
+请用 Vue3 + Element Plus 调整 `src/pages/SmartReportPage.vue`。可以在现有页面上重构，也可以在必要时整体改写，但要保持项目现有文件风格。
 
 不要 import：
 

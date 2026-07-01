@@ -906,7 +906,7 @@ function quickReDiagnose(h) {
 .ed-chat.ai-assistant-panel__messages { min-height: 260px; flex: 1; min-height: 0; overflow-y: auto; border: 1px solid var(--border-default); border-radius: 6px; padding: 12px; background: #fff; display: flex; flex-direction: column; }
 .ed-chat-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px 0; }
 .ed-chat-empty__text { font-size: 12px; color: var(--text-tertiary); text-align: center; }
-/* Legacy .ed-bubble removed - use unified .ai-message classes from tokens.css */
+/* .ai-message classes from tokens.css */
 .ed-bubble__thinking { color: var(--text-tertiary); font-style: italic; }
 .ed-chat-quick.ai-assistant-panel__quick { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border-default); border-bottom: 1px solid var(--border-default); flex-shrink: 0; }
 .ed-chat-input.ai-assistant-panel__footer { display: flex; gap: 8px; margin-top: 0; flex-shrink: 0; align-items: flex-end; }
