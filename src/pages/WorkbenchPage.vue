@@ -129,52 +129,52 @@
       </div>
 
       <!-- ============ 态2：左内容 + 右对话 ============ -->
-      <div v-else class="wb-state-split">
-        <!-- 左侧：业务内容 -->
-        <div class="wb-state-split__left">
-          <!-- 轻量工具栏 -->
-          <div class="wb-workspace-toolbar">
-            <el-button class="wb-workspace-back" circle @click="returnToNormal">
-              <el-icon><ArrowLeft /></el-icon>
-            </el-button>
-            <div class="wb-workspace-title">
-              <strong>{{ workspaceTitle }}</strong>
-              <span v-if="statusText">· {{ statusText }}</span>
+      <div v-else class="wb-state-split-shell">
+        <div class="wb-state-split">
+          <!-- 左侧：业务内容 -->
+          <main class="wb-state-split__left">
+            <!-- 轻量工具栏 -->
+            <div class="wb-workspace-toolbar">
+              <el-button class="wb-workspace-back" circle @click="returnToNormal">
+                <el-icon><ArrowLeft /></el-icon>
+              </el-button>
+              <div class="wb-workspace-title">
+                <strong>{{ workspaceTitle }}</strong>
+                <span v-if="statusText">· {{ statusText }}</span>
+              </div>
             </div>
-          </div>
-          <!-- 轻量阶段条 -->
-          <WorkbenchStageStrip
-            v-if="assistant.flowStages.length"
-            class="wb-workspace-stages"
-            :stages="assistant.flowStages"
-            :active-stage-id="assistant.activeStageId"
-            @select="assistant.setActiveStage"
-          />
-          <WorkbenchBusinessPanel
-            :tool="assistant.activeTool"
-            :data="assistant.leftPanelData"
-            @explore="onExplore"
-            @select-template="onTpl"
-          />
-        </div>
-        <!-- 右侧：AI 对话面板 -->
-        <div class="wb-state-split__right ai-assistant-panel">
-          <div class="wb-state-split__right-head ai-assistant-panel__header">
-            <h3 class="ai-assistant-panel__title">AI Copilot</h3>
-            <el-button text size="small" @click="clearChat">清空</el-button>
-          </div>
-          <div class="wb-state-split__right-msgs ai-assistant-panel__messages">
-            <WorkbenchConversation
-              :messages="assistant.messages"
-              :flow-stages="assistant.flowStages"
-              :waiting-for-input="assistant.waitingForInput"
+            <!-- 轻量阶段条 -->
+            <WorkbenchStageStrip
+              v-if="assistant.flowStages.length"
+              class="wb-workspace-stages"
+              :stages="assistant.flowStages"
               :active-stage-id="assistant.activeStageId"
-              :is-thinking="assistant.isThinking"
-              :thinking-text="assistant.thinkingText"
+              @select="assistant.setActiveStage"
             />
-          </div>
-          <div class="wb-composer wb-composer--right ai-assistant-panel__footer">
-            <div v-if="assistant.contextSuggestions.length" class="wb-sug">
+            <WorkbenchBusinessPanel
+              :tool="assistant.activeTool"
+              :data="assistant.leftPanelData"
+              @explore="onExplore"
+              @select-template="onTpl"
+            />
+          </main>
+          <!-- 右侧：AI 对话面板 -->
+          <aside class="wb-state-split__right ai-assistant-panel">
+            <div class="ai-assistant-panel__header">
+              <h3 class="ai-assistant-panel__title">AI Copilot</h3>
+              <el-button text size="small" @click="clearChat">清空</el-button>
+            </div>
+            <div class="ai-assistant-panel__messages">
+              <WorkbenchConversation
+                :messages="assistant.messages"
+                :flow-stages="assistant.flowStages"
+                :waiting-for-input="assistant.waitingForInput"
+                :active-stage-id="assistant.activeStageId"
+                :is-thinking="assistant.isThinking"
+                :thinking-text="assistant.thinkingText"
+              />
+            </div>
+            <div class="ai-assistant-panel__quick" v-if="assistant.contextSuggestions.length">
               <el-button
                 v-for="(s, i) in assistant.contextSuggestions"
                 :key="i"
@@ -187,17 +187,17 @@
                 {{ s.label }}
               </el-button>
             </div>
-            <div class="wb-composer-row">
+            <div class="ai-assistant-panel__footer">
               <el-input
                 v-model="dialogInputLocal"
                 :placeholder="dialogPlaceholder"
                 clearable
                 @keyup.enter="sendMsg"
-                class="wb-composer__input"
+                class="ai-assistant-panel__input"
               />
-              <el-button type="primary" :icon="Promotion" @click="sendMsg" />
+              <el-button type="primary" size="default" class="ai-assistant-panel__send" @click="sendMsg">发送</el-button>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -373,7 +373,8 @@ function clearChat() { assistant.reset() }
   overflow: hidden;
   display: flex;
   justify-content: center;
-  background: var(--bg-page, #f7faff);
+  padding: 32px var(--space-3xl) 24px;
+  background: var(--surface-page);
 }
 
 .wb-state-center__col {
@@ -399,19 +400,32 @@ function clearChat() { assistant.reset() }
 /* ═══════════════════════════════════════
    态2：左内容 + 右对话
    ═══════════════════════════════════════ */
-.wb-state-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+
+/* 页面壳：增加留白容器 */
+.wb-state-split-shell {
   flex: 1;
   min-height: 0;
+  padding: 24px 28px 24px;
+  overflow: hidden;
+  background: var(--surface-page);
+}
+
+/* 主体工作区 */
+.wb-state-split {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 24px;
   overflow: hidden;
 }
 
+/* 左侧业务区：独立滚动 */
 .wb-state-split__left {
   min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  padding: 0 32px 40px;
-  background: var(--surface-page, var(--bg-page, #f7faff));
+  padding-right: 4px;
 }
 
 /* Workspace toolbar inside left panel */
@@ -420,12 +434,12 @@ function clearChat() { assistant.reset() }
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
-  padding-top: 12px;
+  padding-top: 4px;
 }
 
 .wb-workspace-back {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 
@@ -439,12 +453,12 @@ function clearChat() { assistant.reset() }
 .wb-workspace-title strong {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-primary, #1a1a2e);
+  color: var(--text-primary);
 }
 
 .wb-workspace-title span {
   font-size: 13px;
-  color: var(--text-secondary, #64748b);
+  color: var(--text-secondary);
 }
 
 /* Lightweight stage strip inside left panel */
@@ -452,93 +466,54 @@ function clearChat() { assistant.reset() }
   margin-bottom: 20px;
 }
 
+/* 右侧面板：复用 .ai-assistant-panel（已在 tokens.css 定义） */
 .wb-state-split__right.ai-assistant-panel {
-  width: 360px;
-  min-width: 360px;
-  max-width: 380px;
+  min-width: 0;
+  width: 420px;
   height: 100%;
-  border-radius: 0;
-  border-top: 0;
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 1px solid var(--border-default, var(--border-color, #dbe7f5));
-  background: var(--surface-card, var(--bg-card, #fff));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.wb-state-split__right-head.ai-assistant-panel__header {
-  height: 48px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border-divider, var(--border-color-divider, #f1f5f9));
-  flex-shrink: 0;
-}
-
-.ai-assistant-panel__title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary, #1a1a2e);
-}
-
-.wb-state-split__right-msgs.ai-assistant-panel__messages {
-  flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding: 14px 16px;
-  background: var(--surface-card, var(--bg-card, #fff));
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--surface-card);
 }
 
-/* 右侧面板气泡 */
-.wb-state-split__right-msgs :deep(.bubble.ai) { max-width: 82%; }
-.wb-state-split__right-msgs :deep(.bubble.user) { max-width: 76%; }
-.wb-state-split__right-msgs :deep(.process-card) { max-width: 90%; }
+/* 右侧面板气泡限制 */
+.wb-state-split__right :deep(.bubble.ai) { max-width: 86%; }
+.wb-state-split__right :deep(.bubble.user) { max-width: 76%; }
+.wb-state-split__right :deep(.process-card) { max-width: 100%; }
 
-/* 右侧面板 footer */
-.wb-composer--right.ai-assistant-panel__footer {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border-divider, var(--border-color-divider, #f1f5f9));
-  background: var(--surface-card, var(--bg-card, #fff));
-}
-
-/* ========== 共享：Composer ========== */
+/* 居中态 composer */
 .wb-composer {
   flex-shrink: 0;
   padding: 10px 16px 14px;
-  border-top: 1px solid var(--border-color-divider, #f1f5f9);
-  background: var(--bg-page, #f7faff);
+  border-top: 1px solid var(--border-divider);
+  background: var(--surface-page);
 }
 .wb-composer--center {
-  background: linear-gradient(180deg, transparent 0%, var(--bg-page, #f7faff) 25%);
+  background: linear-gradient(180deg, transparent 0%, var(--surface-page) 25%);
+  border-top: none;
 }
 .wb-composer--center :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px var(--color-primary, #2563eb);
-}
-.wb-composer--right.ai-assistant-panel__footer {
-  padding: 10px 12px;
-  border-top-color: var(--border-divider);
-  background: var(--surface-card);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 .wb-composer__input :deep(.el-input__wrapper) { border-radius: 10px; }
 
-/* 建议按钮 */
-.wb-sug { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
-.wb-sug-btn {
-  padding: 5px 14px;
-  border: 1px solid var(--border-color, #dbe7f5);
-  border-radius: 20px;
-  background: var(--bg-card, #fff);
-  color: var(--color-primary, #2563eb);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+.wb-composer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
 }
-.wb-sug-btn:hover { background: var(--color-primary-bg, #eef2ff); border-color: var(--color-primary, #2563eb); }
+.wb-composer-row .el-input { flex: 1; }
+.wb-composer-row .el-button { flex-shrink: 0; }
+
+/* 居中态 composer 建议按钮 */
+.wb-composer .wb-sug {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+}
 
 /* 左侧产物区表格/描述宽度控制 */
 .wb-state-split__left :deep(.el-table),
@@ -554,11 +529,12 @@ function clearChat() { assistant.reset() }
 @media (max-width: 900px) {
   .wb-home { padding: 16px; }
   .wb-home__grid { grid-template-columns: 1fr; }
+  .wb-state-split-shell { padding: 12px; }
   .wb-state-split {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
-  .wb-state-split__right.ai-assistant-panel { width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--el-border-color, var(--border-color, #dbe7f5)); }
+  .wb-state-split__right.ai-assistant-panel { width: 100%; max-width: 100%; height: 400px; }
   .wb-state-center__col { max-width: 100%; }
 }
 </style>

@@ -18,11 +18,15 @@ import AppSidebar from './components/AppSidebar.vue'
 <style scoped>
 .app-root {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
   background: var(--bg-page);
 }
 .app-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 </style>

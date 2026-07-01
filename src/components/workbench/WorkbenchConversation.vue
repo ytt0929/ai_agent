@@ -2,10 +2,10 @@
   <div class="conversation" ref="scrollRef">
     <div class="date-chip">{{ dateChip }}</div>
 
-    <!-- User messages -->
-    <div v-for="(msg, idx) in messages" :key="idx" class="message" :class="msg.type">
-      <div v-if="msg.type === 'ai'" class="ai-avatar">AI</div>
-      <div class="bubble" :class="msg.type">
+    <!-- Messages -->
+    <div v-for="(msg, idx) in messages" :key="idx" class="ai-message" :class="msg.type === 'user' ? 'ai-message--user' : 'ai-message--ai'">
+      <div class="ai-message__avatar">{{ msg.type === 'user' ? '我' : 'AI' }}</div>
+      <div class="ai-message__bubble">
         <div v-if="msg.type === 'ai'" class="meta">
           <span class="pulse"></span>
           <span>AI Copilot</span>
@@ -22,7 +22,6 @@
           </div>
         </div>
       </div>
-      <div v-if="msg.type === 'user'" class="user-avatar">我</div>
     </div>
 
     
@@ -52,18 +51,18 @@
     </div>
 
     <!-- Thinking indicator -->
-    <div v-if="isThinking" class="message ai">
-      <div class="ai-avatar">AI</div>
-      <div class="bubble ai thinking">
+    <div v-if="isThinking" class="ai-message ai-message--ai">
+      <div class="ai-message__avatar">AI</div>
+      <div class="ai-message__bubble thinking">
         <div class="meta"><span class="pulse-dot thinking-pulse"></span><span>AI 正在执行</span></div>
         <div class="bubble-text thinking-text">{{ thinkingText }}</div>
       </div>
     </div>
 
     <!-- Waiting -->
-    <div v-if="waitingForInput && !isThinking" class="message ai">
-      <div class="ai-avatar">AI</div>
-      <div class="bubble ai">
+    <div v-if="waitingForInput && !isThinking" class="ai-message ai-message--ai">
+      <div class="ai-message__avatar">AI</div>
+      <div class="ai-message__bubble">
         <div class="meta"><span class="pulse"></span><span>等待输入</span></div>
         <div class="bubble-text">可以继续补充问题，或选择下一步操作。</div>
       </div>
@@ -139,8 +138,9 @@ watch(() => activeSteps.value.length, () => {
 
 <style scoped>
 .conversation {
+  width: 100%;
   min-height: 0;
-  overflow: visible;
+  overflow-y: visible;
   padding: 0;
   background: transparent;
 }
@@ -156,7 +156,7 @@ watch(() => activeSteps.value.length, () => {
   font-weight: 500;
 }
 
-/* ====== Message ====== */
+/* ====== Message — reuse global .ai-message, override scoped tokens ====== */
 .message {
   display: flex;
   align-items: flex-start;
@@ -382,40 +382,6 @@ watch(() => activeSteps.value.length, () => {
   50% { transform: scale(1.3); opacity: .7; }
 }
 
-
-/* ====== Suggestion Bar ====== */
-.suggestion-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-default);
-  background: var(--surface-card);
-}
-
-.suggestion-btn {
-  padding: 6px 14px;
-  border: 1px solid var(--border-default);
-  border-radius: 20px;
-  background: var(--surface-page);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.suggestion-btn:hover {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
-}
-
-.suggestion-btn:active {
-  transform: translateY(0);
-}
-
 /* ====== Streaming Cursor ====== */
 @keyframes cursor-blink {
   0%, 50% { opacity: 1; }
@@ -431,6 +397,4 @@ watch(() => activeSteps.value.length, () => {
   vertical-align: text-bottom;
   animation: cursor-blink 0.8s ease-in-out infinite;
 }
-
-
 </style>

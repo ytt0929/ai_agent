@@ -18,41 +18,42 @@
     <div v-if="!workspaceActive" class="edw-chat-only" ref="chatRef">
       <div class="ai-message ai-message--ai" v-if="!chatMessages.length && explorationPhase === 'idle'">
         <div class="ai-message__avatar">AI</div>
-        <div class="ai-message__bubble">你好！我是企业探查助手。你可以告诉我你想了解的企业，我会自动识别、检查数据覆盖、判断问题类型，然后给你探查结果。</div>
+        <div class="ai-message__content">
+          <div class="ai-message__bubble">你好！我是企业探查助手。你可以告诉我你想了解的企业，我会自动识别、检查数据覆盖、判断问题类型，然后给你探查结果。</div>
+        </div>
       </div>
-      <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' && msg.type !== 'engine' ? 'ai-message--ai' : (msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai')">
-        <template v-if="msg.role === 'ai' || msg.type === 'engine'">
-          <div class="ai-message__avatar">AI</div>
-        </template>
-        <div class="ai-message__bubble" v-if="msg.type !== 'engine'" v-html="renderMd(msg.text)"></div>
-        <div v-if="msg.type === 'engine'" class="edw-engine-card">
-          <div class="edw-engine-card__header">
-            <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
-            <div>
-              <strong>AI 诊断引擎运行中</strong>
-              <p>{{ enterprise.name }}</p>
-            </div>
-          </div>
-          <div class="edw-engine-steps">
-            <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
-              <span class="edw-engine-step__icon">
-                <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
-                <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
-                <span v-else class="edw-engine-step__dot--pending"></span>
-              </span>
-              <div>
-                <strong>{{ step.title }}</strong>
-                <p>{{ step.desc }}</p>
+      <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="messageClass(msg)">
+        <div class="ai-message__avatar">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+        <div class="ai-message__content">
+          <div class="ai-message__bubble" v-if="msg.type !== 'engine'" v-html="renderMd(msg.text)"></div>
+          <div v-else class="ai-message__bubble ai-message__bubble--engine">
+            <div class="edw-engine-card">
+              <div class="edw-engine-card__header">
+                <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
+                <div>
+                  <strong>AI 诊断引擎运行中</strong>
+                  <p>{{ enterprise.name }}</p>
+                </div>
+              </div>
+              <div class="edw-engine-steps">
+                <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
+                  <span class="edw-engine-step__icon">
+                    <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
+                    <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
+                    <span v-else class="edw-engine-step__dot--pending"></span>
+                  </span>
+                  <div>
+                    <strong>{{ step.title }}</strong>
+                    <p>{{ step.desc }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+          <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
+            <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
+          </div>
         </div>
-        <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
-          <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
-        </div>
-        <template v-if="msg.role === 'user'">
-          <div class="ai-message__avatar">我</div>
-        </template>
       </div>
       <div class="edw-chat-only__input">
         <el-input
@@ -1484,6 +1485,9 @@ function pushToDD() {
 }
 function authMissing() { ElMessage.info('Demo: 已发起数据授权请求') }
 function uploadFlow() { ElMessage.info('Demo: 已发起流水上传入口') }
+function messageClass(msg) {
+  return msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai'
+}
 function renderMd(text) { return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') }
 function scrollToBottom() { nextTick(() => { if (chatRef.value) chatRef.value.scrollTop = chatRef.value.scrollHeight }) }
 function viewFullReport() { openReportView('diagnosis') }
@@ -1520,13 +1524,11 @@ function goBack() { router.push('/enterprise-diagnosis') }
 }
 
 .edw-chat-only .ai-message--ai {
-  flex-direction: row;
-  align-self: flex-start;
+  justify-content: flex-start;
 }
 
 .edw-chat-only .ai-message--user {
-  flex-direction: row-reverse;
-  align-self: flex-end;
+  justify-content: flex-end;
 }
 
 .edw-chat-only .ai-message__avatar {
@@ -1541,19 +1543,40 @@ function goBack() { router.push('/enterprise-diagnosis') }
   flex-shrink: 0;
 }
 
+.edw-chat-only .ai-message__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 44px);
+}
+
 .edw-chat-only .ai-message--ai .ai-message__avatar {
+  order: 0;
   background: var(--color-primary);
   color: #fff;
 }
 
+.edw-chat-only .ai-message--ai .ai-message__content {
+  order: 1;
+  align-items: flex-start;
+}
+
+.edw-chat-only .ai-message--user .ai-message__content {
+  order: 0;
+  max-width: 76%;
+  align-items: flex-end;
+}
+
 .edw-chat-only .ai-message--user .ai-message__avatar {
+  order: 1;
   background: var(--surface-card);
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
 }
 
 .edw-chat-only .ai-message__bubble {
-  max-width: 80%;
+  max-width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -1575,9 +1598,10 @@ function goBack() { router.push('/enterprise-diagnosis') }
 }
 
 .edw-chat-only .ai-message__actions {
-  margin-left: 42px;
-  margin-top: -8px;
-  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
 }
 
 /* 初始态页面背景 — handled by main .edw-page rule above */
@@ -1766,19 +1790,18 @@ function goBack() { router.push('/enterprise-diagnosis') }
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message {
+  width: 100%;
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message--ai {
-  flex-direction: row;
-  align-self: flex-start;
+  justify-content: flex-start;
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message--user {
-  flex-direction: row-reverse;
-  align-self: flex-end;
+  justify-content: flex-end;
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message__avatar {
@@ -1793,23 +1816,47 @@ function goBack() { router.push('/enterprise-diagnosis') }
   flex-shrink: 0;
 }
 
+.edw-chat-messages.ai-assistant-panel__messages .ai-message__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 40px);
+}
+
 .edw-chat-messages.ai-assistant-panel__messages .ai-message--ai .ai-message__avatar {
+  order: 0;
   background: var(--color-primary);
   color: #fff;
 }
 
+.edw-chat-messages.ai-assistant-panel__messages .ai-message--ai .ai-message__content {
+  order: 1;
+  align-items: flex-start;
+}
+
+.edw-chat-messages.ai-assistant-panel__messages .ai-message--user .ai-message__content {
+  order: 0;
+  max-width: 76%;
+  align-items: flex-end;
+}
+
 .edw-chat-messages.ai-assistant-panel__messages .ai-message--user .ai-message__avatar {
+  order: 1;
   background: var(--surface-page);
   color: var(--text-secondary);
   border: 1px solid var(--border-default);
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message__bubble {
-  max-width: 85%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 8px 12px;
   border-radius: var(--radius-md);
   font-size: var(--font-size-xs);
   line-height: 1.6;
+  white-space: normal;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -1827,9 +1874,16 @@ function goBack() { router.push('/enterprise-diagnosis') }
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .ai-message__actions {
-  margin-left: 36px;
-  margin-top: -6px;
-  margin-bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  max-width: 100%;
+  align-self: flex-start;
+}
+
+.edw-chat-messages.ai-assistant-panel__messages .ai-message__bubble--engine {
+  width: 100%;
 }
 
 .edw-chat-messages.ai-assistant-panel__messages .edw-engine-card {

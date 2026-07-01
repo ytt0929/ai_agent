@@ -552,9 +552,9 @@
       <div v-if="!uploadDone" class="sr-upload__panel">
         <div class="sr-upload__step">
           <label class="sr-upload__label">选择报告模板</label>
-          <select v-model="uploadTplId" class="sr-upload__select">
-            <option v-for="tpl in reportTemplates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
-          </select>
+          <el-select v-model="uploadTplId" placeholder="请选择模板" style="width:100%">
+            <el-option v-for="tpl in reportTemplates" :key="tpl.id" :label="tpl.name" :value="tpl.id" />
+          </el-select>
         </div>
         <div class="sr-upload__step">
           <label class="sr-upload__label">上传资料附件</label>
@@ -566,11 +566,11 @@
         </div>
         <div class="sr-upload__step">
           <label class="sr-upload__label">上传说明（可选）</label>
-          <textarea v-model="uploadNote" class="sr-upload__note" placeholder="例如：请重点关注收入真实性章节" rows="2"></textarea>
+          <el-input v-model="uploadNote" type="textarea" :rows="2" placeholder="例如：请重点关注收入真实性章节" />
         </div>
         <div class="sr-upload__actions">
-          <button class="sr-btn sr-btn--primary" @click="startGenerate" :disabled="!uploadDone">生成报告草稿</button>
-          <button class="sr-btn" @click="view = 'home'">取消</button>
+          <el-button type="primary" @click="startGenerate" :disabled="!uploadDone">生成报告草稿</el-button>
+          <el-button @click="view = 'home'">取消</el-button>
         </div>
       </div>
       <div v-if="uploadDone" class="sr-upload__result">
@@ -592,22 +592,21 @@
           </div>
         </div>
         <div class="sr-upload__actions">
-          <button class="sr-btn sr-btn--primary" @click="startGenerate">生成报告草稿</button>
-          <button class="sr-btn" @click="uploadDone = false">继续上传资料</button>
-          <button class="sr-btn" @click="view = 'home'">取消</button>
+          <el-button type="primary" @click="startGenerate">生成报告草稿</el-button>
+          <el-button @click="uploadDone = false">继续上传资料</el-button>
+          <el-button @click="view = 'home'">取消</el-button>
         </div>
       </div>
     </div>
 
     <div v-if="view === 'generating'" class="sr-generating">
-      <div class="sr-generating__card">
-        <div class="sr-generating__spinner"></div>
-        <div class="sr-generating__title">AI 正在生成报告&#8230;</div>
-        <div v-for="(gs, i) in genSteps" :key="i" class="sr-generating__step" :class="gs.status">
-          <span class="sr-generating__step-icon">{{ gs.status === 'done' ? '&#10003;' : gs.status === 'active' ? '&#10227;' : '&#9675;' }}</span>
-          <span>{{ gs.label }}</span>
-        </div>
-      </div>
+      <el-card shadow="never" class="sr-generating__card">
+        <el-result icon="info" title="AI 正在生成报告" sub-title="请稍候，生成过程将自动跳转" />
+        <el-progress :percentage="genProgressPercent" :stroke-width="8" :show-text="true" class="sr-generating__progress" />
+        <el-steps :active="genStepsActiveIndex" finish-status="success" align-center class="sr-generating__steps">
+          <el-step v-for="(gs, i) in genSteps" :key="i" :title="gs.label" :description="gs.status === 'done' ? '已完成' : gs.status === 'active' ? '进行中' : '等待中'" />
+        </el-steps>
+      </el-card>
     </div>
 
     <div v-if="view === 'editor'" class="sr-editor">
@@ -618,7 +617,7 @@
           <span class="sr-editor__top-report">{{ activeReport?.reportName }}</span>
           <span class="sr-editor__top-meta">模板：{{ activeReport?.templateName }} &#183; 来源：{{ activeReport?.source }} &#183; 资料完整度 {{ activeReport?.materialComplete }}%</span>
           <span v-if="activeReport?.pendingCount" class="sr-editor__top-pending">待确认：{{ activeReport.pendingCount }} 项</span>
-          <span class="sr-badge" :class="statusBadgeClass(activeReport?.status)">{{ activeReport?.status }}</span>
+          <el-tag v-if="activeReport?.status" size="small" :type="statusTagType(activeReport?.status)">{{ activeReport?.status }}</el-tag>
         </div>
         <div class="sr-editor__actions">
           <el-button size="small" @click="handleSaveDraft">保存草稿</el-button>
@@ -647,7 +646,7 @@
           <template v-if="currentSection">
             <div class="sr-sec-header">
               <h2 class="sr-sec-header__title">{{ currentSection.no }}、{{ currentSection.title }}</h2>
-              <span class="sr-badge" :class="statusBadgeClass(currentSection.status)">{{ currentSection.status }}</span>
+              <el-tag size="small" :type="statusTagType(currentSection.status)">{{ currentSection.status }}</el-tag>
               <span class="sr-sec-header__mat" v-if="currentSection.materialStatus !== '完整'">资料：{{ currentSection.materialStatus }}</span>
             </div>
             <el-alert v-if="currentSection.aiNote" type="info" :closable="false" show-icon class="sr-sec-alert">
@@ -661,10 +660,10 @@
             </el-alert>
             <div class="sr-sec-body">
               <div v-if="editingSectionId === currentSection.id" class="sr-sec-edit">
-                <textarea v-model="editText" class="sr-sec-edit__textarea" rows="12"></textarea>
+                <el-input v-model="editText" type="textarea" :rows="12" />
                 <div class="sr-sec-edit__actions">
-                  <button class="sr-btn sr-btn--primary" @click="saveEdit">保存</button>
-                  <button class="sr-btn" @click="cancelEdit">取消</button>
+                  <el-button type="primary" @click="saveEdit">保存</el-button>
+                  <el-button @click="cancelEdit">取消</el-button>
                 </div>
               </div>
               <template v-else>
@@ -1451,6 +1450,19 @@ function simulateUpload() {
 
 const genSteps = ref([])
 
+const genProgressPercent = computed(() => {
+  if (!genSteps.value.length) return 0
+  const done = genSteps.value.filter(s => s.status === 'done').length
+  return Math.round((done / genSteps.value.length) * 100)
+})
+
+const genStepsActiveIndex = computed(() => {
+  if (!genSteps.value.length) return 0
+  const activeIdx = genSteps.value.findIndex(s => s.status === 'active')
+  if (activeIdx >= 0) return activeIdx
+  return genSteps.value.length
+})
+
 function startGenerate() {
   view.value = 'generating'
   genSteps.value = [
@@ -1584,14 +1596,6 @@ function getAiDeliveryReply(input) {
 function renderMd(text) {
   if (!text) return ''
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
-}
-
-function statusBadgeClass(s) {
-  if (!s) return ''
-  if (s.includes('待确认')) return 'sr-badge--warn'
-  if (s.includes('缺失') || s.includes('证据不足') || s.includes('资料缺失')) return 'sr-badge--danger'
-  if (s.includes('待导出') || s.includes('已导出') || s.includes('已确认')) return 'sr-badge--success'
-  return 'sr-badge--info'
 }
 
 function matStatusClass(s) {
@@ -1821,7 +1825,14 @@ function viewEvidenceFromRewrite() {
 
 </script>
 <style scoped>
-.sr-page { padding: 20px 28px; max-width: 1440px; margin: 0 auto; }
+.sr-page {
+  height: 100vh;
+  min-height: 0;
+  padding: 20px 28px;
+  max-width: 1440px;
+  margin: 0 auto;
+  overflow-y: auto;
+}
 
 /* ═══ 首页 ═══ */
 .sr-home { max-width: 960px; margin: 0 auto; }
@@ -1915,20 +1926,6 @@ function viewEvidenceFromRewrite() {
 .sr-tag--danger { background: #fef2f2; color: #b91c1c; }
 .sr-tag--success { background: #f0fdf4; color: #15803d; }
 
-/* ═══ 通用 badge ═══ */
-.sr-badge { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm); display: inline-block; }
-.sr-badge--warn { background: var(--color-warning-bg); color: var(--color-warning); }
-.sr-badge--danger { background: var(--color-danger-bg); color: var(--color-danger); }
-.sr-badge--success { background: var(--color-success-bg); color: var(--color-success); }
-.sr-badge--info { background: var(--bg-page); color: var(--text-tertiary); }
-.sr-badge--ok { background: var(--color-success-bg); color: var(--color-success); }
-
-/* ═══ 通用按钮 ═══ */
-.sr-btn { padding: 6px 14px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: var(--font-size-sm); cursor: pointer; color: var(--text-primary); transition: all .15s; white-space: nowrap; }
-.sr-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.sr-btn--primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
-.sr-btn--primary:hover { background: #2563eb; }
-
 .sr-back { cursor: pointer; font-size: 18px; color: var(--text-tertiary); }
 .sr-back:hover { color: var(--color-primary); }
 
@@ -1939,11 +1936,9 @@ function viewEvidenceFromRewrite() {
 .sr-upload__panel { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-xl) 24px; display: flex; flex-direction: column; gap: var(--space-lg); }
 .sr-upload__step { display: flex; flex-direction: column; gap: var(--space-sm); }
 .sr-upload__label { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
-.sr-upload__select { border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-sm) 12px; font-size: var(--font-size-sm); outline: none; background: #fff; }
 .sr-upload__drop { border: 2px dashed var(--border-default); border-radius: var(--radius-md); padding: 32px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); color: var(--text-tertiary); transition: border-color .15s; }
 .sr-upload__drop:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .sr-upload__hint { font-size: var(--font-size-xs); }
-.sr-upload__note { border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-sm) 12px; font-size: var(--font-size-sm); outline: none; resize: none; font-family: var(--font-family); }
 .sr-upload__actions { display: flex; gap: var(--space-sm); justify-content: flex-end; }
 
 .sr-upload__result { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-xl) 24px; }
@@ -1957,14 +1952,17 @@ function viewEvidenceFromRewrite() {
 
 /* ═══ 生成态 ═══ */
 .sr-generating { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
-.sr-generating__card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-3xl) 40px; text-align: center; max-width: 480px; width: 100%; }
-.sr-generating__spinner { width: 40px; height: 40px; border: 3px solid var(--border-light); border-top-color: var(--color-primary); border-radius: 50%; animation: sr-spin 1s linear infinite; margin: 0 auto var(--space-lg); }
-@keyframes sr-spin { to { transform: rotate(360deg); } }
-.sr-generating__title { font-size: var(--font-size-xl); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-xl); }
-.sr-generating__step { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; font-size: var(--font-size-body); color: var(--text-tertiary); }
-.sr-generating__step.done { color: var(--color-success); }
-.sr-generating__step.active { color: var(--color-primary); font-weight: 500; }
-.sr-generating__step-icon { width: 20px; text-align: center; flex-shrink: 0; }
+.sr-generating__card {
+  max-width: 640px;
+  width: 100%;
+  padding: 32px;
+  background: var(--el-bg-color, var(--surface-card, #fff));
+  border: 1px solid var(--el-border-color-light, var(--border-default));
+  border-radius: var(--el-border-radius-base, var(--radius-lg));
+  text-align: center;
+}
+.sr-generating__progress { margin: 20px 0 24px; }
+.sr-generating__steps { margin-top: 8px; }
 
 /* ═══ 三栏编辑器 ═══ */
 .sr-editor { display: flex; flex-direction: column; height: calc(100vh - 140px); }
@@ -2298,6 +2296,10 @@ function viewEvidenceFromRewrite() {
 .sr-template-center {
   max-width: 1200px;
   margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .sr-tc__top-bar {
   display: flex;
@@ -2345,7 +2347,9 @@ function viewEvidenceFromRewrite() {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 12px;
-  min-height: calc(100vh - 280px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 左侧模板列表 */
@@ -2356,6 +2360,8 @@ function viewEvidenceFromRewrite() {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  height: 100%;
 }
 .sr-tc__sidebar-title {
   padding: 12px 16px 8px;
@@ -2413,6 +2419,8 @@ function viewEvidenceFromRewrite() {
   border-radius: 8px;
   padding: 16px;
   overflow-y: auto;
+  min-height: 0;
+  height: 100%;
 }
 .sr-tc-detail__info-card {
   margin-bottom: 16px;
@@ -2546,6 +2554,10 @@ function viewEvidenceFromRewrite() {
 .sr-template-upload {
   max-width: 1200px;
   margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .sr-tu__top-bar {
   display: flex;
