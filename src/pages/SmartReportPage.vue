@@ -1636,7 +1636,7 @@ function viewEvidenceFromRewrite() {
 .sr-assistant-toggle:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .sr-assistant-toggle__title { font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
 .sr-assistant-toggle__desc { flex: 1; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ai-assistant-panel__header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border-light); }
+.ai-assistant-panel__header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
 .ai-assistant-panel__title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); }
 
 @media (max-width: 1200px) {
