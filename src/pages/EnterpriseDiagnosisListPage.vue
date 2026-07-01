@@ -1,83 +1,126 @@
 <template>
   <div class="edl-page">
-    <!-- AI 企业探查入口 -->
+    <!-- 顶部标题区 -->
     <section class="edl-hero">
       <h1 class="edl-hero-title">AI 企业探查</h1>
-      <p class="edl-hero-sub">输入企业名称、税号，或直接提问。系统会根据问题类型，在对话中回答或打开结构化分析视图。</p>
+      <p class="edl-hero-sub">输入企业名称、税号，或直接提问。系统会识别企业、检查数据覆盖，并在对话中打开分析视图。</p>
+
+      <!-- 主输入区 -->
       <div class="edl-hero-input">
-        <input v-model="heroInput" class="edl-hero-field" placeholder="输入企业名称、税号，或直接问：税负率是多少、查看股东明细、近12个月申报记录如何、是否存在欺诈风险…"
-               @keydown.enter="handleHeroSearch" />
-        <el-button type="primary" size="large" @click="handleHeroSearch">开始探查</el-button>
+        <el-input
+          v-model="heroInput"
+          class="edl-hero-field"
+          size="large"
+          placeholder="输入企业名称、税号，或直接问：税负率是多少、查看股东明细、近12个月申报记录如何…"
+          @keydown.enter="handleHeroSearch"
+          clearable
+        />
+        <el-button type="primary" size="large" @click="handleHeroSearch">
+          开始探查
+        </el-button>
       </div>
+
+      <!-- 五组示例问题 -->
       <div class="edl-hero-chips">
-        <div class="edl-chip-group" v-for="group in chipGroups" :key="group.title">
+        <div v-for="group in chipGroups" :key="group.title" class="edl-chip-group">
           <span class="edl-chip-group-title">{{ group.title }}</span>
-          <span class="edl-hero-chip" v-for="chip in group.chips" :key="chip" @click="onChipClick(chip)">{{ chip }}</span>
+          <el-button
+            v-for="chip in group.chips"
+            :key="chip"
+            class="edl-hero-chip"
+            size="small"
+            plain
+            @click="onChipClick(chip)"
+          >
+            {{ chip }}
+          </el-button>
         </div>
       </div>
 
-      <p class="edl-hero-tip">可直接输入企业名称或税号，也可以直接提问。系统会先识别企业和数据覆盖，再根据问题打开对话回答、明细、报告或证据链。缺少税票或流水时，先基于工商、司法和公开信息完成基础探查，并引导授权税票或上传补充数据。</p>
+      <!-- 轻量提示 -->
+      <div class="edl-hero-tip">
+        <span class="edl-tip-item">输入企业名/税号后自动识别</span>
+        <span class="edl-tip-dot">·</span>
+        <span class="edl-tip-item">缺少税票/流水时先用工商和司法数据基础探查</span>
+        <span class="edl-tip-dot">·</span>
+        <span class="edl-tip-item">可继续授权税票或上传流水生成更完整报告</span>
+      </div>
     </section>
 
     <!-- 列表工具栏 -->
     <div class="edl-toolbar">
       <div class="edl-toolbar__left">
         <h2 class="edl-toolbar-title">最近探查</h2>
-        <span class="edl-toolbar-sub">继续查看企业探查结果、证据链，或推送到尽调任务。</span>
       </div>
       <div class="edl-toolbar__right">
         <div class="edl-filters">
-          <button class="edl-filter-chip" :class="{ active: riskFilter === 'all' }" @click="riskFilter = 'all'">全部</button>
-          <button class="edl-filter-chip" :class="{ active: riskFilter === 'high' }" @click="riskFilter = 'high'">高风险</button>
-          <button class="edl-filter-chip" :class="{ active: riskFilter === 'medium' }" @click="riskFilter = 'medium'">中风险</button>
-          <button class="edl-filter-chip" :class="{ active: riskFilter === 'low' }" @click="riskFilter = 'low'">低风险</button>
+          <el-button-group>
+            <el-button size="small" :type="riskFilter === 'all' ? 'primary' : ''" plain @click="riskFilter = 'all'">全部</el-button>
+            <el-button size="small" :type="riskFilter === 'high' ? 'danger' : ''" plain @click="riskFilter = 'high'">高风险</el-button>
+            <el-button size="small" :type="riskFilter === 'medium' ? 'warning' : ''" plain @click="riskFilter = 'medium'">中风险</el-button>
+            <el-button size="small" :type="riskFilter === 'low' ? 'success' : ''" plain @click="riskFilter = 'low'">低风险</el-button>
+          </el-button-group>
         </div>
       </div>
     </div>
 
-    <!-- 探查记录列表 -->
-    <div class="edl-table-wrap">
-      <table class="edl-table">
-        <thead>
-          <tr>
-            <th>企业名称</th>
-            <th>数据覆盖</th>
-            <th>当前结论</th>
-            <th>风险等级</th>
-            <th>最近问题</th>
-            <th>最近时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in filteredRows" :key="row.creditCode">
-            <td class="edl-cell--name">{{ row.name }}</td>
-            <td>
-              <div class="edl-tags">
-                <span v-for="tag in row.sourceTags" :key="tag.label"
-                      class="edl-tag" :class="'edl-tag--' + tag.variant">{{ tag.label }}</span>
-              </div>
-            </td>
-            <td class="edl-cell--conclusion">{{ row.shortConclusion }}</td>
-            <td class="edl-cell--risk">
-              <span class="edl-status" :class="'edl-status--' + row.riskLevel">
-                {{ row.riskLevel === 'high' ? '高风险' : row.riskLevel === 'medium' ? '中风险' : '低风险' }}
-              </span>
-              <span class="edl-grade" :class="'edl-grade--' + gradeColor(row.grade)">{{ row.grade }}</span>
-              <span class="edl-risk-score">· {{ row.score }}</span>
-            </td>
-            <td class="edl-cell--question">{{ row.lastQuestion }}</td>
-            <td>{{ row.lastDiagnosedAt }}</td>
-            <td class="edl-cell--actions">
-              <el-button size="small" text type="primary" @click="continueExplore(row)">继续探查</el-button>
-              <el-button size="small" text type="primary" @click="viewEvidence(row)">查看证据链</el-button>
-              <el-button size="small" text @click="pushToDD(row)">推送尽调</el-button>
-              <el-button v-if="row.needsAuth" size="small" text type="warning" @click="authData(row)">授权税票</el-button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- 探查记录表格 -->
+    <el-table :data="filteredRows" size="small" class="edl-table" stripe>
+      <el-table-column label="企业名称" min-width="140">
+        <template #default="{ row }">
+          <span class="edl-cell--name">{{ row.name }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="数据覆盖" width="240">
+        <template #default="{ row }">
+          <div class="edl-tags">
+            <el-tag
+              v-for="tag in row.sourceTags"
+              :key="tag.label"
+              :type="tag.variant === 'ok' ? 'info' : 'warning'"
+              size="small"
+              effect="plain"
+            >
+              {{ tag.label }}
+            </el-tag>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column label="当前结论" min-width="180">
+        <template #default="{ row }">
+          <span class="edl-cell--conclusion">{{ row.shortConclusion }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="风险等级" width="130">
+        <template #default="{ row }">
+          <span class="edl-risk-level">
+            <el-tag :type="riskTagType(row.riskLevel)" size="small">
+              {{ riskLabel(row.riskLevel) }}
+            </el-tag>
+            <el-tag :type="gradeTagType(row.grade)" size="small" class="edl-grade-tag">{{ row.grade }}</el-tag>
+            <span class="edl-risk-score">{{ row.score }}</span>
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column label="最近问题" width="120">
+        <template #default="{ row }">
+          <span class="edl-cell--question">{{ row.lastQuestion }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="最近时间" width="100">
+        <template #default="{ row }">
+          <span class="edl-cell--time">{{ row.lastDiagnosedAt }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="260" fixed="right">
+        <template #default="{ row }">
+          <el-button size="small" text type="primary" @click="continueExplore(row)">继续探查</el-button>
+          <el-button size="small" text type="primary" @click="viewEvidence(row)">查看证据链</el-button>
+          <el-button size="small" text @click="pushToDD(row)">推送尽调</el-button>
+          <el-button v-if="row.needsAuth" size="small" text type="warning" @click="authData(row)">授权税票</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
   </div>
 </template>
 
@@ -119,13 +162,10 @@ const listRows = computed(() => {
   return enterpriseDB.map(ent => {
     const mock = getDiagnosisMock(ent.creditCode)
     const riskItems = mock?.riskItems || []
-    const highRiskCount = riskItems.filter(i => i.level === 'high').length
 
     const hasTax = ent.creditCode === '91130203MA7EEQ2N0T'
     const hasOps = ent.creditCode === '91130203MA7EEQ2N0T'
-    const hasDD = false
 
-    // 数据来源标签（含缺失项）
     const sourceTags = [
       { label: '工商', variant: 'ok' },
       { label: '司法', variant: 'ok' },
@@ -133,7 +173,6 @@ const listRows = computed(() => {
       hasOps ? { label: '经营', variant: 'ok' } : { label: '流水缺失', variant: 'missing' },
     ]
 
-    // 短结论
     const firstHigh = riskItems.find(i => i.level === 'high')
     let shortConclusion = '数据正常，无显著风险'
     if (firstHigh) shortConclusion = firstHigh.name + '，' + firstHigh.fact
@@ -162,7 +201,15 @@ const filteredRows = computed(() => {
   return rows
 })
 
-function gradeColor(grade) {
+function riskTagType(level) {
+  return { high: 'danger', medium: 'warning', low: 'success' }[level] || 'info'
+}
+
+function riskLabel(level) {
+  return { high: '高风险', medium: '中风险', low: '低风险' }[level] || level
+}
+
+function gradeTagType(grade) {
   if (['D', 'E', 'F'].includes(grade)) return 'danger'
   if (grade === 'C') return 'warning'
   return 'success'
@@ -178,7 +225,6 @@ function handleHeroSearch() {
   if (found && found.creditCode) {
     router.push('/enterprise-diagnosis/workspace/' + found.creditCode + '?q=' + encodeURIComponent(text))
   } else {
-    // 没有识别到企业身份，进入 _new 状态
     router.push('/enterprise-diagnosis/workspace/_new?q=' + encodeURIComponent(text))
   }
 }
@@ -190,10 +236,6 @@ function onChipClick(chip) {
 
 function continueExplore(row) {
   router.push(`/enterprise-diagnosis/workspace/${row.creditCode}`)
-}
-
-function viewReport(row) {
-  router.push(`/enterprise-diagnosis/report/${row.creditCode}`)
 }
 
 function viewEvidence(row) {
@@ -214,76 +256,232 @@ function authData(row) {
 </script>
 
 <style scoped>
-.edl-page { padding: var(--space-xl) var(--space-3xl); max-width: 1280px; margin: 0 auto; }
+.edl-page {
+  padding: var(--space-2xl) 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+  background: var(--surface-page);
+  min-height: 100vh;
+}
 
-/* ===== AI 企业探查 Hero ===== */
-.edl-hero { margin-bottom: var(--space-xl); }
-.edl-hero-title { font-size: 28px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
-.edl-hero-sub { font-size: var(--font-size-body); color: var(--text-tertiary); margin: 0 0 var(--space-lg); }
+/* ===== Hero ===== */
+.edl-hero {
+  margin-bottom: var(--space-2xl);
+}
 
-.edl-hero-input { display: flex; gap: 8px; margin-bottom: var(--space-md); }
-.edl-hero-field { flex: 1; border: 1.5px solid var(--border-default); border-radius: var(--radius-md); padding: 12px 16px; font-size: var(--font-size-body); outline: none; background: var(--bg-card); }
-.edl-hero-field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
+.edl-hero-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-xs);
+}
 
-.edl-hero-chips { display: flex; flex-direction: column; gap: 10px; margin-bottom: var(--space-md); }
-.edl-chip-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.edl-chip-group-title { font-size: var(--font-size-xs); font-weight: 600; color: var(--text-tertiary); white-space: nowrap; min-width: 64px; }
-.edl-hero-chip { display: inline-block; padding: 4px 12px; border-radius: var(--radius-full); font-size: var(--font-size-xs); color: var(--color-primary); background: var(--color-primary-bg); cursor: pointer; transition: all .15s; border: 1px solid transparent; }
-.edl-hero-chip:hover { border-color: var(--color-primary); background: #fff; }
+.edl-hero-sub {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-lg);
+}
 
-/* ===== 轻提示条 ===== */
-.edl-hero-tip { font-size: var(--font-size-xs); color: var(--text-tertiary); margin: var(--space-sm) 0 0; padding: 6px 12px; background: var(--bg-subtle, #f8fafc); border-radius: var(--radius-md); line-height: 1.5; max-width: 720px; }
+/* 主输入区 */
+.edl-hero-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--surface-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  margin-bottom: var(--space-lg);
+  max-width: 860px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.edl-hero-input:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
+}
+
+.edl-hero-input .edl-hero-field {
+  flex: 1;
+}
+
+.edl-hero-input .edl-hero-field :deep(.el-input__wrapper) {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.edl-hero-input .edl-hero-field :deep(.el-input__inner) {
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  line-height: 1.6;
+  height: 32px;
+}
+
+.edl-hero-input .edl-hero-field :deep(.el-input__inner::placeholder) {
+  color: var(--text-disabled);
+}
+
+.edl-hero-input .el-button {
+  flex-shrink: 0;
+  height: 48px;
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-xl);
+  font-weight: 600;
+}
+
+/* 示例问题 */
+.edl-hero-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  max-width: 860px;
+}
+
+.edl-chip-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.edl-chip-group-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+.edl-hero-chip {
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  height: 32px;
+  padding: 0 var(--space-lg);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-color: var(--border-default);
+}
+
+.edl-hero-chip:hover,
+.edl-hero-chip:focus {
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+}
+
+/* 轻量提示条 */
+.edl-hero-tip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+
+.edl-tip-dot {
+  color: var(--border-default);
+}
 
 /* ===== 工具栏 ===== */
-.edl-toolbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-md); }
-.edl-toolbar__left { display: flex; flex-direction: column; gap: 2px; }
-.edl-toolbar-title { font-size: var(--font-size-body-lg); font-weight: 600; color: var(--text-primary); margin: 0; }
-.edl-toolbar-sub { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.edl-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
 
-.edl-filters { display: flex; gap: 6px; flex-wrap: wrap; }
-.edl-filter-chip { border: 1px solid var(--border-default); background: #fff; border-radius: var(--radius-full); padding: 4px 14px; cursor: pointer; font-size: var(--font-size-xs); color: var(--text-secondary); transition: all .15s; }
-.edl-filter-chip:hover, .edl-filter-chip.active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-bg); }
+.edl-toolbar__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
-
+.edl-toolbar-title {
+  font-size: var(--font-size-body-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
 
 /* ===== 表格 ===== */
-.edl-table-wrap { border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: auto; background: var(--surface-card); }
-.edl-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
-.edl-table thead { position: sticky; top: 0; z-index: 1; background: var(--bg-table-header); }
-.edl-table th { padding: 8px 10px; text-align: left; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-default); white-space: nowrap; }
-.edl-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-divider); vertical-align: middle; }
-.edl-table tbody tr:hover { background: rgba(37, 99, 235, 0.03); }
-.edl-table tbody tr:last-child td { border-bottom: none; }
+.edl-table {
+  width: 100%;
+}
 
-.edl-cell--name { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
-.edl-cell--conclusion { font-size: var(--font-size-xs); color: var(--text-secondary); max-width: 240px; }
-.edl-cell--actions { white-space: nowrap; }
+.edl-table :deep(.el-table__header th) {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
 
-.edl-cell--risk { white-space: nowrap; }
-.edl-risk-score { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-left: 2px; }
+.edl-table :deep(.el-table__row) {
+  height: 44px;
+}
 
-.edl-grade { display: inline-block; padding: 1px 8px; border-radius: var(--radius-sm); font-weight: 600; font-size: var(--font-size-xs); }
-.edl-grade--danger { background: var(--color-danger-bg); color: var(--color-danger); }
-.edl-grade--warning { background: var(--color-warning-bg); color: var(--color-warning); }
-.edl-grade--success { background: var(--color-success-bg); color: var(--color-success); }
+.edl-cell--name {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
 
-.edl-status { font-size: var(--font-size-xs); font-weight: 500; }
-.edl-status--high { color: var(--color-danger); }
-.edl-status--medium { color: var(--color-warning); }
-.edl-status--low { color: var(--color-success); }
+.edl-cell--conclusion {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  max-width: 240px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
+.edl-cell--question {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
 
-.edl-tags { display: flex; gap: 4px; flex-wrap: wrap; }
-.edl-tag { display: inline-block; padding: 1px 6px; border-radius: var(--radius-sm); font-size: 10px; line-height: 1.4; }
-.edl-tag--ok { background: #f1f5f9; color: var(--text-secondary); }
-.edl-tag--missing { background: #fef3c7; color: #b45309; }
+.edl-cell--time {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
 
-/* 数据来源标签 */.edl-cell--question { font-size: var(--font-size-xs); color: var(--text-secondary); max-width: 160px; }
+.edl-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
 
+.edl-risk-level {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.edl-grade-tag {
+  font-weight: 600;
+}
+
+.edl-risk-score {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+/* 响应式 */
 @media (max-width: 1200px) {
-  .edl-page { padding: var(--space-lg); }
-  .edl-hero { margin-bottom: var(--space-lg); }
-  .edl-toolbar { flex-direction: column; gap: var(--space-sm); align-items: flex-start; }
-  .edl-table { font-size: var(--font-size-xs); }
+  .edl-page {
+    padding: var(--space-lg);
+  }
+  .edl-hero {
+    margin-bottom: var(--space-lg);
+  }
+  .edl-toolbar {
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
+  }
 }
 </style>

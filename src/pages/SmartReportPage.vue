@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sr-page">
     <div v-if="view === 'home'" class="sr-home">
       <div class="sr-home__header">
@@ -10,11 +10,8 @@
       <el-card shadow="never" class="sr-home__ai-input-card">
         <p class="sr-home__ai-label">告诉我你要处理什么报告任务？</p>
         <div class="sr-home__ai-input-row">
-          <el-input v-model="aiTaskInput" class="sr-home__ai-input" placeholder="例如：明达精工现在报告到哪一步了？或者把明达精工报告按浙江分行 V2024 模板重新生成" @keydown.enter.exact.prevent="handleAiTask" clearable size="large">
-            <template #append>
-              <el-button type="primary" :disabled="!aiTaskInput.trim()" @click="handleAiTask" size="default">询问 AI</el-button>
-            </template>
-          </el-input>
+          <el-input v-model="aiTaskInput" class="sr-home__ai-input" placeholder="例如：明达精工现在报告到哪一步了？或者把明达精工报告按浙江分行 V2024 模板重新生成" @keydown.enter.exact.prevent="handleAiTask" clearable size="large" />
+          <el-button type="primary" size="large" :disabled="!aiTaskInput.trim()" @click="handleAiTask">识别任务</el-button>
         </div>
         <div class="sr-home__ai-chips">
           <el-button v-for="(chip, ci) in aiSuggestions" :key="ci" size="small" text @click="handleAiTask(chip)">{{ chip }}</el-button>
@@ -23,25 +20,29 @@
 
       <!-- 四项核心能力 -->
       <div class="sr-home__capabilities">
-        <el-card shadow="hover" class="sr-cap-card" @click="startTaskDialog('查询明达精工报告状态')">
+        <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
           <div class="sr-cap-card__icon">📊</div>
           <div class="sr-cap-card__title">查询报告状态</div>
           <div class="sr-cap-card__desc">查看报告进度、待确认章节和缺失材料</div>
+          <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="startTaskDialog('查询明达精工报告状态')">查询状态</el-button>
         </el-card>
-        <el-card shadow="hover" class="sr-cap-card" @click="startTaskDialog('继续修改明达精工授信调查报告')">
+        <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
           <div class="sr-cap-card__icon">✏️</div>
           <div class="sr-cap-card__title">继续修改报告</div>
           <div class="sr-cap-card__desc">编辑、确认章节，完善证据链</div>
+          <el-button size="small" type="primary" class="sr-cap-card__btn" @click="startTaskDialog('继续修改明达精工授信调查报告')">继续修改</el-button>
         </el-card>
-        <el-card shadow="hover" class="sr-cap-card" @click="startTaskDialog('按浙江分行 V2024 模板重新生成明达精工报告')">
+        <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
           <div class="sr-cap-card__icon">📋</div>
           <div class="sr-cap-card__title">按新模板生成</div>
           <div class="sr-cap-card__desc">用已有资料按新模板重排报告</div>
+          <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="startTaskDialog('按浙江分行 V2024 模板重新生成明达精工报告')">选择模板生成</el-button>
         </el-card>
-        <el-card shadow="hover" class="sr-cap-card" @click="startTaskDialog('打开模板中心')">
+        <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
           <div class="sr-cap-card__icon">⚙️</div>
           <div class="sr-cap-card__title">维护报告模板</div>
           <div class="sr-cap-card__desc">管理银行模板、章节规则和资料要求</div>
+          <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="view = 'templateCenter'">进入模板中心</el-button>
         </el-card>
       </div>
 
@@ -61,16 +62,386 @@
             </template>
           </el-table-column>
           <el-table-column prop="nextStep" label="下一步" />
-          <el-table-column label="操作" width="80" align="center">
+          <el-table-column label="操作" width="100" align="center">
             <template #default="{ row }">
-              <el-button size="small" type="primary" text @click="openReport(row)">打开</el-button>
+              <el-button v-if="row.status.includes('待确认')" size="small" type="primary" text @click="openReport(row, 'continue-edit')">继续修改</el-button>
+              <el-button v-else-if="row.status.includes('缺失')" size="small" type="danger" text @click="openReport(row, 'view-missing')">查看缺失</el-button>
+              <el-button v-else size="small" type="primary" text @click="openReport(row, 'open')">打开</el-button>
             </template>
           </el-table-column>
         </el-table>
       </el-card>
     </div>
 
-    <!-- AI 任务识别/确认页面 -->
+    <!-- 模板中心 -->
+    <div v-if="view === 'templateCenter'" class="sr-template-center">
+      <!-- 页面顶部 -->
+      <div class="sr-tc__top-bar">
+        <div class="sr-tc__top-left">
+          <el-button size="small" text @click="view = 'home'">
+            <el-icon><ArrowLeft /></el-icon> 返回首页
+          </el-button>
+          <div class="sr-tc__top-title-group">
+            <h2 class="sr-tc__title">报告模板中心</h2>
+            <p class="sr-tc__sub">维护不同银行/分行的报告模板、章节规则、资料要求、AI 生成提示词和禁用词。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 筛选区 -->
+      <div class="sr-tc__filters">
+        <el-input v-model="templateKeyword" placeholder="搜索模板名称/银行/报告类型" clearable size="small" style="width:220px" />
+        <el-select v-model="templateBankFilter" placeholder="银行/机构" clearable size="small" style="width:160px">
+          <el-option v-for="b in allBanks" :key="b" :label="b" :value="b" />
+        </el-select>
+        <el-select v-model="templateTypeFilter" placeholder="报告类型" clearable size="small" style="width:140px">
+          <el-option v-for="t in allReportTypes" :key="t" :label="t" :value="t" />
+        </el-select>
+        <el-select v-model="templateStatusFilter" placeholder="状态" clearable size="small" style="width:100px">
+          <el-option label="启用" value="启用" />
+          <el-option label="草稿" value="草稿" />
+        </el-select>
+        <div class="sr-tc-filter__actions">
+          <el-button size="small" type="primary" @click="openNewTplDialog()">新建模板</el-button>
+          <el-button size="small" plain @click="goToTemplateUpload()">上传新模板</el-button>
+        </div>
+      </div>
+
+      <!-- 左右布局 -->
+      <div class="sr-tc__layout">
+        <!-- 左侧：模板名称列表 -->
+        <aside class="sr-tc__sidebar">
+          <div class="sr-tc__sidebar-title">模板列表</div>
+          <div class="sr-tc__sidebar-list">
+            <div v-for="row in filteredTemplateRows" :key="row.id" class="sr-tc-sidebar-item" :class="{ active: selectedTpl?.id === row.id }" @click="selectTemplate(row)">
+              <div class="sr-tc-sidebar-item__name">{{ row.name }}</div>
+              <div class="sr-tc-sidebar-item__meta">
+                <el-tag size="small" :type="row.status === '启用' ? 'success' : 'info'">{{ row.status }}</el-tag>
+                <el-tag v-if="row.isDefault" size="small" type="primary" effect="dark">默认</el-tag>
+                <span>{{ row.bank }}</span>
+              </div>
+            </div>
+            <div v-if="filteredTemplateRows.length === 0" class="sr-tc-sidebar-empty">
+              没有匹配的模板
+            </div>
+          </div>
+        </aside>
+
+        <!-- 右侧：模板详情 + 章节规则 + 关联资料/证据链 -->
+        <main class="sr-tc__detail">
+          <template v-if="selectedTpl">
+            <!-- 基本信息 -->
+            <div class="sr-tc-detail__info-card">
+              <div class="sr-tc-detail__info-title">
+                <h3>{{ selectedTpl.name }}</h3>
+                <div class="sr-tc-detail__info-tags">
+                  <el-tag size="small" :type="selectedTpl.status === '启用' ? 'success' : 'info'">{{ selectedTpl.status }}</el-tag>
+                  <el-tag v-if="selectedTpl.isDefault" size="small" type="primary" effect="dark">默认</el-tag>
+                </div>
+              </div>
+              <div class="sr-tc-detail__info-meta">
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">银行/机构</span><span>{{ selectedTpl.bank || '—' }}</span></div>
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">报告类型</span><span>{{ selectedTpl.reportType || '授信调查' }}</span></div>
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">章节数</span><span>{{ selectedTpl.sectionsCount }} 章</span></div>
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">必需资料</span><span>{{ selectedTpl.requiredMaterials }} 份</span></div>
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">最近使用</span><span>{{ selectedTpl.recentUsage }} 次</span></div>
+                <div class="sr-tc-detail__info-row"><span class="sr-tc-detail__info-label">禁用词规则</span><span>{{ selectedTpl.forbiddenWords }} 条</span></div>
+              </div>
+              <!-- 操作区 -->
+              <div class="sr-tc-detail__actions">
+                <el-button size="small" @click="setAsDefault(selectedTpl.id)" :disabled="selectedTpl.isDefault">{{ selectedTpl.isDefault ? '已是默认' : '设为默认' }}</el-button>
+                <el-button size="small" type="primary" @click="viewTemplateRules(selectedTpl)">查看章节规则</el-button>
+                <el-button size="small" type="warning" @click="goToTemplateUpload(selectedTpl)">上传新版模板</el-button>
+                <el-button size="small" type="success" @click="generateReportFromTpl(selectedTpl)">用此模板生成报告</el-button>
+                <el-button size="small" plain @click="openNewTplDialog()">新建模板</el-button>
+              </div>
+            </div>
+
+            <!-- 章节规则表 -->
+            <div class="sr-tc-detail__section" id="section-rules">
+              <h4 class="sr-tc-detail__section-title">章节规则</h4>
+              <el-table :data="selectedTplDetailSections" size="small" stripe class="sr-tc-rules-table" :header-cell-style="{ background: '#fafbfd', color: '#64748b', fontWeight: 600, fontSize: '12px' }">
+                <el-table-column label="章节" min-width="120">
+                  <template #default="{ row }"><span class="sr-rule-name">{{ row.name }}</span></template>
+                </el-table-column>
+                <el-table-column label="是否必填" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small" :type="row.required === '是' ? 'primary' : 'info'">{{ row.required }}</el-tag></template>
+                </el-table-column>
+                <el-table-column label="所需资料" min-width="120">
+                  <template #default="{ row }"><span class="sr-rule-mats">{{ row.materials }}</span></template>
+                </el-table-column>
+                <el-table-column label="生成规则" min-width="140">
+                  <template #default="{ row }"><span class="sr-rule-gen">{{ row.genRule }}</span></template>
+                </el-table-column>
+                <el-table-column label="状态" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small" :type="row.ruleStatus === '已配置' ? 'success' : row.ruleStatus === '待确认' ? 'warning' : 'danger'">{{ row.ruleStatus }}</el-tag></template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <!-- 禁用词规则 -->
+            <div class="sr-tc-detail__section">
+              <h4 class="sr-tc-detail__section-title">禁用词规则</h4>
+              <div class="sr-tc-rules-forbidden-list">
+                <span v-for="(fw, fi) in selectedTplForbiddenWords" :key="fi" class="sr-forbidden-tag">{{ fw }}</span>
+              </div>
+            </div>
+
+            <!-- 关联资料 / 证据链面板 -->
+            <div class="sr-tc-detail__section sr-tc-detail__evidence">
+              <h4 class="sr-tc-detail__section-title">关联资料 / 证据链</h4>
+              <p class="sr-tc-detail__evidence-desc">模板需要的资料链映射状态（资料 → 用途章节 → 来源 → 已映射/待确认/缺规则）</p>
+              <el-table :data="selectedTemplateEvidenceRows" size="small" stripe class="sr-tc-rules-table" :header-cell-style="{ background: '#fafbfd', color: '#64748b', fontWeight: 600, fontSize: '12px' }">
+                <el-table-column label="资料名称" min-width="100">
+                  <template #default="{ row }"><span class="sr-rule-name">{{ row.name }}</span></template>
+                </el-table-column>
+                <el-table-column label="用途章节" min-width="100">
+                  <template #default="{ row }"><span class="sr-rule-mats">{{ row.purpose }}</span></template>
+                </el-table-column>
+                <el-table-column label="来源" min-width="80">
+                  <template #default="{ row }"><span class="sr-rule-gen">{{ row.source }}</span></template>
+                </el-table-column>
+                <el-table-column label="状态" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small" :type="row.status === '已映射' ? 'success' : row.status === '待确认' ? 'warning' : 'danger'">{{ row.status }}</el-tag></template>
+                </el-table-column>
+                <el-table-column label="说明" min-width="140">
+                  <template #default="{ row }"><span class="sr-rule-mats">{{ row.note }}</span></template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </template>
+
+          <div v-else class="sr-tc-detail__empty">
+            <p>请在左侧选择一个模板查看详情</p>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- 新建模板 Dialog -->
+    <el-dialog v-model="showNewTplDialog" title="新建模板" width="480px" destroy-on-close>
+      <el-form label-width="100px" size="small" label-position="right">
+        <el-form-item label="模板名称">
+          <el-input v-model="newTplForm.name" placeholder="例如：浙江分行授信调查报告 V2025" />
+        </el-form-item>
+        <el-form-item label="银行/机构">
+          <el-input v-model="newTplForm.bank" placeholder="例如：浙江银行杭州分行" />
+        </el-form-item>
+        <el-form-item label="报告类型">
+          <el-select v-model="newTplForm.reportType" style="width:100%">
+            <el-option label="授信调查" value="授信调查" />
+            <el-option label="综合授信" value="综合授信" />
+            <el-option label="全景报告" value="全景报告" />
+            <el-option label="诊断报告" value="诊断报告" />
+            <el-option label="农户授信" value="农户授信" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="版本号">
+          <el-input v-model="newTplForm.version" placeholder="例如：V2025" />
+        </el-form-item>
+        <el-form-item label="创建方式">
+          <el-radio-group v-model="newTplForm.createMode">
+            <el-radio value="blank">空白模板</el-radio>
+            <el-radio value="copy">复制当前模板</el-radio>
+            <el-radio value="upload">上传文件解析</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="设为默认">
+          <el-switch v-model="newTplForm.isDefault" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showNewTplDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmNewTemplate()">确认创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 章节规则 Drawer（辅助查看方式） -->
+    <el-drawer v-model="showTplRules" :title="selectedTpl?.name + ' — 章节规则'" size="520px" :close-on-click-modal="false">
+      <template #header>
+        <div class="sr-drawer-header">
+          <span class="sr-drawer-title">{{ selectedTpl?.name }} — 章节规则</span>
+        </div>
+      </template>
+      <div v-if="selectedTpl" class="sr-tc-rules">
+        <div class="sr-tc-rules-info">
+          <el-descriptions :column="2" size="small" border>
+            <el-descriptions-item label="模板名称">{{ selectedTpl.name }}</el-descriptions-item>
+            <el-descriptions-item label="银行/机构">{{ selectedTpl.bank }}</el-descriptions-item>
+            <el-descriptions-item label="报告类型">{{ selectedTpl.reportType }}</el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag size="small" :type="selectedTpl.status === '启用' ? 'success' : 'info'">{{ selectedTpl.status }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="章节数">{{ selectedTpl.sectionsCount }}</el-descriptions-item>
+            <el-descriptions-item label="必需资料数">{{ selectedTpl.requiredMaterials }}</el-descriptions-item>
+            <el-descriptions-item label="禁用词规则">{{ selectedTpl.forbiddenWords || 8 }} 条</el-descriptions-item>
+            <el-descriptions-item label="最近使用">{{ selectedTpl.recentUsage || 0 }} 次</el-descriptions-item>
+          </el-descriptions>
+        </div>
+        <div class="sr-tc-rules-sections">
+          <h4 class="sr-tc-rules-title">章节列表与资料要求</h4>
+          <el-table :data="selectedTplDetailSections" size="small" stripe class="sr-tc-rules-table" :header-cell-style="{ background: '#fafbfd', color: '#64748b', fontWeight: 600, fontSize: '12px' }">
+            <el-table-column label="章节" min-width="120"><template #default="{ row }"><span class="sr-rule-name">{{ row.name }}</span></template></el-table-column>
+            <el-table-column label="是否必填" width="80" align="center"><template #default="{ row }"><el-tag size="small" :type="row.required === '是' ? 'primary' : 'info'">{{ row.required }}</el-tag></template></el-table-column>
+            <el-table-column label="所需资料" min-width="120"><template #default="{ row }"><span class="sr-rule-mats">{{ row.materials }}</span></template></el-table-column>
+            <el-table-column label="生成规则" min-width="140"><template #default="{ row }"><span class="sr-rule-gen">{{ row.genRule }}</span></template></el-table-column>
+            <el-table-column label="状态" width="80" align="center"><template #default="{ row }"><el-tag size="small" :type="row.ruleStatus === '已配置' ? 'success' : row.ruleStatus === '待确认' ? 'warning' : 'danger'">{{ row.ruleStatus }}</el-tag></template></el-table-column>
+          </el-table>
+        </div>
+        <div class="sr-tc-rules-sections sr-tc-rules-forbidden">
+          <h4 class="sr-tc-rules-title">禁用词规则</h4>
+          <div class="sr-tc-rules-forbidden-list">
+            <span v-for="(fw, fi) in selectedTplForbiddenWords" :key="fi" class="sr-forbidden-tag">{{ fw }}</span>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- 上传新版模板 -->
+    <div v-if="view === 'templateUpload'" class="sr-template-upload">
+      <!-- 页面顶部 -->
+      <div class="sr-tu__top-bar">
+        <div class="sr-tu__top-left">
+          <el-button size="small" text @click="view = 'templateCenter'">
+            <el-icon><ArrowLeft /></el-icon> 返回模板中心
+          </el-button>
+          <div class="sr-tu__top-title-group">
+            <h2 class="sr-tu__title">上传新版模板</h2>
+            <p class="sr-tu__sub">上传 Word/PDF 模板，AI 将解析章节结构、资料要求、生成规则和禁用词。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 主体：上传区 + AI 解析结果 -->
+      <div class="sr-tu__body">
+        <div class="sr-tu__upload-zone">
+          <el-card shadow="never" class="sr-tu-card">
+            <template #header><span class="sr-tu-card-title">1. 上传模板文件</span></template>
+            <div class="sr-tu-upload-area" @click="simulateTplUpload" :class="{ 'sr-tu-upload-area--done': tplUploadDone }">
+              <template v-if="!tplUploadDone">
+                <el-icon :size="40" color="#94a3b8"><Upload /></el-icon>
+                <p class="sr-tu-upload-text">点击或拖拽上传模板文件</p>
+                <p class="sr-tu-upload-hint">支持 .docx / .pdf / .doc 格式</p>
+              </template>
+              <template v-else>
+                <el-icon :size="32" color="#10b981"><CircleCheck /></el-icon>
+                <p class="sr-tu-upload-text">{{ tplFileName || '授信调查报告模板 V2025.docx' }}</p>
+                <p class="sr-tu-upload-hint">上传成功，AI 正在解析...</p>
+              </template>
+            </div>
+          </el-card>
+
+          <el-card shadow="never" class="sr-tu-card">
+            <template #header><span class="sr-tu-card-title">2. 模板基本信息</span></template>
+            <el-form label-width="90px" size="small" label-position="top">
+              <el-form-item label="模板名称">
+                <el-input v-model="tplForm.name" placeholder="例如：浙江分行授信调查报告 V2025" />
+              </el-form-item>
+              <el-form-item label="所属银行/机构">
+                <el-input v-model="tplForm.bank" placeholder="例如：浙江银行杭州分行" />
+              </el-form-item>
+              <el-form-item label="报告类型">
+                <el-select v-model="tplForm.reportType" style="width:100%">
+                  <el-option label="授信调查报告" value="授信调查报告" />
+                  <el-option label="综合授信报告" value="综合授信报告" />
+                  <el-option label="农户授信报告" value="农户授信报告" />
+                  <el-option label="全景报告" value="全景报告" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="版本号">
+                <el-input v-model="tplForm.version" placeholder="例如：V2025" />
+              </el-form-item>
+              <el-form-item label="设为默认模板">
+                <el-switch v-model="tplForm.isDefault" />
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </div>
+
+        <div class="sr-tu__parse-zone">
+          <!-- AI 解析步骤 -->
+          <el-card shadow="never" class="sr-tu-card">
+            <template #header><span class="sr-tu-card-title">3. AI 解析进度</span></template>
+            <el-steps :active="tplParseStep" align-center finish-status="success" class="sr-tu-steps">
+              <el-step title="上传模板" description="文件上传" />
+              <el-step title="解析章节目录" description="识别章节结构" />
+              <el-step title="识别必填资料" description="资料映射" />
+              <el-step title="生成章节规则" description="规则生成" />
+              <el-step title="检查禁用词" description="合规检查" />
+              <el-step title="保存模板" description="完成" />
+            </el-steps>
+          </el-card>
+
+          <!-- AI 解析结果预览 -->
+          <el-card shadow="never" class="sr-tu-card" v-if="tplParseStep >= 2">
+            <template #header><span class="sr-tu-card-title">4. AI 解析结果预览</span></template>
+            <div class="sr-tu-parse-summary">
+              <div class="sr-tu-parse-stat">
+                <span class="sr-tu-parse-stat__value">{{ tplParseResult.sections || 0 }}</span>
+                <span class="sr-tu-parse-stat__label">识别章节数</span>
+              </div>
+              <div class="sr-tu-parse-stat">
+                <span class="sr-tu-parse-stat__value">{{ tplParseResult.requiredMaterials || 0 }}</span>
+                <span class="sr-tu-parse-stat__label">必填资料</span>
+              </div>
+              <div class="sr-tu-parse-stat">
+                <span class="sr-tu-parse-stat__value">{{ tplParseResult.materialRules || 0 }}</span>
+                <span class="sr-tu-parse-stat__label">资料规则</span>
+              </div>
+              <div class="sr-tu-parse-stat">
+                <span class="sr-tu-parse-stat__value">{{ tplParseResult.forbiddenRules || 0 }}</span>
+                <span class="sr-tu-parse-stat__label">禁用词规则</span>
+              </div>
+              <div class="sr-tu-parse-stat sr-tu-parse-stat--warn">
+                <span class="sr-tu-parse-stat__value">{{ tplParseResult.pendingRules || 0 }}</span>
+                <span class="sr-tu-parse-stat__label">待确认规则</span>
+              </div>
+            </div>
+
+            <!-- 解析出的章节规则表 -->
+            <div class="sr-tu-parse-table-wrap" v-if="tplParseStep >= 4">
+              <h4 class="sr-tu-parse-title">章节规则预览</h4>
+              <el-table :data="tplParseSections" size="small" stripe class="sr-tc-rules-table" :header-cell-style="{ background: '#fafbfd', color: '#64748b', fontWeight: 600, fontSize: '12px' }">
+                <el-table-column label="章节" min-width="120">
+                  <template #default="{ row }"><span class="sr-rule-name">{{ row.name }}</span></template>
+                </el-table-column>
+                <el-table-column label="是否必填" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small" :type="row.required === '是' ? 'primary' : 'info'">{{ row.required }}</el-tag></template>
+                </el-table-column>
+                <el-table-column label="所需资料" min-width="120">
+                  <template #default="{ row }"><span class="sr-rule-mats">{{ row.materials }}</span></template>
+                </el-table-column>
+                <el-table-column label="生成规则" min-width="140">
+                  <template #default="{ row }"><span class="sr-rule-gen">{{ row.genRule }}</span></template>
+                </el-table-column>
+                <el-table-column label="状态" width="80" align="center">
+                  <template #default="{ row }"><el-tag size="small" :type="row.ruleStatus === '已配置' ? 'success' : row.ruleStatus === '待确认' ? 'warning' : 'danger'">{{ row.ruleStatus }}</el-tag></template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-card>
+
+          <!-- AI 解析建议 -->
+          <el-card shadow="never" class="sr-tu-card" v-if="tplParseStep >= 3">
+            <template #header><span class="sr-tu-card-title">AI 解析建议</span></template>
+            <div class="sr-tu-ai-tips">
+              <div v-for="(tip, ti) in tplAiTips" :key="ti" class="sr-tu-ai-tip">
+                <el-icon color="#2563eb"><MagicStick /></el-icon>
+                <span>{{ tip }}</span>
+              </div>
+            </div>
+          </el-card>
+
+          <!-- 操作按钮 -->
+          <div class="sr-tu-actions">
+            <el-button size="default" plain @click="view = 'templateCenter'">返回模板中心</el-button>
+            <el-button size="default" plain @click="resetTplUpload()">重新上传</el-button>
+            <el-button size="default" @click="saveTplAsDraft()" :disabled="tplParseStep < 5">保存为草稿</el-button>
+            <el-button size="default" type="primary" @click="saveTplAndEnable()" :disabled="tplParseStep < 5">保存并启用</el-button>
+          </div>
+        </div>
+      </div>
+    </div><!-- AI 任务识别/确认页面 -->
     <div v-if="view === 'taskDialog'" class="sr-task-workspace">
       <div class="sr-task-workspace__header">
         <el-button size="small" text @click="view = 'home'">
@@ -515,7 +886,7 @@
 </template>
 <script setup>
 import { ref, computed } from 'vue'
-import { ArrowLeft, Upload, CircleCheck, Close, Document } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, CircleCheck, Close, Document, MagicStick } from '@element-plus/icons-vue'
 import { ElMessage, ElDialog } from 'element-plus'
 import {
   reportTasks,
@@ -531,6 +902,260 @@ import {
 } from '../data/mockSmartReport.js'
 
 const view = ref('home')
+
+// === Template center extended data (local, not in mock) ===
+const templateCenterRows = ref([
+  { id: 'tpl-001', name: '单一客户授信调查报告通用版 V2021', bank: '浙江银行总行', reportType: '授信调查', sectionsCount: 12, requiredMaterials: 10, status: '启用', isDefault: true, forbiddenWords: 8, recentUsage: 45 },
+  { id: 'tpl-002', name: '浙江分行授信调查报告 V2024', bank: '浙江分行', reportType: '授信调查', sectionsCount: 16, requiredMaterials: 12, status: '草稿', isDefault: false, forbiddenWords: 8, recentUsage: 23 },
+  { id: 'tpl-003', name: '企业全景报告模板 V2', bank: '公司金融部', reportType: '全景报告', sectionsCount: 10, requiredMaterials: 8, status: '启用', isDefault: false, forbiddenWords: 6, recentUsage: 12 },
+  { id: 'tpl-004', name: '企业诊断报告模板 V1', bank: '风险管理部门', reportType: '诊断报告', sectionsCount: 8, requiredMaterials: 6, status: '启用', isDefault: false, forbiddenWords: 5, recentUsage: 31 },
+  { id: 'tpl-005', name: '宁波银行单户授信调查报告 V2023', bank: '宁波银行', reportType: '授信调查', sectionsCount: 14, requiredMaterials: 11, status: '启用', isDefault: false, forbiddenWords: 7, recentUsage: 18 },
+  { id: 'tpl-006', name: '工商银行浙江分行授信调查报告 V2024', bank: '工商银行浙江分行', reportType: '授信调查', sectionsCount: 15, requiredMaterials: 13, status: '草稿', isDefault: false, forbiddenWords: 9, recentUsage: 8 },
+  { id: 'tpl-007', name: '建设银行浙江分行综合授信报告 V2023', bank: '建设银行浙江分行', reportType: '综合授信', sectionsCount: 18, requiredMaterials: 15, status: '启用', isDefault: false, forbiddenWords: 10, recentUsage: 15 },
+  { id: 'tpl-008', name: '农业银行宁波分行农户授信报告 V2024', bank: '农业银行宁波分行', reportType: '农户授信', sectionsCount: 9, requiredMaterials: 7, status: '启用', isDefault: false, forbiddenWords: 4, recentUsage: 27 },
+  { id: 'tpl-009', name: '江苏银行南京分行授信调查报告 V2022', bank: '江苏银行南京分行', reportType: '授信调查', sectionsCount: 13, requiredMaterials: 10, status: '启用', isDefault: false, forbiddenWords: 7, recentUsage: 9 },
+  { id: 'tpl-010', name: '上海银行浦东支行授信调查报告 V2024', bank: '上海银行浦东支行', reportType: '授信调查', sectionsCount: 11, requiredMaterials: 9, status: '草稿', isDefault: false, forbiddenWords: 6, recentUsage: 3 },
+]);
+
+// === Template detail sections (local mock) ===
+const tplDetailSectionData = [
+  { name: '申请人基本信息', required: '是', materials: '工商资料、营业执照', genRule: '按工商登记信息生成，不做风险判断', ruleStatus: '已配置' },
+  { name: '股权结构及历史沿革', required: '是', materials: '工商变更记录、股东名册', genRule: '需说明重要变更和实控人情况', ruleStatus: '待确认' },
+  { name: '收入真实性核实', required: '是', materials: '税票、银行流水、合同、发票', genRule: '必须引用证据，结论需审慎表达', ruleStatus: '缺资料规则' },
+  { name: '主要风险分析', required: '是', materials: '风险清单、诉讼信息、征信资料', genRule: '禁止无证据风险结论', ruleStatus: '已配置' },
+  { name: '财务状况分析', required: '是', materials: '财务报表、审计报告、纳税证明', genRule: '对比近三年数据，标注异常波动', ruleStatus: '已配置' },
+  { name: '授信方案建议', required: '是', materials: '授信申请、担保方案、还款来源', genRule: '综合风险评估后生成授信建议', ruleStatus: '待确认' },
+  { name: '担保与抵押物评估', required: '否', materials: '抵押物评估报告、权属证明', genRule: '按评估价折算，说明担保充分性', ruleStatus: '已配置' },
+  { name: '调查结论', required: '是', materials: '全部章节汇总', genRule: '综合前述分析给出最终结论', ruleStatus: '已配置' },
+];
+
+const tplForbiddenWordsData = [
+  '保证盈利', '无风险', '确定收益', '绝对安全', '保本', '无诉讼风险', '资金链无隐患', '经营状况良好'
+];
+
+// === Upload template parse mock data ===
+const tplUploadSectionData = [
+  { name: '申请人基本信息', required: '是', materials: '工商资料、营业执照、法人身份证', genRule: '按工商登记信息生成，不做风险判断', ruleStatus: '已配置' },
+  { name: '股权结构及历史沿革', required: '是', materials: '工商变更记录、股东名册', genRule: '需说明重要变更和实控人情况', ruleStatus: '待确认' },
+  { name: '收入真实性核实', required: '是', materials: '税票、银行流水、合同、发票', genRule: '必须引用证据，结论需审慎表达', ruleStatus: '缺资料规则' },
+  { name: '主要风险分析', required: '是', materials: '风险清单、诉讼信息、征信资料', genRule: '禁止无证据风险结论', ruleStatus: '已配置' },
+  { name: '授信方案建议', required: '是', materials: '授信申请、担保方案、还款来源', genRule: '综合风险评估后生成授信建议', ruleStatus: '待确认' },
+];
+
+const tplUploadAiTips = [
+  '已识别到 16 个章节，其中 4 个章节涉及授信审批关键判断。',
+  '收入真实性核实章节缺少明确的银行流水要求，建议补充为必填资料。',
+  '主要风险分析章节建议增加禁用规则：禁止无证据下结论。',
+  '调查结论与授信方案章节建议设置为强制人工确认。',
+];
+
+// Template center
+
+const showTplRules = ref(false)
+const selectedTpl = ref(null)
+
+// === Filter state for template center ===
+const templateKeyword = ref("")
+const templateBankFilter = ref("")
+const templateTypeFilter = ref("")
+const templateStatusFilter = ref("")
+const tplDetailScrollTarget = ref("")
+
+// === New template dialog ===
+const showNewTplDialog = ref(false)
+const newTplForm = ref({ name: "", bank: "", reportType: "���ŵ���", version: "", isDefault: false, createMode: "blank" })
+
+
+// === Missing functions for template center ===
+function viewTemplateRules(row) {
+  selectedTpl.value = row
+  showTplRules.value = true
+}
+
+function setAsDefault(id) {
+  const row = templateCenterRows.value.find(t => t.id === id)
+  if (!row) return
+  templateCenterRows.value.forEach(t => { t.isDefault = false })
+  row.isDefault = true
+  ElMessage.success('已设置为默认模板')
+}
+
+function goToTemplateUpload(row = null) {
+  if (row) {
+    uploadFromTemplateId.value = row.id
+    tplForm.value.name = row.name
+    tplForm.value.bank = row.bank || ''
+    tplForm.value.reportType = row.reportType || '授信调查报告'
+    tplForm.value.version = ''
+    tplForm.value.isDefault = row.isDefault || false
+  } else {
+    uploadFromTemplateId.value = null
+    tplForm.value = { name: '', bank: '', reportType: '授信调查报告', version: '', isDefault: false }
+  }
+  resetTplUpload()
+  view.value = 'templateUpload'
+}
+
+function simulateTplUpload() {
+  if (tplUploadDone.value) return
+  tplUploadDone.value = true
+  tplFileName.value = '授信调查报告模板 V2025.docx'
+  let step = 0
+  const timer = setInterval(() => {
+    step++
+    tplParseStep.value = step
+    if (step >= 6) {
+      clearInterval(timer)
+      tplParseResult.value = { sections: 16, requiredMaterials: 12, materialRules: 24, forbiddenRules: 8, pendingRules: 3 }
+      tplParseSections.value = tplUploadSectionData.map(s => ({ ...s }))
+      tplAiTips.value = tplUploadAiTips
+    }
+  }, 600)
+}
+
+function resetTplUpload() {
+  tplUploadDone.value = false
+  tplFileName.value = ''
+  tplParseStep.value = 0
+  tplParseResult.value = { sections: 0, requiredMaterials: 0, materialRules: 0, forbiddenRules: 0, pendingRules: 0 }
+  tplAiTips.value = []
+  tplParseSections.value = []
+}
+
+function saveTplAsDraft() {
+  if (!tplForm.value.name) { ElMessage.warning('请填写模板名称'); return }
+  const newRow = {
+    id: 'tpl-' + Date.now(),
+    name: tplForm.value.name,
+    bank: tplForm.value.bank,
+    reportType: tplForm.value.reportType,
+    sectionsCount: tplParseResult.value.sections,
+    requiredMaterials: tplParseResult.value.requiredMaterials,
+    status: '草稿',
+    isDefault: tplForm.value.isDefault,
+    forbiddenWords: tplParseResult.value.forbiddenRules,
+    recentUsage: 0,
+  }
+  templateCenterRows.value.push(newRow)
+  ElMessage.success('模板已保存为草稿')
+  view.value = 'templateCenter'
+  selectedTpl.value = newRow
+  if (tplForm.value.isDefault) {
+    templateCenterRows.value.forEach(t => { t.isDefault = false })
+    newRow.isDefault = true
+  }
+}
+
+function saveTplAndEnable() {
+  if (!tplForm.value.name) { ElMessage.warning('请填写模板名称'); return }
+  const newRow = {
+    id: 'tpl-' + Date.now(),
+    name: tplForm.value.name,
+    bank: tplForm.value.bank,
+    reportType: tplForm.value.reportType,
+    sectionsCount: tplParseResult.value.sections,
+    requiredMaterials: tplParseResult.value.requiredMaterials,
+    status: '启用',
+    isDefault: tplForm.value.isDefault,
+    forbiddenWords: tplParseResult.value.forbiddenRules,
+    recentUsage: 0,
+  }
+  templateCenterRows.value.push(newRow)
+  ElMessage.success('模板已保存并启用')
+  view.value = 'templateCenter'
+  selectedTpl.value = newRow
+  if (tplForm.value.isDefault) {
+    templateCenterRows.value.forEach(t => { t.isDefault = false })
+    newRow.isDefault = true
+  }
+}
+
+function selectTemplate(row) {
+  selectedTpl.value = row
+}
+
+function openNewTplDialog() {
+  newTplForm.value = { name: '', bank: '', reportType: '授信调查', version: '', isDefault: false, createMode: 'blank' }
+  showNewTplDialog.value = true
+}
+
+function confirmNewTemplate() {
+  if (!newTplForm.value.name) { ElMessage.warning('请填写模板名称'); return }
+  const isCopy = newTplForm.value.createMode === 'copy' && selectedTpl.value
+  const newRow = {
+    id: 'tpl-' + Date.now(),
+    name: newTplForm.value.name,
+    bank: newTplForm.value.bank,
+    reportType: newTplForm.value.reportType,
+    sectionsCount: isCopy ? selectedTpl.value.sectionsCount : 0,
+    requiredMaterials: isCopy ? selectedTpl.value.requiredMaterials : 0,
+    status: '草稿',
+    isDefault: newTplForm.value.isDefault,
+    forbiddenWords: isCopy ? selectedTpl.value.forbiddenWords : 0,
+    recentUsage: 0,
+  }
+  if (newTplForm.value.isDefault) {
+    templateCenterRows.value.forEach(t => { t.isDefault = false })
+  }
+  templateCenterRows.value.push(newRow)
+  ElMessage.success('模板已创建')
+  showNewTplDialog.value = false
+  selectedTpl.value = newRow
+  if (newTplForm.value.createMode === 'upload') {
+    goToTemplateUpload(newRow)
+  }
+}
+
+function generateReportFromTpl(row) {
+  ElMessage.info('正在用【' + row.name + '】生成报告...')
+  view.value = 'taskDialog'
+  startTaskDialog('使用【' + row.name + '】为明达精工有限公司生成授信调查报告，并检查缺失材料')
+}
+
+const allBanks = computed(() => [...new Set(templateCenterRows.value.map(t => t.bank))].sort())
+const allReportTypes = computed(() => [...new Set(templateCenterRows.value.map(t => t.reportType))].sort())
+
+const filteredTemplateRows = computed(() => {
+  let rows = templateCenterRows.value
+  if (templateKeyword.value) {
+    const kw = templateKeyword.value.toLowerCase()
+    rows = rows.filter(t => t.name.toLowerCase().includes(kw) || (t.bank || '').toLowerCase().includes(kw) || (t.reportType || '').toLowerCase().includes(kw))
+  }
+  if (templateBankFilter.value) {
+    rows = rows.filter(t => t.bank === templateBankFilter.value)
+  }
+  if (templateTypeFilter.value) {
+    rows = rows.filter(t => t.reportType === templateTypeFilter.value)
+  }
+  if (templateStatusFilter.value) {
+    rows = rows.filter(t => t.status === templateStatusFilter.value)
+  }
+  return rows
+})
+
+const selectedTemplateEvidenceRows = computed(() => {
+  return [
+    { name: '工商资料', purpose: '申请人基本信息', source: '工商查询', status: '已映射', note: '用于生成企业基本信息章节' },
+    { name: '营业执照', purpose: '申请人基本信息', source: '资料识别', status: '已映射', note: '用于核验企业名称、统一社会信用代码' },
+    { name: '工商变更记录', purpose: '股权结构及历史沿革', source: '工商查询', status: '已映射', note: '用于说明重要变更和实控人情况' },
+    { name: '税票数据', purpose: '收入真实性核实', source: '税票采集', status: '待确认', note: '需要确认近12个月范围' },
+    { name: '银行流水', purpose: '收入真实性核实', source: '用户上传', status: '缺规则', note: '模板未明确流水期间要求' },
+    { name: '征信授权', purpose: '信用状况', source: '用户上传', status: '已映射', note: '用于核验信用状况' },
+    { name: '财务报表', purpose: '财务状况分析', source: '用户上传', status: '已映射', note: '对比近三年数据，标注异常波动' },
+    { name: '授信申请', purpose: '授信方案建议', source: '用户上传', status: '待确认', note: '需确认授信额度和期限' },
+  ]
+})
+
+// Upload template state
+const tplUploadDone = ref(false)
+const tplFileName = ref('')
+const tplParseStep = ref(0)
+const tplForm = ref({ name: '', bank: '', reportType: '授信调查报告', version: '', isDefault: false })
+const tplParseResult = ref({ sections: 0, requiredMaterials: 0, materialRules: 0, forbiddenRules: 0, pendingRules: 0 })
+const tplAiTips = ref([])
+const tplParseSections = ref([])
+const uploadFromTemplateId = ref(null)
+
 const activeReport = ref(null)
 const activeSectionId = ref('')
 const editingSectionId = ref('')
@@ -680,10 +1305,23 @@ function confirmRecognizedTask() {
   if (!recognizedTask.value) return
   const card = recognizedTask.value
   assistantCollapsed.value = true
-  // 维护模板不走 editor
+  // 维护模板 -> templateCenter
   if (card.type === '维护报告模板') {
-    ElMessage.info('已进入模板维护流程')
-    view.value = 'home'
+    view.value = 'templateCenter'
+    return
+  }
+  // 按新模板生成 -> editor + showRegenDialog
+  if (card.type === '按模板重新生成报告') {
+    assistantCollapsed.value = false
+    ElMessage.info('任务已创建，正在打开报告详情...')
+    if (reportTasks.length) openReport(reportTasks[0], 'regen-template')
+    return
+  }
+  // 继续修改报告 -> editor + position pending
+  if (card.type === '继续修改报告') {
+    assistantCollapsed.value = false
+    ElMessage.info('任务已创建，正在打开报告详情...')
+    if (reportTasks.length) openReport(reportTasks[0], 'continue-edit')
     return
   }
   // 其他类型都进入报告详情
@@ -979,6 +1617,15 @@ function openReport(task) {
 }
 
 function backToHome() { view.value = 'home'; activeReport.value = null }
+
+// === Template center computed ===
+const selectedTplDetailSections = computed(() => {
+  return tplDetailSectionData;
+});
+
+const selectedTplForbiddenWords = computed(() => {
+  return tplForbiddenWordsData;
+});
 
 function handleSaveDraft() { ElMessage.success('草稿已保存') }
 
@@ -1646,4 +2293,407 @@ function viewEvidenceFromRewrite() {
 @media (max-width: 1200px) {
   .sr-task-dialog__body { grid-template-columns: 1fr; }
 }
+
+/* ===== Template Center ===== */
+.sr-template-center {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.sr-tc__top-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sr-tc__top-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sr-tc__title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.sr-tc__sub {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* 筛选区 */
+.sr-tc__filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid #dbe7f5;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.sr-tc-filter__actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* 左右布局 */
+.sr-tc__layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 12px;
+  min-height: calc(100vh - 280px);
+}
+
+/* 左侧模板列表 */
+.sr-tc__sidebar {
+  background: #fff;
+  border: 1px solid #dbe7f5;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sr-tc__sidebar-title {
+  padding: 12px 16px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sr-tc__sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.sr-tc-sidebar-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+  margin-bottom: 4px;
+}
+.sr-tc-sidebar-item:hover {
+  background: #f8fafc;
+}
+.sr-tc-sidebar-item.active {
+  background: #eef2ff;
+  border: 1px solid #dbe7f5;
+}
+.sr-tc-sidebar-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sr-tc-sidebar-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+.sr-tc-sidebar-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* 右侧详情 */
+.sr-tc__detail {
+  background: #fff;
+  border: 1px solid #dbe7f5;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.sr-tc-detail__info-card {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.sr-tc-detail__info-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sr-tc-detail__info-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.sr-tc-detail__info-tags {
+  display: flex;
+  gap: 4px;
+}
+.sr-tc-detail__info-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.sr-tc-detail__info-row {
+  font-size: 13px;
+  color: #64748b;
+}
+.sr-tc-detail__info-label {
+  color: #94a3b8;
+  margin-right: 4px;
+}
+.sr-tc-detail__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 详情区块 */
+.sr-tc-detail__section {
+  margin-bottom: 16px;
+}
+.sr-tc-detail__section-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+.sr-tc-detail__evidence {
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+.sr-tc-detail__evidence-desc {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.sr-tc-detail__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* Template rules drawer */
+.sr-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sr-drawer-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.sr-tc-rules {
+  padding: 4px 0;
+}
+.sr-tc-rules-info {
+  margin-bottom: 16px;
+}
+.sr-tc-rules-sections {
+  margin-bottom: 16px;
+}
+.sr-tc-rules-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+.sr-tc-rules-table {
+  width: 100%;
+}
+.sr-rule-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a1a2e;
+}
+.sr-rule-mats {
+  font-size: 12px;
+  color: #64748b;
+}
+.sr-rule-gen {
+  font-size: 12px;
+  color: #64748b;
+}
+.sr-tc-rules-forbidden {
+  margin-top: 16px;
+}
+.sr-tc-rules-forbidden-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sr-forbidden-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ===== Template Upload View ===== */
+.sr-template-upload {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.sr-tu__top-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.sr-tu__top-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.sr-tu__title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+.sr-tu__sub {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+.sr-tu__body {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.sr-tu__upload-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sr-tu__parse-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sr-tu-card {
+  border: 1px solid #dbe7f5;
+  border-radius: 8px;
+}
+.sr-tu-card :deep(.el-card__header) {
+  padding: 12px 16px;
+  border-bottom: 1px solid #dbe7f5;
+}
+.sr-tu-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+.sr-tu-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  border: 2px dashed #dbe7f5;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 180px;
+}
+.sr-tu-upload-area:hover {
+  border-color: #2563eb;
+  background: #eef2ff;
+}
+.sr-tu-upload-area--done {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+.sr-tu-upload-text {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+.sr-tu-upload-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.sr-tu-steps {
+  margin: 8px 0;
+}
+.sr-tu-parse-summary {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sr-tu-parse-stat {
+  text-align: center;
+  padding: 12px 8px;
+  background: #f7faff;
+  border-radius: 8px;
+  border: 1px solid #dbe7f5;
+}
+.sr-tu-parse-stat--warn {
+  background: #fffbeb;
+  border-color: #fef3c7;
+}
+.sr-tu-parse-stat__value {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  color: #2563eb;
+}
+.sr-tu-parse-stat--warn .sr-tu-parse-stat__value {
+  color: #d97706;
+}
+.sr-tu-parse-stat__label {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+.sr-tu-parse-table-wrap {
+  margin-top: 12px;
+}
+.sr-tu-parse-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+.sr-tu-ai-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sr-tu-ai-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #eef2ff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #1a1a2e;
+  line-height: 1.5;
+}
+.sr-tu-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 0;
+}
+
 </style>

@@ -1,16 +1,18 @@
 <template>
-  <nav class="stage-strip">
-    <button
+  <div class="stage-strip">
+    <el-button
       v-for="stage in stages"
       :key="stage.id"
-      class="stage-tab"
-      :class="[stage.status, { active: stage.id === activeStageId }]"
+      :class="['stage-tab', stage.status, { active: stage.id === activeStageId }]"
       :disabled="stage.status === 'pending'"
+      size="small"
+      plain
+      round
       @click="$emit('select', stage.id)"
     >
       {{ stage.icon }} {{ stage.label }}
-    </button>
-  </nav>
+    </el-button>
+  </div>
 </template>
 
 <script setup>
@@ -23,49 +25,48 @@ defineEmits(['select'])
 
 <style scoped>
 .stage-strip {
-  flex: 0 0 auto;
   display: flex;
-  gap: 8px;
-  padding: 14px 20px;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 12px;
   overflow-x: auto;
-  background: #fff;
-  border-bottom: 1px solid #edf3fa;
+  background: transparent;
+  border-bottom: 0;
+  flex-wrap: wrap;
 }
 
-.stage-tab {
-  white-space: nowrap;
-  height: 34px;
-  padding: 0 13px;
+/* Override el-button styles for stage tabs */
+.stage-tab.el-button {
+  height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
-  color: #50617b;
-  background: #f8fbff;
-  border: 1px solid #dfe8f5;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--el-border-color, #dbe7f5);
+  background: var(--el-bg-color, #fff);
+  color: var(--el-text-color-regular, #64748b);
   transition: all .15s;
 }
 
-.stage-tab:disabled {
+.stage-tab.el-button.is-disabled {
   opacity: .5;
   cursor: default;
 }
 
-.stage-tab:not(:disabled):hover {
-  border-color: #2168f3;
-  color: #2168f3;
+.stage-tab.el-button:not(.is-disabled):hover {
+  border-color: var(--el-color-primary, #2563eb);
+  color: var(--el-color-primary, #2563eb);
 }
 
-.stage-tab.done {
-  color: #18a66a;
-  background: #eaf8f2;
-  border-color: #c9ecd9;
+.stage-tab.done.el-button {
+  color: var(--el-color-success, #10b981);
+  background: var(--el-color-success-light-9, #ecfdf5);
+  border-color: var(--el-color-success-light-7, #d1fae5);
 }
 
-.stage-tab.active {
-  color: #fff;
-  background: #2168f3;
-  border-color: #2168f3;
-  box-shadow: 0 10px 22px rgba(33, 104, 243, .18);
+.stage-tab.active.el-button {
+  color: var(--el-color-primary, #2563eb);
+  background: var(--el-color-primary-light-9, #eef2ff);
+  border-color: var(--el-color-primary, #2563eb);
 }
 </style>

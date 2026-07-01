@@ -619,39 +619,38 @@
           <el-button size="small" text @click="toggleChatPanel" title="收起面板">收起</el-button>
         </div>
         <div class="edw-chat-messages ai-assistant-panel__messages" ref="chatRef">
-          <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' && msg.type !== 'engine' ? 'ai-message--ai' : (msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai')">
-            <template v-if="msg.role === 'ai' || msg.type === 'engine'">
-              <div class="ai-message__avatar">AI</div>
-            </template>
-            <div class="ai-message__bubble" v-if="msg.type !== 'engine'" v-html="renderMd(msg.text)"></div>
-            <div v-if="msg.type === 'engine'" class="edw-engine-card">
-              <div class="edw-engine-card__header">
-                <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
-                <div>
-                  <strong>AI 诊断引擎运行中</strong>
-                  <p>{{ enterprise.name }}</p>
-                </div>
-              </div>
-              <div class="edw-engine-steps">
-                <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
-                  <span class="edw-engine-step__icon">
-                    <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
-                    <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
-                    <span v-else class="edw-engine-step__dot--pending"></span>
-                  </span>
-                  <div>
-                    <strong>{{ step.title }}</strong>
-                    <p>{{ step.desc }}</p>
+          <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="messageClass(msg)">
+            <div class="ai-message__avatar">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
+            <div class="ai-message__content">
+              <div v-if="msg.type !== 'engine'" class="ai-message__bubble" v-html="renderMd(msg.text)"></div>
+              <div v-else class="ai-message__bubble ai-message__bubble--engine">
+                <div class="edw-engine-card">
+                  <div class="edw-engine-card__header">
+                    <span v-if="!engineAllDone" class="edw-engine-spinner"></span>
+                    <div>
+                      <strong>AI 诊断引擎运行中</strong>
+                      <p>{{ enterprise.name }}</p>
+                    </div>
+                  </div>
+                  <div class="edw-engine-steps">
+                    <div v-for="step in engineSteps" :key="step.title" class="edw-engine-step" :class="'edw-engine-step--' + step.status">
+                      <span class="edw-engine-step__icon">
+                        <el-icon v-if="step.status === 'done'" :size="12" color="#22c55e"><Check /></el-icon>
+                        <span v-else-if="step.status === 'active'" class="edw-engine-step__dot--active"></span>
+                        <span v-else class="edw-engine-step__dot--pending"></span>
+                      </span>
+                      <div>
+                        <strong>{{ step.title }}</strong>
+                        <p>{{ step.desc }}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
+                <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
+              </div>
             </div>
-            <div v-if="msg.role === 'ai' && msg.actions" class="ai-message__actions">
-              <el-button v-for="a in msg.actions" :key="a.label" size="small" text :type="a.type || 'primary'" @click="onMsgAction(a)">{{ a.label }}</el-button>
-            </div>
-            <template v-if="msg.role === 'user'">
-              <div class="ai-message__avatar">我</div>
-            </template>
           </div>
         </div>
         <div class="edw-chat-input ai-assistant-panel__footer">
@@ -1508,6 +1507,8 @@ function goBack() { router.push('/enterprise-diagnosis') }
   border-radius: 0;
   overflow: visible;
   padding: 0 var(--space-xl);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .edw-chat-only .ai-message {
@@ -1579,8 +1580,7 @@ function goBack() { router.push('/enterprise-diagnosis') }
   margin-bottom: 8px;
 }
 
-/* 初始态页面背景 */
-.edw-page { background: var(--surface-page); }
+/* 初始态页面背景 — handled by main .edw-page rule above */
 
 .edw-chat-only__input {
   display: flex;
@@ -1612,7 +1612,10 @@ function goBack() { router.push('/enterprise-diagnosis') }
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 20px;
-  height: calc(100vh - 100px);
+  height: calc(100vh - 80px);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
 }
 
 .edw-workspace-layout.collapsed {
@@ -1624,8 +1627,9 @@ function goBack() { router.push('/enterprise-diagnosis') }
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
-  padding-right: 12px;
+  padding: 0 12px 0 0;
   min-width: 0;
+  max-height: calc(100vh - 80px);
 }
 .edw-chat-panel { /* inherits .ai-assistant-panel from tokens */ }
 
@@ -1645,7 +1649,9 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-result-topbar__name { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
 .edw-result-topbar__meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: var(--font-size-xs); color: var(--text-secondary); }
 .edw-result-topbar__view { color: var(--color-primary); font-weight: 500; }
-.edw-page { padding: var(--space-xl) var(--space-3xl); max-width: 1280px; margin: 0 auto; }
+.edw-page { background: var(--surface-page); }
+.edw-page:not(:has(.edw-workspace-layout)) { padding: var(--space-xl) var(--space-3xl); }
+.edw-page:has(.edw-workspace-layout) { padding: 0 var(--space-xl); max-width: 100%; }
 .edw-back-btn { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 /* ══ 旧结果模式布局（未使用） ══ */
 /* .edw-result-mode, .edw-result-layout — removed */
@@ -1727,10 +1733,9 @@ function goBack() { router.push('/enterprise-diagnosis') }
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: calc(100vh - 100px);
+  height: calc(100vh - 80px);
   position: sticky;
   top: 0;
-  width: 360px;
 }
 
 .edw-chat-header.ai-assistant-panel__header {
@@ -1839,6 +1844,7 @@ function goBack() { router.push('/enterprise-diagnosis') }
   display: flex;
   gap: 8px;
   align-items: center;
+  background: var(--surface-card);
 }
 
 .edw-chat-input.ai-assistant-panel__footer .edw-chat-input-el { flex: 1; }
@@ -1998,8 +2004,15 @@ function goBack() { router.push('/enterprise-diagnosis') }
 
 
 /* 收起态 */
-.edw-chat-panel-collapsed { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 44px; min-width: 44px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; transition: all .15s; }
+.edw-chat-panel-collapsed { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: calc(100vh - 80px); min-width: 44px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; transition: all .15s; }
 .edw-chat-panel-collapsed:hover { border-color: var(--color-primary); background: var(--color-primary-bg); }
 .edw-chat-panel-collapsed__icon { font-size: 14px; font-weight: 700; color: var(--color-primary); }
 .edw-chat-panel-collapsed__label { font-size: 10px; color: var(--text-tertiary); writing-mode: vertical-rl; }
+/* Global box-sizing fix */
+.edw-page *,
+.edw-page *::before,
+.edw-page *::after {
+  box-sizing: border-box;
+}
+
 </style>

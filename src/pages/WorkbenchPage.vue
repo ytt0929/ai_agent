@@ -1,223 +1,204 @@
 <template>
-  <div class="page page--wide">
-    <!-- ==================== Normal View ==================== -->
-    <div v-if="!assistant.dialogOpen" class="workbench-normal">
-      <header class="wb-header">
-        <div class="wb-header-left">
-          <h1 class="wb-greeting">{{ greeting }}，张经理</h1>
-          <p class="wb-date">{{ formattedDate }}</p>
+  <div class="wb-page">
+    <!-- ==================== Normal View (工作台首页) ==================== -->
+    <div v-if="!assistant.dialogOpen" class="wb-home">
+      <header class="wb-home__header">
+        <div>
+          <h1 class="wb-home__greeting">{{ greeting }}，张经理</h1>
+          <p class="wb-home__date">{{ formattedDate }}</p>
         </div>
-        <div class="wb-header-right">
-          <el-badge :value="3" :max="99" class="wb-notification">
-            <el-button :icon="Bell" circle size="default" />
-          </el-badge>
-        </div>
+        <el-badge :value="3" :max="99">
+          <el-button :icon="Bell" circle />
+        </el-badge>
       </header>
 
-      <div class="wb-main">
-        <!-- 首要区域：今日待办 + 内联 AI 建议 -->
-        <section class="wb-section wb-todos wb-section--primary">
-          <div class="wb-section-title wb-section-title--primary">
-            <span class="wb-section-label">今日待办</span>
-            <el-tag size="small" round type="info">{{ todos.length }}</el-tag>
-          </div>
+      <div class="wb-home__grid">
+        <section class="wb-card wb-card--wide">
+          <h2 class="wb-card__title">今日待办 <el-tag size="small" round type="info">{{ todos.length }}</el-tag></h2>
           <div class="wb-todo-list">
-            <div v-for="todo in todos" :key="todo.id" class="wb-todo-item" :class="{ 'wb-todo-item--primary': todo.level === 'danger' }">
-              <span class="wb-todo-dot" :class="`level-${todo.level}`"></span>
-              <span class="wb-todo-text"><strong>{{ todo.enterprise }}</strong> · {{ todo.desc }}<span v-if="todo.level === 'danger'" class="wb-todo-ai-badge">AI 建议优先处理</span></span>
+            <div v-for="todo in todos" :key="todo.id" class="wb-todo" :class="{ 'wb-todo--urgent': todo.level === 'danger' }">
+              <span class="wb-todo__dot" :class="`wb-todo__dot--${todo.level}`"></span>
+              <span class="wb-todo__text"><strong>{{ todo.enterprise }}</strong> · {{ todo.desc }}</span>
               <el-button size="small" type="primary" link @click="go(todo.route)">{{ todo.action }}</el-button>
             </div>
           </div>
 
-          <!-- 内联 AI 建议：紧跟待办下方，非独立卡片 -->
-          <div class="wb-ai-inline">
-            <div class="wb-ai-inline-header">
-              <el-icon class="wb-ai-inline-icon"><MagicStick /></el-icon>
-              <span class="wb-ai-inline-label">推荐下一步</span>
-            </div>
-            <p class="wb-ai-inline-text">优先处理「宁波天合新材料」税票超时事项；杭州智造装备证据已齐，可进入报告确认。</p>
-            <div class="wb-ai-inline-actions">
+          <div class="wb-ai-tip">
+            <div class="wb-ai-tip__header"><el-icon><MagicStick /></el-icon> 推荐下一步</div>
+            <p>优先处理「宁波天合新材料」税票超时事项；杭州智造装备证据已齐，可进入报告确认。</p>
+            <div class="wb-ai-tip__actions">
               <el-button size="small" type="primary" plain @click="handleAdopt">采纳建议</el-button>
               <el-button size="small" plain @click="handleIgnore">稍后处理</el-button>
             </div>
           </div>
 
-          <!-- Agent 指令输入区：嵌入今日待办区域 -->
-          <div class="wb-agent-input">
-            <div class="wb-agent-label">
-              <el-icon class="wb-agent-label-icon"><Promotion /></el-icon>
-              <span>下一步让 AI 处理</span>
-            </div>
-            <div class="wb-agent-input-row">
-              <el-input
-                v-model="dialogInputLocal"
-                placeholder="可追问：宁波天合税票为什么超时？或输入新的客户任务"
-                clearable
-                @keyup.enter="handleNormalSend"
-                size="large"
-                class="wb-agent-input-inner"
-              >
-                <template #prefix><el-icon><ChatDotRound /></el-icon></template>
-                <template #append>
-                  <el-button type="primary" @click="handleNormalSend">
-                    <el-icon><Promotion /></el-icon>
-                  </el-button>
-                </template>
-              </el-input>
-            </div>
-            <div class="wb-agent-chips">
-              <button class="wb-agent-chip" @click="handleNormalSendWith('处理税票')">
-                <el-icon><Tickets /></el-icon>处理税票
-              </button>
-              <button class="wb-agent-chip" @click="handleNormalSendWith('查看证据')">
-                <el-icon><Picture /></el-icon>查看证据
-              </button>
-              <button class="wb-agent-chip" @click="go('/screening')">
-                <el-icon><Search /></el-icon>发起筛客
-              </button>
-              <button class="wb-agent-chip" @click="handleNormalSendWith('生成报告摘要')">
-                <el-icon><DocumentChecked /></el-icon>生成报告摘要
-              </button>
+          <div class="wb-home__composer">
+            <div class="wb-home__composer-label"><el-icon><Promotion /></el-icon> 下一步让 AI 处理</div>
+            <el-input v-model="dialogInputLocal" placeholder="例如：帮我筛选深圳的软件企业，看看工商风险和进度" clearable @keyup.enter="handleNormalSend" size="large">
+              <template #prefix><el-icon><ChatDotRound /></el-icon></template>
+              <template #append><el-button type="primary" @click="handleNormalSend"><el-icon><Promotion /></el-icon></el-button></template>
+            </el-input>
+            <div class="wb-home__chips">
+              <button class="wb-chip" @click="handleNormalSendWith('处理税票')"><el-icon><Tickets /></el-icon>处理税票</button>
+              <button class="wb-chip" @click="handleNormalSendWith('查看证据')"><el-icon><Picture /></el-icon>查看证据</button>
+              <button class="wb-chip" @click="handleNormalSendWith('帮我筛选深圳的软件企业，看看工商风险和进度')"><el-icon><Search /></el-icon>发起筛客</button>
+              <button class="wb-chip" @click="handleNormalSendWith('生成报告摘要')"><el-icon><DocumentChecked /></el-icon>生成报告摘要</button>
             </div>
           </div>
         </section>
 
-        <!-- 次要区域：本周进度（紧凑） -->
-        <section class="wb-section wb-weekly wb-section--compact">
-          <div class="wb-section-title wb-section-title--compact"><span class="wb-section-label">本周进度</span></div>
-          <div class="wb-weekly-stats">
-            <div class="wb-weekly-stat"><span class="wb-stat-value" style="color:var(--color-success)">3</span><span class="wb-stat-label">本周完成尽调</span></div>
-            <div class="wb-weekly-stat"><span class="wb-stat-value" style="color:var(--color-warning)">5</span><span class="wb-stat-label">在途</span></div>
-            <div class="wb-weekly-stat"><span class="wb-stat-value" style="color:var(--text-tertiary)">12</span><span class="wb-stat-label">监测企业</span></div>
+        <section class="wb-card wb-card--narrow">
+          <h2 class="wb-card__title wb-card__title--sm">本周进度</h2>
+          <div class="wb-stats">
+            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--color-success)">3</span><span class="wb-stat__label">本周完成尽调</span></div>
+            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--color-warning)">5</span><span class="wb-stat__label">在途</span></div>
+            <div class="wb-stat"><span class="wb-stat__num" style="color:var(--text-tertiary)">12</span><span class="wb-stat__label">监测企业</span></div>
           </div>
         </section>
 
-        <!-- 快捷操作（4 个，轻量） -->
-        <section class="wb-section wb-quick wb-section--compact">
-          <div class="wb-section-title wb-section-title--compact"><span class="wb-section-label">快捷操作</span></div>
-          <div class="wb-quick-actions">
+        <section class="wb-card wb-card--narrow">
+          <h2 class="wb-card__title wb-card__title--sm">快捷操作</h2>
+          <div class="wb-quick">
             <el-button v-for="qa in quickActions" :key="qa.label" class="wb-quick-btn" @click="go(qa.route)">
               <el-icon><component :is="iconMap[qa.icon]" /></el-icon><span>{{ qa.label }}</span>
             </el-button>
           </div>
         </section>
 
-        <!-- 我的任务（详情队列，视觉次要） -->
-        <section class="wb-section wb-tasks wb-section--secondary">
-          <div class="wb-section-title wb-section-title--secondary"><span class="wb-section-label">我的任务</span></div>
-          <el-table :data="tasks" stripe size="small" class="wb-task-table">
+        <section class="wb-card wb-card--wide">
+          <h2 class="wb-card__title wb-card__title--sm">我的任务</h2>
+          <el-table :data="tasks" stripe size="small">
             <el-table-column prop="name" label="企业名称" min-width="140" />
             <el-table-column prop="type" label="类型" width="70" align="center" />
             <el-table-column label="进度" width="160">
-              <template #default="{ row }">
-                <el-progress :percentage="row.progress" :status="progressStatus(row.progress)" :stroke-width="8" />
-              </template>
+              <template #default="{ row }"><el-progress :percentage="row.progress" :status="pStatus(row.progress)" :stroke-width="8" /></template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag :type="statusTagType(row.status)" size="small" round>{{ row.status }}</el-tag>
-              </template>
+              <template #default="{ row }"><el-tag :type="sTag(row.status)" size="small" round>{{ row.status }}</el-tag></template>
             </el-table-column>
             <el-table-column label="下一步" width="120" align="center">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" link @click="go(row.route)">{{ row.next }}</el-button>
-              </template>
+              <template #default="{ row }"><el-button size="small" type="primary" link @click="go(row.route)">{{ row.next }}</el-button></template>
             </el-table-column>
           </el-table>
         </section>
       </div>
-
     </div>
 
-    <!-- ==================== Conversation View ==================== -->
-    <div v-else class="workbench-dialog-wrap">
-      <header class="wb-dialog-header">
-        <div class="wb-dialog-header-left">
-          <el-button class="btn-return" @click="returnToNormal" plain size="default">
-            <el-icon><ArrowLeft /></el-icon><span>返回工作台</span>
-          </el-button>
-          <span class="wb-dialog-title">AI Copilot</span>
-          <span v-if="assistant.flowStages.length" class="assist-status">
-            <span class="pulse-dot"></span> 自动推进中
-          </span>
-        </div>
-        <div class="wb-dialog-header-right">
-          <el-button text @click="clearChat" size="small">清空对话</el-button>
-        </div>
-      </header>
+    <!-- ==================== AI Copilot 二级页 ==================== -->
+    <div v-else class="wb-copilot" :class="`wb-copilot--${assistant.layoutMode}`">
 
-      <!-- Stage Strip -->
-      <WorkbenchStageStrip
-        v-if="assistant.flowStages.length"
-        :stages="assistant.flowStages"
-        :active-stage-id="assistant.activeStageId"
-        @select="assistant.setActiveStage"
-      />
-
-      <div class="workbench-dialog-body">
-        <!-- Left: Conversation + Process -->
-        <div class="wb-dialog-left">
-          <WorkbenchConversation
-            :messages="assistant.messages"
-            :flow-stages="assistant.flowStages"
-            :waiting-for-input="assistant.waitingForInput"
-            :active-stage-id="assistant.activeStageId"
-            :is-thinking="assistant.isThinking"
-            :thinking-text="assistant.thinkingText"
-          />
-        </div>
-
-        <!-- Right: Artifact Panel -->
-        <div v-if="assistant.currentArtifactType" class="wb-dialog-right">
-          <div class="wb-right-header">
-            <span class="wb-right-header-title">阶段产物</span>
-            <el-button text size="small" @click="assistant.currentArtifactType = null">
-              <el-icon><Close /></el-icon>
-            </el-button>
-          </div>
-          <div class="wb-right-content">
-            <WorkbenchArtifactPanel
-              :type="assistant.currentArtifactType"
-              :data="assistant.artifactData"
-              :current-flow-status="assistant.currentFlowStatus"
-              @select-customer="assistant.selectCustomerAndStartDueDiligence"
-              @tax-authorized="assistant.markTaxAuthorizedAndContinue"
-              @confirm-tax-send="onConfirmTaxSend"
-              @defer-tax-send="onDeferTaxSend"
+      <!-- ============ 态1：居中对话 ============ -->
+      <div v-if="assistant.layoutMode === 'chat-center'" class="wb-state-center">
+        <div class="wb-state-center__col">
+          <div class="wb-state-center__msgs">
+            <WorkbenchConversation
+              :messages="assistant.messages"
+              :flow-stages="assistant.flowStages"
+              :waiting-for-input="assistant.waitingForInput"
+              :active-stage-id="assistant.activeStageId"
+              :is-thinking="assistant.isThinking"
+              :thinking-text="assistant.thinkingText"
             />
           </div>
+          <div class="wb-composer wb-composer--center">
+            <div v-if="assistant.contextSuggestions.length" class="wb-sug">
+              <el-button
+                v-for="(s, i) in assistant.contextSuggestions"
+                :key="i"
+                size="small"
+                round
+                plain
+                type="primary"
+                @click="assistant.handleSuggestionClick(s)"
+              >
+                {{ s.label }}
+              </el-button>
+            </div>
+            <div class="wb-composer-row">
+              <el-input
+                v-model="dialogInputLocal"
+                :placeholder="dialogPlaceholder"
+                clearable
+                @keyup.enter="sendMsg"
+                class="wb-composer__input"
+              />
+              <el-button type="primary" :icon="Promotion" @click="sendMsg" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Suggestion Bar (快捷回复) -->
-      <div v-if="assistant.contextSuggestions.length" class="wb-suggestion-bar">
-        <button
-          v-for="(s, si) in assistant.contextSuggestions"
-          :key="si"
-          class="wb-suggestion-btn"
-          @click="handleSuggestionClick(s)"
-        >
-          {{ s.label }}
-        </button>
-      </div>
-
-      <!-- Composer -->
-      <div class="wb-dialog-input">
-        <el-input
-          v-model="dialogInputLocal"
-          :placeholder="dialogPlaceholder"
-          clearable
-          @keyup.enter="sendDialogMessage"
-          size="large"
-          class="wb-dialog-input-inner"
-        >
-          <template #prefix><el-icon><ChatDotRound /></el-icon></template>
-          <template #append>
-            <el-button type="primary" @click="sendDialogMessage">
-              <el-icon><Promotion /></el-icon>
+      <!-- ============ 态2：左内容 + 右对话 ============ -->
+      <div v-else class="wb-state-split">
+        <!-- 左侧：业务内容 -->
+        <div class="wb-state-split__left">
+          <!-- 轻量工具栏 -->
+          <div class="wb-workspace-toolbar">
+            <el-button class="wb-workspace-back" circle @click="returnToNormal">
+              <el-icon><ArrowLeft /></el-icon>
             </el-button>
-          </template>
-        </el-input>
+            <div class="wb-workspace-title">
+              <strong>{{ workspaceTitle }}</strong>
+              <span v-if="statusText">· {{ statusText }}</span>
+            </div>
+          </div>
+          <!-- 轻量阶段条 -->
+          <WorkbenchStageStrip
+            v-if="assistant.flowStages.length"
+            class="wb-workspace-stages"
+            :stages="assistant.flowStages"
+            :active-stage-id="assistant.activeStageId"
+            @select="assistant.setActiveStage"
+          />
+          <WorkbenchBusinessPanel
+            :tool="assistant.activeTool"
+            :data="assistant.leftPanelData"
+            @explore="onExplore"
+            @select-template="onTpl"
+          />
+        </div>
+        <!-- 右侧：AI 对话面板 -->
+        <div class="wb-state-split__right ai-assistant-panel">
+          <div class="wb-state-split__right-head ai-assistant-panel__header">
+            <h3 class="ai-assistant-panel__title">AI Copilot</h3>
+            <el-button text size="small" @click="clearChat">清空</el-button>
+          </div>
+          <div class="wb-state-split__right-msgs ai-assistant-panel__messages">
+            <WorkbenchConversation
+              :messages="assistant.messages"
+              :flow-stages="assistant.flowStages"
+              :waiting-for-input="assistant.waitingForInput"
+              :active-stage-id="assistant.activeStageId"
+              :is-thinking="assistant.isThinking"
+              :thinking-text="assistant.thinkingText"
+            />
+          </div>
+          <div class="wb-composer wb-composer--right ai-assistant-panel__footer">
+            <div v-if="assistant.contextSuggestions.length" class="wb-sug">
+              <el-button
+                v-for="(s, i) in assistant.contextSuggestions"
+                :key="i"
+                size="small"
+                round
+                plain
+                type="primary"
+                @click="assistant.handleSuggestionClick(s)"
+              >
+                {{ s.label }}
+              </el-button>
+            </div>
+            <div class="wb-composer-row">
+              <el-input
+                v-model="dialogInputLocal"
+                :placeholder="dialogPlaceholder"
+                clearable
+                @keyup.enter="sendMsg"
+                class="wb-composer__input"
+              />
+              <el-button type="primary" :icon="Promotion" @click="sendMsg" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -226,17 +207,16 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, Plus, Search, Tickets, Picture, OfficeBuilding, Warning, ArrowLeft, ChatDotRound, Promotion, Close, MagicStick, DocumentChecked } from '@element-plus/icons-vue'
+import { Bell, ArrowLeft, ChatDotRound, Promotion, MagicStick, DocumentChecked, Tickets, Picture, Search, Plus } from '@element-plus/icons-vue'
 import { useWorkbenchAssistantStore } from '../stores/workbenchAssistant.js'
 import WorkbenchStageStrip from '../components/workbench/WorkbenchStageStrip.vue'
 import WorkbenchConversation from '../components/workbench/WorkbenchConversation.vue'
-import WorkbenchArtifactPanel from '../components/workbench/WorkbenchArtifactPanel.vue'
+import WorkbenchBusinessPanel from '../components/workbench/WorkbenchBusinessPanel.vue'
 
 const router = useRouter()
 const assistant = useWorkbenchAssistantStore()
 const dialogInputLocal = ref('')
 
-// ===================== Normal View Data =====================
 const todos = [
   { id: 't1', enterprise: '杭州智造装备', level: 'danger', desc: '报告待确认，证据已齐', action: '查看并确认', route: '/due-diligence/dd001' },
   { id: 't2', enterprise: '宁波天合新材料', level: 'warning', desc: '税票已超时，已等3天', action: '处理税票', route: '/tax-rpa' },
@@ -256,357 +236,329 @@ const quickActions = [
   { label: '税票采集', icon: 'Tickets', route: '/tax-rpa' },
   { label: '识别文件', icon: 'Picture', route: '/doc-recognition' },
 ]
-const iconMap = { Plus, Search, Tickets, Picture, OfficeBuilding, Warning }
+const iconMap = { Plus, Search, Tickets, Picture }
 
-const greeting = computed(() => {
-  const h = new Date().getHours()
-  if (h < 6) return '夜深了'; if (h < 9) return '早上好'; if (h < 12) return '上午好'
-  if (h < 14) return '中午好'; if (h < 18) return '下午好'; return '晚上好'
+const greeting = computed(() => { const h = new Date().getHours(); return h < 6 ? '夜深了' : h < 9 ? '早上好' : h < 12 ? '上午好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好' })
+const formattedDate = computed(() => { const d = new Date(); const days = ['周日','周一','周二','周三','周四','周五','周六']; return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${days[d.getDay()]}` })
+
+const workspaceTitle = computed(() => {
+  const m = {
+    screening: '智能筛客',
+    exploration: '企业探查',
+    monitor: '企业监控',
+    dueDiligence: '智能尽调',
+    business: '工商核验',
+    tax: '税票采集',
+    materials: '资料收集',
+    riskDiagnosis: '风险诊断',
+    deliverables: '产物生成',
+    reportEditor: '报告编辑',
+  }
+  return m[assistant.activeTool] || '工作台'
 })
-const formattedDate = computed(() => {
-  const now = new Date()
-  const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`
+
+const statusText = computed(() => {
+  if (assistant.currentFlowStatus === 'completed') return '流程已完成'
+  if (assistant.waitingForInput) return '等待输入'
+  if (assistant.isThinking || assistant.flowStages.length) return '自动推进中'
+  return ''
 })
-
-function go(path) { router.push(path) }
-function progressStatus(pct) { if (pct === 100) return 'success'; if (pct >= 60) return ''; if (pct > 0) return 'warning'; return 'exception' }
-function statusTagType(s) { const m = { '待确认': 'warning', '超时': 'danger', '处理中': '', '过期': 'danger', '完成': 'success' }; return m[s] || 'info' }
-function handleAdopt() { assistant.sendMessage('帮我查看杭州智造装备的尽调报告并确认') }
-function handleIgnore() {}
-function handleNormalSendWith(text) {
-  dialogInputLocal.value = text
-  handleNormalSend()
-}
-
-function onConfirmTaxSend() {
-  assistant.confirmTaxAndContinue()
-}
-
-function onDeferTaxSend() {
-  assistant.sendMessage('稍后再发')
-}
 
 const dialogPlaceholder = computed(() => {
-  const status = assistant.currentFlowStatus
-  const data = assistant.artifactData
-  if (status === 'waiting_selection') {
-    return '回复企业名称或序号选择企业...'
-  }
-  if (status === 'waiting_confirmation' && data.linkStatus === '未发送') {
-    return '请点击"确认发送采集链接"，或回复"确认发送"...'
-  }
-  if (status === 'waiting_tax_authorization') {
-    return '企业完成线下授权后，点击按钮或回复"企业已授权"...'
-  }
-  if (status === 'waiting_confirmation' && data.status === '待确认') {
-    return '请确认报告或稍后处理...'
-  }
-  if (status === 'completed') {
-    return '可以询问进度、查看结果或调整监控规则...'
-  }
+  const s = assistant.currentFlowStatus
+  if (s === 'waiting_selection') return '回复企业名称或序号选择企业...'
+  if (s === 'waiting_action') return '选择加入监控或新建尽调...'
+  if (s === 'waiting_template') return '选择尽调模板...'
+  if (s === 'waiting_tax_confirmation') return '确认发送采集链接...'
+  if (s === 'waiting_tax_auth') return '企业完成授权后回复"继续"...'
+  if (s === 'waiting_report_action') return '修改报告 / 导出 / 加入监控...'
+  if (s === 'editing_report') return '例如：帮我改写风险结论 / 补充税票异常说明...'
   return '例如：筛选深圳的软件企业 / 发起尽调 / 进度如何'
 })
 
-// ===================== Conversation Mode =====================
-function handleNormalSend() {
-  const text = dialogInputLocal.value.trim(); if (!text) return
-  dialogInputLocal.value = ''
-  assistant.sendMessage(text)
-}
-function sendDialogMessage() {
-  const text = dialogInputLocal.value.trim(); if (!text) return
-  dialogInputLocal.value = ''
-  assistant.sendMessage(text)
-}
+function go(path) { router.push(path) }
+function pStatus(p) { return p === 100 ? 'success' : p >= 60 ? '' : p > 0 ? 'warning' : 'exception' }
+function sTag(s) { return { '待确认':'warning', '超时':'danger', '处理中':'', '过期':'danger', '完成':'success' }[s] || 'info' }
+function handleAdopt() { assistant.sendMessage('帮我查看杭州智造装备的尽调报告并确认') }
+function handleIgnore() {}
+function handleNormalSendWith(t) { dialogInputLocal.value = t; handleNormalSend() }
+function onExplore(e) { assistant.selectEnterpriseAndExplore(e) }
+function onTpl(t) { assistant.confirmDueTemplate(t) }
+
+function handleNormalSend() { const t = dialogInputLocal.value.trim(); if (!t) return; dialogInputLocal.value = ''; assistant.runIntentRecognition(t) }
+function sendMsg() { const t = dialogInputLocal.value.trim(); if (!t) return; dialogInputLocal.value = ''; assistant.sendMessage(t) }
 function returnToNormal() { assistant.reset() }
 function clearChat() { assistant.reset() }
-
-function handleSuggestionClick(suggestion) {
-  switch (suggestion.type) {
-    case 'confirm_tax_send':
-      assistant.confirmTaxAndContinue()
-      break
-    case 'defer_tax_send':
-      assistant.sendMessage('稍后处理')
-      break
-    case 'tax_authorized':
-      assistant.markTaxAuthorizedAndContinue()
-      break
-    case 'confirm_report':
-      assistant.confirmReportAndContinue()
-      break
-    case 'send_text':
-      assistant.sendMessage(suggestion.text)
-      break
-    case 'select_customer':
-      assistant.selectCustomerAndStartDueDiligence(suggestion.customer)
-      break
-    case 'set_active_stage':
-      assistant.setActiveStage(suggestion.stageId)
-      break
-    default:
-      assistant.sendMessage(suggestion.label)
-  }
-}
-
-defineExpose({ openDialog: assistant.sendMessage })
 </script>
 
 <style scoped>
-.page { padding:var(--space-2xl) 32px 120px; max-width: 1200px; margin: 0 auto; }
-.page--wide { max-width: 100%; padding:var(--space-2xl) 48px 120px; }
-
-/* Normal View */
-.wb-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom:var(--space-2xl); }
-.wb-greeting { font-size:var(--font-size-workbench-title); font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
-.wb-date { font-size:var(--font-size-lg); color: var(--text-tertiary); margin: 0; }
-.wb-notification { margin-top:var(--space-xs); }
-
-/* ====== Base section ====== */
-.wb-section { background: var(--surface-card); border-radius:var(--radius-md); padding:var(--space-xl) var(--space-xl); border: 1px solid var(--border-default); margin-bottom:var(--space-lg); }
-
-.wb-section-title { display: flex; align-items: center; gap:var(--space-xs); font-size:var(--font-size-xl); font-weight: 600; color: var(--text-primary); margin-bottom:var(--space-lg); }
-.wb-section-label { font-size:var(--font-size-body); }
-
-/* ====== 今日待办 — 首要区域 ====== */
-.wb-section--primary { padding:var(--space-2xl); }
-.wb-section-title--primary { font-size:var(--font-size-section-title); margin-bottom:var(--space-xl); }
-
-.wb-todo-list { display: flex; flex-direction: column; gap:var(--space-md); }
-.wb-todo-item { display: flex; align-items: center; gap:var(--space-md); padding:var(--space-md) var(--space-lg); border-radius:var(--radius-md); border: 1px solid var(--border-soft); transition: background 0.15s ease; }
-.wb-todo-item:hover { background: var(--surface-page); }
-.wb-todo-item:last-child { border-bottom: 1px solid var(--border-soft); }
-.wb-todo-item--primary { border-color: var(--color-warning); background: var(--color-warning-bg); }
-.wb-todo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.level-danger { background: var(--color-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12); }
-.level-warning { background: var(--color-warning); }
-.level-success { background: var(--color-success); }
-.level-info { background: var(--text-tertiary); }
-.wb-todo-text { flex: 1; font-size:var(--font-size-body-lg); color: var(--text-primary); display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
-.wb-todo-ai-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-warning);
-  color: #fff;
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-semibold);
-  line-height: 1.3;
-}
-
-/* ====== 内联 AI 建议 ====== */
-.wb-ai-inline {
-  margin-top: var(--space-2xl);
-  padding: var(--space-lg);
-  background: var(--surface-soft, var(--surface-page));
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-soft);
-}
-.wb-ai-inline-header { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-sm); }
-.wb-ai-inline-icon { color: var(--color-primary); font-size: 16px; }
-.wb-ai-inline-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
-.wb-ai-inline-text { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.6; margin: 0 0 var(--space-sm); }
-.wb-ai-inline-actions { display: flex; gap: var(--space-xs); }
-
-/* ====== 次要区域 ====== */
-.wb-section--compact { padding: var(--space-lg) var(--space-xl); }
-.wb-section-title--compact { font-size: var(--font-size-body-lg); margin-bottom: var(--space-md); }
-
-.wb-weekly-stats { display: flex; gap: var(--space-2xl); }
-.wb-weekly-stat { display: flex; align-items: baseline; gap: var(--space-sm); }
-.wb-stat-value { font-size:var(--font-size-metric); font-weight: 700; line-height: 1; }
-.wb-stat-label { font-size:var(--font-size-sm); color: var(--text-tertiary); }
-
-/* ====== 任务表格 — 视觉次要 ====== */
-.wb-section--secondary .wb-section-title { font-size: var(--font-size-body-lg); margin-bottom: var(--space-md); }
-.wb-section-title--secondary { font-size: var(--font-size-body-lg); margin-bottom: var(--space-md); color: var(--text-secondary); }
-
-/* ====== 快捷操作 ====== */
-.wb-quick-actions { display: flex; flex-wrap: wrap; gap:var(--space-sm); }
-.wb-quick-btn {
-  display: inline-flex !important;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  background: var(--surface-page);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  transition: all 0.15s ease;
-}
-.wb-quick-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-}
-.wb-task-table { width: 100%; }
-
-/* ====== Agent 指令输入区 ====== */
-.wb-agent-input {
-  margin-top: var(--space-xl);
-  padding: var(--space-lg);
-  background: var(--surface-soft, var(--surface-page));
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-soft);
-}
-.wb-agent-label {
+/* ========== 页面壳 ========== */
+.wb-page {
+  height: 100vh;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-sm);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-}
-.wb-agent-label-icon { color: var(--color-primary); font-size: 14px; }
-.wb-agent-input-row { margin-bottom: var(--space-sm); }
-.wb-agent-input-inner :deep(.el-input__wrapper) {
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.wb-agent-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-.wb-agent-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
-  background: var(--surface-card);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-family);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-.wb-agent-chip:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-}
-.wb-agent-chip .el-icon { font-size: 14px; }
-
-/* ====== Conversation View ====== */
-.workbench-dialog-wrap {
-  display: flex; flex-direction: column;
-  height: calc(100vh - 120px); min-height: 400px; max-width: 100%;
-  background: var(--surface-page);
-}
-
-.wb-dialog-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding:var(--space-lg) 20px; flex-shrink: 0;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--border-default);
-  backdrop-filter: blur(12px);
-}
-
-.wb-dialog-header-left { display: flex; align-items: center; gap:var(--space-md); }
-.btn-return { font-size:var(--font-size-body); }
-.wb-dialog-title { font-size:var(--font-size-assist); font-weight: 600; color: var(--text-primary); }
-.wb-dialog-header-right { display: flex; gap:var(--space-xs); }
-
-.assist-status {
-  display: inline-flex; align-items: center; gap: 7px;
-  color: var(--text-secondary); font-size:var(--font-size-body);
-}
-
-.pulse-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--color-success);
-  box-shadow: 0 0 0 5px var(--color-success-light);
-}
-
-.workbench-dialog-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
-
-/* Left: Chat (窄, ~30%) */
-.wb-dialog-left {
-  width: 380px; min-width: 320px; max-width: 460px;
-  display: flex; flex-direction: column;
-  background: var(--surface-page);
-  border-right: 1px solid var(--border-default);
-}
-
-/* Right: Results (宽, ~70%) */
-.wb-dialog-right {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column;
+  flex-direction: column;
   overflow: hidden;
-  background: var(--surface-card);
 }
 
-/* animation removed */
-
-.wb-right-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding:var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-default);
-  background: var(--surface-card); flex-shrink: 0;
+/* ========== 工作台首页 ========== */
+.wb-home {
+  padding: 32px 48px 48px;
+  overflow-y: auto;
+  flex: 1;
+  background: var(--bg-page, #f7faff);
 }
+.wb-home__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.wb-home__greeting { font-size: 28px; font-weight: 700; color: var(--text-primary, #1a1a2e); margin: 0 0 4px; }
+.wb-home__date { font-size: 14px; color: var(--text-tertiary, #94a3b8); margin: 0; }
 
-.wb-right-header-title { font-size:var(--font-size-body); font-weight: 600; color: var(--text-primary); }
-.wb-right-content { flex: 1; overflow-y: auto; }
+.wb-home__grid { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+.wb-card { background: var(--bg-card, #fff); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color, #dbe7f5); }
+.wb-card--wide { grid-column: 1 / -1; }
+.wb-card__title { font-size: 16px; font-weight: 600; color: var(--text-primary, #1a1a2e); margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+.wb-card__title--sm { font-size: 14px; margin-bottom: 12px; }
 
-/* Composer */
-.wb-dialog-input {
-  flex: 0 0 auto;
-  padding:var(--space-lg) 20px 18px;
-  background: linear-gradient(180deg, transparent, var(--surface-page) 34%);
-}
+.wb-todo-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.wb-todo { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color-light, #e5eaf2); transition: background 0.15s; }
+.wb-todo:hover { background: var(--bg-card-hover, #f7faff); }
+.wb-todo--urgent { border-color: var(--color-warning, #f59e0b); background: var(--color-warning-bg, #fffbeb); }
+.wb-todo__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.wb-todo__dot--danger { background: var(--color-danger, #ef4444); box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+.wb-todo__dot--warning { background: var(--color-warning, #f59e0b); }
+.wb-todo__dot--success { background: var(--color-success, #10b981); }
+.wb-todo__dot--info { background: var(--text-tertiary, #94a3b8); }
+.wb-todo__text { flex: 1; font-size: 14px; color: var(--text-primary, #1a1a2e); }
 
-.wb-dialog-input-inner :deep(.el-input__wrapper) {
-  border-radius:var(--radius-lg);
-  box-shadow: var(--shadow-primary);
-}
+.wb-ai-tip { margin-top: 16px; padding: 16px; background: var(--bg-card-hover, #f7faff); border-radius: 8px; border: 1px solid var(--border-color-light, #e5eaf2); }
+.wb-ai-tip__header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-primary, #1a1a2e); }
+.wb-ai-tip__header .el-icon { color: var(--color-primary, #2563eb); }
+.wb-ai-tip p { font-size: 13px; color: var(--text-secondary, #64748b); line-height: 1.6; margin: 0 0 10px; }
+.wb-ai-tip__actions { display: flex; gap: 8px; }
 
-@media (max-width: 768px) {
-  .page { padding:var(--space-lg); } .page--wide { padding:var(--space-lg); }
-  .wb-row-top { grid-template-columns: 1fr; }
-  .wb-quick-actions { grid-template-columns: repeat(3, 1fr); display: grid; }
-  .wb-dialog-right { width: 300px; min-width: 300px; }
-}
+.wb-home__composer { margin-top: 20px; padding: 16px; background: var(--bg-card-hover, #f7faff); border-radius: 8px; border: 1px solid var(--border-color-light, #e5eaf2); }
+.wb-home__composer-label { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary, #1a1a2e); }
+.wb-home__composer-label .el-icon { color: var(--color-primary, #2563eb); font-size: 14px; }
+.wb-home__chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.wb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--border-color, #dbe7f5); border-radius: 20px; background: var(--bg-card, #fff); color: var(--text-secondary, #64748b); font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.wb-chip:hover { border-color: var(--color-primary, #2563eb); color: var(--color-primary, #2563eb); background: var(--color-primary-bg, #eef2ff); }
+.wb-chip .el-icon { font-size: 14px; }
 
-/* ====== Suggestion Bar (快捷回复) ====== */
-.wb-suggestion-bar {
+.wb-stats { display: flex; gap: 32px; }
+.wb-stat { display: flex; align-items: baseline; gap: 8px; }
+.wb-stat__num { font-size: 28px; font-weight: 700; line-height: 1; }
+.wb-stat__label { font-size: 13px; color: var(--text-tertiary, #94a3b8); }
+
+.wb-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.wb-quick-btn { display: inline-flex !important; align-items: center; gap: 6px; padding: 4px 12px; border: 1px solid var(--border-color-light, #e5eaf2); border-radius: 8px; background: var(--bg-page, #f7faff); color: var(--text-secondary, #64748b); font-size: 13px; transition: all 0.15s; }
+.wb-quick-btn:hover { border-color: var(--color-primary, #2563eb); color: var(--color-primary, #2563eb); background: var(--color-primary-bg, #eef2ff); }
+
+/* ========== AI Copilot 二级页 ========== */
+.wb-copilot {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
-  border-top: 1px solid var(--border-divider);
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-page, #f7faff);
+  overflow: hidden;
+}
+
+
+/* ═══════════════════════════════════════
+   态1：居中对话
+   780px max-width column, centered by parent flex
+   ═══════════════════════════════════════ */
+.wb-state-center {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background: var(--bg-page, #f7faff);
+}
+
+.wb-state-center__col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 780px;
+  min-height: 0;
+  height: 100%;
+}
+
+.wb-state-center__msgs {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 居中态气泡更窄 */
+.wb-state-center__msgs :deep(.bubble.ai) { max-width: 72%; }
+.wb-state-center__msgs :deep(.bubble.user) { max-width: 60%; }
+.wb-state-center__msgs :deep(.process-card) { max-width: 82%; }
+
+/* ═══════════════════════════════════════
+   态2：左内容 + 右对话
+   ═══════════════════════════════════════ */
+.wb-state-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.wb-state-split__left {
+  min-width: 0;
+  overflow-y: auto;
+  padding: 0 32px 40px;
+  background: var(--surface-page, var(--bg-page, #f7faff));
+}
+
+/* Workspace toolbar inside left panel */
+.wb-workspace-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-top: 12px;
+}
+
+.wb-workspace-back {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.wb-workspace-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wb-workspace-title strong {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.wb-workspace-title span {
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Lightweight stage strip inside left panel */
+.wb-workspace-stages {
+  margin-bottom: 20px;
+}
+
+.wb-state-split__right.ai-assistant-panel {
+  width: 360px;
+  min-width: 360px;
+  max-width: 380px;
+  height: 100%;
+  border-radius: 0;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 1px solid var(--border-default, var(--border-color, #dbe7f5));
+  background: var(--surface-card, var(--bg-card, #fff));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-state-split__right-head.ai-assistant-panel__header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-divider, var(--border-color-divider, #f1f5f9));
+  flex-shrink: 0;
+}
+
+.ai-assistant-panel__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.wb-state-split__right-msgs.ai-assistant-panel__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+  background: var(--surface-card, var(--bg-card, #fff));
+}
+
+/* 右侧面板气泡 */
+.wb-state-split__right-msgs :deep(.bubble.ai) { max-width: 82%; }
+.wb-state-split__right-msgs :deep(.bubble.user) { max-width: 76%; }
+.wb-state-split__right-msgs :deep(.process-card) { max-width: 90%; }
+
+/* 右侧面板 footer */
+.wb-composer--right.ai-assistant-panel__footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-divider, var(--border-color-divider, #f1f5f9));
+  background: var(--surface-card, var(--bg-card, #fff));
+}
+
+/* ========== 共享：Composer ========== */
+.wb-composer {
+  flex-shrink: 0;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--border-color-divider, #f1f5f9);
+  background: var(--bg-page, #f7faff);
+}
+.wb-composer--center {
+  background: linear-gradient(180deg, transparent 0%, var(--bg-page, #f7faff) 25%);
+}
+.wb-composer--center :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--color-primary, #2563eb);
+}
+.wb-composer--right.ai-assistant-panel__footer {
+  padding: 10px 12px;
+  border-top-color: var(--border-divider);
   background: var(--surface-card);
 }
+.wb-composer__input :deep(.el-input__wrapper) { border-radius: 10px; }
 
-.wb-suggestion-btn {
-  padding: var(--space-xs) var(--space-md);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-full);
-  background: var(--surface-page);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+/* 建议按钮 */
+.wb-sug { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 8px; }
+.wb-sug-btn {
+  padding: 5px 14px;
+  border: 1px solid var(--border-color, #dbe7f5);
+  border-radius: 20px;
+  background: var(--bg-card, #fff);
+  color: var(--color-primary, #2563eb);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.15s;
   white-space: nowrap;
-  line-height: 1.4;
+}
+.wb-sug-btn:hover { background: var(--color-primary-bg, #eef2ff); border-color: var(--color-primary, #2563eb); }
+
+/* 左侧产物区表格/描述宽度控制 */
+.wb-state-split__left :deep(.el-table),
+.wb-state-split__left :deep(.el-descriptions),
+.wb-state-split__left :deep(.el-tabs),
+.wb-bp-table,
+.wb-bp-tabs,
+.wb-bp-desc {
+  width: 100%;
+  min-width: 0;
 }
 
-.wb-suggestion-btn:hover {
-  background: var(--color-primary-bg);
-  border-color: var(--color-primary);
-  transform: translateY(-1px);
+@media (max-width: 900px) {
+  .wb-home { padding: 16px; }
+  .wb-home__grid { grid-template-columns: 1fr; }
+  .wb-state-split {
+    display: flex;
+    flex-direction: column;
+  }
+  .wb-state-split__right.ai-assistant-panel { width: 100%; max-width: 100%; border-left: none; border-top: 1px solid var(--el-border-color, var(--border-color, #dbe7f5)); }
+  .wb-state-center__col { max-width: 100%; }
 }
-
-.wb-suggestion-btn:active {
-  transform: translateY(0);
-}
-
 </style>
