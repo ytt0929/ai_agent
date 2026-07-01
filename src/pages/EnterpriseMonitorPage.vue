@@ -1,510 +1,918 @@
 <template>
   <div class="page">
+    <!-- 页头 -->
     <div class="page-header">
       <div>
         <h1 class="page-title">企业监测</h1>
-        <p class="page-subtitle">用一句话告诉 AI 要监测哪家企业、哪些风险变化，AI 自动建立监测并生成预警</p>
+        <p class="page-subtitle">监控已纳入的企业，AI 自动扫描风险变化并生成预警</p>
+      </div>
+      <el-button type="primary" size="large" @click="openCreateMonitor">
+        <el-icon><Plus /></el-icon> 新增监控
+      </el-button>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar card-animate">
+      <div class="filter-tabs">
+        <span class="filter-tab" :class="{ active: store.taskFilter === 'all' }" @click="setTaskFilter('all')">
+          全部 <span class="filter-count">{{ store.monitorTasks.length }}</span>
+        </span>
+        <span class="filter-tab" :class="{ active: store.taskFilter === 'warning' }" @click="setTaskFilter('warning')">
+          有预警 <span class="filter-count filter-count--danger">{{ warningTaskCount }}</span>
+        </span>
+        <span class="filter-tab" :class="{ active: store.taskFilter === 'due-diligence' }" @click="setTaskFilter('due-diligence')">
+          尽调转入 <span class="filter-count">{{ sourceCount('due-diligence') }}</span>
+        </span>
+        <span class="filter-tab" :class="{ active: store.taskFilter === 'screening' }" @click="setTaskFilter('screening')">
+          筛客转入 <span class="filter-count">{{ sourceCount('screening') }}</span>
+        </span>
+        <span class="filter-tab" :class="{ active: store.taskFilter === 'diagnosis' }" @click="setTaskFilter('diagnosis')">
+          探查转入 <span class="filter-count">{{ sourceCount('diagnosis') }}</span>
+        </span>
+      </div>
+      <div class="filter-actions">
+        <el-button plain size="small" @click="openIndicatorLibrary">
+          <el-icon><Collection /></el-icon> 指标库
+        </el-button>
       </div>
     </div>
 
-    <!-- 阶段 1：发起监测 -->
-    <section v-if="store.monitorView === 'launch'" class="monitor-launch card-animate">
-      <div class="launch-card">
-        <div class="launch-eyebrow"><el-icon><MagicStick /></el-icon><span>AI 创建监测</span></div>
-        <h2 class="launch-title">告诉 AI 要监测哪家企业、哪些风险变化</h2>
-        <div class="launch-input-card">
-          <el-input v-model="store.monitorInput" type="textarea" :rows="3" class="launch-textarea" placeholder="例：监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我" @keydown.enter.exact.prevent="handleCreateMonitor" />
-          <div class="launch-actions">
-            <el-button type="primary" size="large" @click="handleCreateMonitor"><el-icon><MagicStick /></el-icon>开始监测</el-button>
-            <el-button plain size="large" @click="handleManualMonitor">手工添加</el-button>
+    <!-- 任务列表 -->
+    <div v-if="filteredTasks.length" class="task-list card-animate">
+      <div v-for="task in filteredTasks" :key="task.id" class="task-card" @click="openTaskDetail(task.id)">
+        <div class="task-left">
+          <div class="task-name-row">
+            <span class="task-name">{{ task.enterpriseName }}</span>
+            <span v-if="task.focused" class="focus-badge">已关注</span>
+          </div>
+          <div class="task-meta">
+            <span class="task-credit">{{ task.creditCode }}</span>
+            <span class="task-dot">·</span>
+            <span class="task-source-tag" :class="'source-' + task.source">{{ task.sourceLabel }}</span>
+            <span class="task-dot">·</span>
+            <span>最近扫描 {{ task.lastScanAt }}</span>
+          </div>
+          <div class="task-indicators">
+            <span v-for="ind in task.indicators.slice(0, 4)" :key="ind.id" class="ind-tag" :class="'level-' + ind.level">
+              {{ ind.name }}
+            </span>
+            <span v-if="task.indicators.length > 4" class="ind-more">+{{ task.indicators.length - 4 }}</span>
           </div>
         </div>
+        <div class="task-right">
+          <div class="task-status-badge" :class="'status-' + task.status">
+            {{ task.status === 'running' ? '监测中' : task.status === 'paused' ? '已暂停' : '异常' }}
+          </div>
+          <div v-if="task.warningCount > 0" class="task-warning-badge">
+            <el-icon><WarningFilled /></el-icon>
+            {{ task.warningCount }} 条预警
+          </div>
+          <el-dropdown @command="(cmd) => handleTaskAction(cmd, task)" trigger="click" @click.stop>
+            <el-button text size="small" @click.stop><el-icon><More /></el-icon></el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="detail">查看详情</el-dropdown-item>
+                <el-dropdown-item command="edit">编辑指标</el-dropdown-item>
+                <el-dropdown-item :command="task.status === 'running' ? 'pause' : 'resume'">
+                  {{ task.status === 'running' ? '暂停监控' : '恢复监控' }}
+                </el-dropdown-item>
+                <el-dropdown-item :command="{ action: 'toggleFocus', task }">
+                  {{ task.focused ? '取消关注' : '加入重点关注' }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
+      </div>
+    </div>
+    <div v-else class="empty-state card-animate">
+      <el-icon class="empty-icon"><Monitor /></el-icon>
+      <p class="empty-title">暂无监控任务</p>
+      <p class="empty-desc">点击「新增监控」开始监控企业风险变化</p>
+      <el-button type="primary" @click="openCreateMonitor"><el-icon><Plus /></el-icon> 新增监控</el-button>
+    </div>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- 新增监控 Dialog -->
+    <!-- ════════════════════════════════════════ -->
+    <el-dialog v-model="store.createOpen" :title="createDialogTitle" width="560px" :close-on-click-modal="false" @close="closeCreateMonitor">
+      <div v-if="!creating" class="create-mode-tabs">
+        <span class="create-mode-tab" :class="{ active: createMode === 'natural' }" @click="createMode = 'natural'">自然语言</span>
+        <span class="create-mode-tab" :class="{ active: createMode === 'manual' }" @click="handleManualCreate">手工选择</span>
+      </div>
+
+      <!-- 自然语言模式 -->
+      <div v-if="createMode === 'natural' && !creating" class="create-natural">
+        <el-input v-model="createInput" type="textarea" :rows="3" placeholder="例如：监测明达精工，税票连续下降超过30%或新增被执行时提醒我" />
+        <div class="create-parse-row">
+          <el-button type="primary" @click="parseCreateText" :loading="createParsing" :disabled="!createInput.trim()">
+            <el-icon><MagicStick /></el-icon> AI 识别
+          </el-button>
+        </div>
         <transition name="fade">
-          <div v-if="store.parsedQuickMonitor" class="recognized-block">
-            <div class="recognized-header"><el-icon class="recognized-icon"><CircleCheckFilled /></el-icon><span class="recognized-title-text">AI 已理解你的监测要求</span></div>
-            <div class="recognized-items">
-              <div class="recognized-item">
-                <div class="ri-label">被监测企业</div>
-                <el-tag size="small" effect="plain" class="ri-ent-tag">{{ store.parsedQuickMonitor.enterprises.join('、') }}</el-tag>
+          <div v-if="createParsed" class="create-recognized">
+            <div class="create-recognized-header">
+              <el-icon class="create-recognized-icon"><CircleCheckFilled /></el-icon>
+              <span>AI 已识别</span>
+            </div>
+            <div class="create-recognized-body">
+              <div class="create-rec-item">
+                <span class="create-rec-label">企业</span>
+                <el-tag size="small" effect="plain">{{ createEnterprise }}</el-tag>
               </div>
-              <div v-for="d in store.parsedQuickMonitor.dimensions" :key="d.name" class="recognized-item">
-                <div class="ri-label-row">
-                  <el-tag size="small" :type="dimTagType(d.level)" effect="plain" class="ri-dim-tag">{{ d.name }}</el-tag>
-                  <span class="ri-level" :class="d.level">{{ dimLevelText(d.level) }}</span>
-                </div>
-                <div class="ri-value">{{ d.condition }}</div>
+              <div v-for="ind in createSelectedIndicators" :key="ind.id" class="create-rec-item">
+                <el-tag size="small" :type="levelTagType(ind.level)" effect="plain">{{ ind.name }}</el-tag>
+                <span class="create-rec-condition">{{ ind.condition }}</span>
               </div>
             </div>
-            <div class="recognized-suggestion"><el-icon><InfoFilled /></el-icon><span>建议动作：生成预警提醒 → 客户经理确认 → 可推送尽调</span></div>
+            <div class="create-confirm-row">
+              <el-button type="primary" @click="confirmCreateMonitor">确认创建</el-button>
+            </div>
           </div>
         </transition>
       </div>
-      <div class="launch-examples">
-        <div class="examples-label">💡 试试这样说：</div>
-        <div class="examples-list">
-          <span v-for="(ex, idx) in exampleTexts" :key="idx" class="example-chip" @click="useExample(idx)">{{ ex }}</span>
-        </div>
-      </div>
-    </section>
 
-    <!-- 阶段 2：AI 正在工作 -->
-    <section v-else-if="store.monitorView === 'running'" class="monitor-running card-animate">
-      <div class="running-header">
-        <el-icon class="running-icon spin"><Loading /></el-icon>
-        <div>
-          <div class="running-title-text">AI 正在为你建立监测</div>
-          <div class="running-subtitle">「{{ runningText }}」</div>
-        </div>
-      </div>
-      <div v-if="store.parsedQuickMonitor" class="running-recognized">
-        <div class="running-recognized-label">已识别的监测要求</div>
-        <div class="running-recognized-items">
-          <el-tag size="small" effect="plain">{{ store.parsedQuickMonitor.enterprises.join('、') }}</el-tag>
-          <el-tag v-for="d in store.parsedQuickMonitor.dimensions" :key="d.name" size="small" :type="dimTagType(d.level)" effect="plain">{{ d.name }}：{{ d.condition }}</el-tag>
-        </div>
-      </div>
-      <div class="running-progress">
-        <div v-for="(step, idx) in store.runningSteps" :key="step.label" class="running-progress-step" :class="step.status">
-          <div class="rps-dot">
-            <el-icon v-if="step.status === 'done'" class="rps-done-icon"><Select /></el-icon>
-            <div v-else-if="step.status === 'active'" class="rps-spinner"></div>
-            <span v-else class="rps-num">{{ idx + 1 }}</span>
-          </div>
-          <div class="rps-line" :class="{ visible: idx < store.runningSteps.length - 1 }"></div>
-          <div class="rps-content">
-            <div class="rps-label">{{ step.label }}</div>
-            <div class="rps-desc">{{ step.status === 'done' ? step.result : step.loadingText }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 阶段 3：监测任务结果 -->
-    <div v-else class="monitor-results">
-      <div class="results-header card-animate">
-        <div>
-          <div class="results-eyebrow">AI 已完成首轮扫描</div>
-          <div class="results-title">监测已建立，以下是发现</div>
-        </div>
-        <div class="results-header-actions">
-          <el-button plain @click="goLaunch"><el-icon><Plus /></el-icon>新建监测</el-button>
-        </div>
-      </div>
-
-      <transition name="fade">
-        <section v-if="store.createdMonitorResult" class="created-card card-animate">
-          <div class="created-icon-wrap"><el-icon class="created-icon"><CircleCheckFilled /></el-icon></div>
-          <div class="created-body">
-            <div class="created-name">{{ store.createdMonitorResult.task?.name || store.createdMonitorResult.rule?.name || '新监测任务' }}</div>
-            <div class="created-dims">
-              <el-tag v-for="d in (store.createdMonitorResult.task?.dimensions || [])" :key="d.name" size="small" effect="plain" class="created-dim-tag">{{ d.name }} → {{ d.condition }}</el-tag>
+      <!-- 手工选择模式 -->
+      <div v-if="createMode === 'manual' && !creating" class="create-manual">
+        <el-input v-model="createEnterprise" placeholder="输入企业名称或统一社会信用代码" class="create-ent-input" />
+        <div class="create-ind-selector">
+          <div class="create-ind-selector-label">选择监控指标</div>
+          <div v-for="ind in indicatorLibrary" :key="ind.id" class="create-ind-option" :class="{ selected: isIndicatorSelected(ind.id) }" @click="toggleCreateIndicatorManual(ind)">
+            <div class="create-ind-check">
+              <el-icon v-if="isIndicatorSelected(ind.id)" class="check-checked"><Select /></el-icon>
+              <div v-else class="check-unchecked"></div>
             </div>
-            <div class="created-status">AI 已模拟触发 <strong>{{ store.createdMonitorResult.warning ? '1 条预警' : '0 条预警' }}</strong>，请确认处置。</div>
-          </div>
-          <div class="created-actions">
-            <el-button size="small" type="primary" @click="handleViewCreatedWarning">查看预警</el-button>
-            <el-button size="small" plain @click="handlePushCreatedWarning">推送尽调</el-button>
-          </div>
-        </section>
-      </transition>
-
-      <section class="ai-brief-section card-animate">
-        <div class="section-head">
-          <div>
-            <div class="section-title">🤖 AI 摘要：需要你关注的变化</div>
-            <div class="section-subtitle">按风险级别和处置状态自动排序，高优先级的排在前面</div>
-          </div>
-        </div>
-        <div class="decision-list">
-          <div v-for="item in store.decisionQueue" :key="item.id" class="decision-item" @click="store.openDetail(item)">
-            <div class="decision-dot" :class="item.level"></div>
-            <div class="decision-main">
-              <div class="decision-row">
-                <span class="decision-enterprise">{{ item.enterprise.name }}</span>
-                <span class="decision-title">{{ item.title }}</span>
-              </div>
-              <div class="decision-explain">{{ item.suggestion?.next || item.summary }}</div>
-              <div class="decision-tags">
-                <el-tag v-for="tag in getReasonTags(item)" :key="tag" size="small" effect="plain" class="reason-tag">{{ tag }}</el-tag>
+            <div class="create-ind-info">
+              <div class="create-ind-name">{{ ind.name }}</div>
+              <div class="create-ind-meta">
+                <span class="ind-cat">{{ ind.category }}</span>
+                <span class="ind-dot">·</span>
+                <span>{{ ind.defaultCondition }}</span>
               </div>
             </div>
-            <div class="decision-action" @click.stop>
-              <el-button size="small" type="primary" plain @click="handleRecommendedAction(item)">{{ getActionLabel(item) }}</el-button>
-            </div>
-          </div>
-          <div v-if="!store.decisionQueue.length" class="decision-empty">
-            <el-icon><CircleCheck /></el-icon><span>AI 暂未发现需要接管的变化。</span>
+            <el-tag size="small" :type="levelTagType(ind.defaultLevel)">{{ levelText(ind.defaultLevel) }}</el-tag>
           </div>
         </div>
-      </section>
+        <div class="create-confirm-row">
+          <el-button type="primary" :disabled="!createEnterprise.trim() || !createSelectedIndicators.length" @click="confirmCreateManual">
+            创建监控任务
+          </el-button>
+        </div>
+      </div>
 
-      <section class="tasks-section card-animate">
-        <div class="section-head">
-          <div>
-            <div class="section-title">监测任务</div>
-            <div class="section-subtitle">所有已建立的 AI 监测任务及其扫描状态</div>
+      <!-- 创建中动画 -->
+      <div v-if="creating" class="create-running">
+        <div class="create-running-header">
+          <el-icon class="create-running-icon spin"><Loading /></el-icon>
+          <span>正在创建监控任务</span>
+        </div>
+        <div v-for="(step, i) in creatingSteps" :key="step.label" class="create-step" :class="step.status">
+          <div class="create-step-dot">
+            <el-icon v-if="step.status === 'done'" class="create-step-done"><Select /></el-icon>
+            <div v-else-if="step.status === 'active'" class="create-step-spinner"></div>
+            <span v-else class="create-step-num">{{ i + 1 }}</span>
           </div>
+          <div class="create-step-label">{{ step.label }}</div>
         </div>
-        <div v-if="!store.monitorTasks.length" class="tasks-empty">
-          <el-icon><Document /></el-icon><span>暂无监测任务，使用上方输入框创建第一个 AI 监测。</span>
-        </div>
-        <div v-else class="task-list">
-          <div v-for="task in store.monitorTasks" :key="task.id" class="task-card" @click="handleViewTask(task)">
-            <div class="task-main">
-              <div class="task-name">{{ task.name }}</div>
-              <div class="task-meta">
-                <span>{{ task.source }}</span><span class="task-dot">·</span><span>监测 {{ task.enterprises.join('、') }}</span><span class="task-dot">·</span><span>最近扫描 {{ task.lastScan }}</span>
-              </div>
-              <div class="task-dims"><span v-for="d in task.dimensions" :key="d.name">{{ d.name }}：{{ d.condition }}</span></div>
-            </div>
-            <div class="task-side">
-              <div class="task-status" :class="task.status === 'running' ? 'status-running' : 'status-paused'">{{ task.status === 'running' ? '监测中' : '已暂停' }}</div>
-              <div class="task-count" v-if="task.warningCount">{{ task.warningCount }} 预警</div>
-              <el-button size="small" text type="primary" @click.stop="handleViewTask(task)">查看详情</el-button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </el-dialog>
 
-    <!-- 侧滑：预警详情 -->
-    <transition name="drawer">
-      <div v-if="store.detailOpen" class="drawer-overlay" @click.self="store.closeDetail()">
-        <div class="drawer-panel">
-          <div class="drawer-header">
-            <el-icon class="drawer-back" @click="store.closeDetail()"><ArrowLeft /></el-icon>
-            <span class="drawer-title">预警详情</span>
+    <!-- ════════════════════════════════════════ -->
+    <!-- 指标库 Dialog -->
+    <!-- ════════════════════════════════════════ -->
+    <el-dialog v-model="indicatorLibraryOpen" title="监控指标库" width="600px">
+      <div class="indicator-lib-list">
+        <div v-for="ind in indicatorLibrary" :key="ind.id" class="indicator-lib-item">
+          <div class="indicator-lib-name">{{ ind.name }}</div>
+          <div class="indicator-lib-meta">
+            <el-tag size="small" type="info" effect="plain">{{ ind.category }}</el-tag>
+            <span class="indicator-lib-dot">·</span>
+            <span>{{ ind.dataSource }}</span>
+            <span class="indicator-lib-dot">·</span>
+            <span>{{ ind.defaultCondition }}</span>
           </div>
-          <div v-if="store.detailWarning" class="drawer-body">
-            <div class="dw-header">
-              <div class="dw-level" :class="store.detailWarning.level">{{ levelLabel(store.detailWarning.level) }}</div>
-              <div class="dw-title-text">{{ store.detailWarning.title }}</div>
-              <div class="dw-ent-name">{{ store.detailWarning.enterprise.name }}</div>
-              <div v-if="store.detailWarning.ruleName" class="dw-rule">触发规则：{{ store.detailWarning.ruleName }}</div>
+          <el-tag size="small" :type="levelTagType(ind.defaultLevel)">{{ levelText(ind.defaultLevel) }}</el-tag>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- 任务详情 Drawer -->
+    <!-- ════════════════════════════════════════ -->
+    <el-drawer v-model="detailTaskOpen" title="监控任务详情" size="520px">
+      <div v-if="detailTask" class="detail-content">
+        <div class="detail-header">
+          <h2 class="detail-ent-name">{{ detailTask.enterpriseName }}</h2>
+          <div class="detail-meta-row">
+            <span class="detail-credit">{{ detailTask.creditCode }}</span>
+            <span class="detail-dot">·</span>
+            <span class="detail-source-tag" :class="'source-' + detailTask.source">{{ detailTask.sourceLabel }}</span>
+            <span class="detail-dot">·</span>
+            <span>创建于 {{ detailTask.createdAt }}</span>
+          </div>
+        </div>
+
+        <div class="detail-tabs">
+          <span class="detail-tab" :class="{ active: detailTab === 'indicators' }" @click="detailTab = 'indicators'">
+            监控指标 ({{ detailTask.indicators.length }})
+          </span>
+          <span class="detail-tab" :class="{ active: detailTab === 'warnings' }" @click="detailTab = 'warnings'">
+            预警 ({{ taskWarningCount(detailTask.id) }})
+          </span>
+        </div>
+
+        <!-- 指标 Tab -->
+        <div v-if="detailTab === 'indicators'" class="detail-tab-content">
+          <div v-for="ind in detailTask.indicators" :key="ind.id" class="detail-ind-item">
+            <div class="detail-ind-left">
+              <el-tag size="small" :type="levelTagType(ind.level)">{{ levelText(ind.level) }}</el-tag>
+              <span class="detail-ind-name">{{ ind.name }}</span>
             </div>
-            <div class="dw-section">
-              <div class="dw-section-title">📌 触发原因</div>
-              <div class="dw-section-body">{{ store.detailWarning.triggerReason || store.detailWarning.summary }}</div>
-            </div>
-            <div class="dw-section">
-              <div class="dw-section-title">AI 处置建议</div>
-              <div class="suggest-card">
-                <div class="suggest-primary">{{ monitorSuggestion.primary }}</div>
-                <div class="suggest-text">{{ monitorSuggestion.next }}</div>
-                <div class="suggest-impact">{{ monitorSuggestion.impact }}</div>
+            <span class="detail-ind-condition">{{ ind.condition }}</span>
+            <el-tag size="small" :type="ind.enabled ? 'success' : 'info'">{{ ind.enabled ? '启用' : '停用' }}</el-tag>
+          </div>
+
+          <div v-if="taskScanItems(detailTask.id).length" class="detail-scan-results">
+            <h3 class="detail-section-title">最近扫描结果</h3>
+            <div v-for="item in taskScanItems(detailTask.id)" :key="item.indicatorId" class="scan-result-item" :class="'scan-' + item.status">
+              <div class="scan-row">
+                <span class="scan-indicator">{{ item.indicatorName }}</span>
+                <el-tag size="small" :type="item.status === 'warning' ? 'danger' : 'success'">
+                  {{ item.status === 'warning' ? '触发预警' : '正常' }}
+                </el-tag>
               </div>
+              <div class="scan-evidence">{{ item.evidence }}</div>
+              <div class="scan-ai">{{ item.aiJudgement }}</div>
             </div>
-            <div v-if="store.detailWarning.trendData?.length" class="dw-section">
-              <div class="dw-section-title">📊 趋势对比</div>
-              <div class="trend-chart">
-                <div v-for="d in store.detailWarning.trendData" :key="d.month" class="trend-bar" :class="{ abnormal: d.abnormal }">
-                  <div class="trend-label">{{ d.month }}</div>
-                  <div class="trend-fill-wrap"><div class="trend-fill" :style="{ width: (d.value / 2000 * 100) + '%' }"></div></div>
-                  <div class="trend-value">{{ d.value }}万</div>
+          </div>
+
+          <div class="detail-edit-section">
+            <h3 class="detail-section-title">添加指标</h3>
+            <div class="detail-edit-row">
+              <el-input v-model="editInputVal" size="small" placeholder="描述要新增的监控指标..." @keydown.enter.exact.prevent="doParseEditText" />
+              <el-button type="primary" size="small" @click="doParseEditText" :loading="editParsing">AI 识别</el-button>
+            </div>
+            <transition name="fade">
+              <div v-if="editParsed" class="edit-recognized">
+                <div v-for="ind in editParsed.indicators" :key="ind.id" class="edit-rec-item">
+                  <el-tag size="small" :type="levelTagType(ind.level)">{{ ind.name }}</el-tag>
+                  <span class="edit-rec-condition">{{ ind.condition }}</span>
+                  <el-button text size="small" type="primary" @click="addEditIndicator(ind)">添加</el-button>
                 </div>
-                <div v-if="store.detailWarning.industryAvg" class="trend-industry">行业均值：{{ store.detailWarning.industryAvg }}</div>
               </div>
-            </div>
-            <div v-if="store.detailWarning.impactAssessment" class="dw-section">
-              <div class="dw-section-title">💡 影响评估</div>
-              <div class="dw-section-body">
-                <div v-for="(item, i) in store.detailWarning.impactAssessment" :key="i" class="impact-item">· {{ item }}</div>
+            </transition>
+          </div>
+        </div>
+
+        <!-- 预警 Tab -->
+        <div v-if="detailTab === 'warnings'" class="detail-tab-content">
+          <div v-if="taskWarningsList(detailTask.id).length" class="detail-warning-list">
+            <div v-for="w in taskWarningsList(detailTask.id)" :key="w.id" class="detail-warning-item" @click="openWarningDetail(w)">
+              <div class="detail-warning-level" :class="'level-' + w.level">
+                {{ levelText(w.level) }}
               </div>
-            </div>
-            <div class="dw-section">
-              <div class="dw-section-title">处置进展</div>
-              <div class="action-status-card" :class="{ active: store.detailWarning.pushedToDueDiligence || store.detailWarning.focused }">
-                <div class="action-status-title">{{ store.detailWarning.dispositionStatus || '待处置' }}</div>
-                <div v-if="store.detailWarning.dueTaskName" class="action-status-text">已生成尽调核查项：{{ store.detailWarning.dueTaskName }}，当前进度 {{ store.detailWarning.dueTaskProgress }}%</div>
-                <div v-else class="action-status-text">可推送到智能尽调，或加入重点关注等待下次数据刷新。</div>
+              <div class="detail-warning-body">
+                <div class="detail-warning-title">{{ w.title }}</div>
+                <div class="detail-warning-time">{{ w.createdAt }}</div>
+                <div class="detail-warning-tags">
+                  <el-tag v-if="w.focused" size="small" type="warning" effect="plain">已关注</el-tag>
+                  <el-tag v-if="w.pushedToDueDiligence" size="small" type="success" effect="plain">已推送尽调</el-tag>
+                  <el-tag v-if="w.handled" size="small" type="info" effect="plain">已处理</el-tag>
+                </div>
               </div>
             </div>
           </div>
-          <div class="drawer-footer">
-            <el-button size="small" type="primary" :disabled="store.detailWarning?.pushedToDueDiligence" @click="handlePushToDueDiligence">{{ store.detailWarning?.pushedToDueDiligence ? '已推送尽调' : '推送到尽调' }}</el-button>
-            <el-button size="small" plain :disabled="store.detailWarning?.focused" @click="handleAddFocus">{{ store.detailWarning?.focused ? '已重点关注' : '加入重点关注' }}</el-button>
+          <div v-else class="detail-empty">
+            <el-icon><CircleCheck /></el-icon>
+            <p>暂无预警</p>
           </div>
         </div>
       </div>
-    </transition>
+    </el-drawer>
+
+    <!-- ════════════════════════════════════════ -->
+    <!-- 预警详情 Drawer -->
+    <!-- ════════════════════════════════════════ -->
+    <el-drawer v-model="warningDetailOpen" title="预警详情" size="480px">
+      <div v-if="warningDetail" class="warning-detail-content">
+        <div class="wd-header">
+          <el-tag :type="levelTagType(warningDetail.level)" size="small">{{ levelText(warningDetail.level) }}</el-tag>
+          <h3 class="wd-title">{{ warningDetail.title }}</h3>
+          <div class="wd-ent">{{ warningDetail.enterpriseName }}</div>
+        </div>
+
+        <div class="wd-section">
+          <div class="wd-section-title">触发条件</div>
+          <div class="wd-section-body">{{ warningDetail.triggerCondition }}</div>
+        </div>
+
+        <div class="wd-section">
+          <div class="wd-section-title">触发证据</div>
+          <div class="wd-section-body wd-evidence">{{ warningDetail.triggerEvidence }}</div>
+        </div>
+
+        <div class="wd-section">
+          <div class="wd-section-title">AI 研判</div>
+          <div class="wd-ai-card">
+            <div class="wd-ai-judgement">{{ warningDetail.aiJudgement }}</div>
+            <div class="wd-ai-suggestion">💡 {{ warningDetail.suggestion }}</div>
+          </div>
+        </div>
+
+        <div class="wd-section">
+          <div class="wd-section-title">处置记录</div>
+          <div v-if="warningDetail.actionLogs && warningDetail.actionLogs.length" class="wd-action-logs">
+            <div v-for="(log, i) in warningDetail.actionLogs" :key="i" class="wd-action-log">
+              <span class="wd-action-log-title">{{ log.title }}</span>
+              <span class="wd-action-log-time">{{ log.time }}</span>
+            </div>
+          </div>
+          <div v-else class="wd-action-empty">暂无处置记录</div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="wd-footer">
+          <el-button type="primary" size="small" :disabled="warningDetail?.pushedToDueDiligence" @click="doPushToDueDiligence">
+            {{ warningDetail?.pushedToDueDiligence ? '已推送尽调' : '推送尽调' }}
+          </el-button>
+          <el-button size="small" plain :disabled="warningDetail?.focused" @click="doAddFocus">
+            {{ warningDetail?.focused ? '已关注' : '加入关注' }}
+          </el-button>
+          <el-button size="small" plain :disabled="warningDetail?.handled" @click="doMarkHandled">
+            {{ warningDetail?.handled ? '已处理' : '标记已处理' }}
+          </el-button>
+        </div>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onUnmounted } from 'vue'
-import { MagicStick, ArrowLeft, InfoFilled, Plus, CircleCheckFilled, CircleCheck, Select, Loading, Document } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import {
+  Plus, MagicStick, CircleCheckFilled, CircleCheck, Select, Loading,
+  More, WarningFilled, Monitor, Collection,
+} from '@element-plus/icons-vue'
 import { useMonitorStore } from '../stores/enterpriseMonitor.js'
 import { ElMessage } from 'element-plus'
 
 const store = useMonitorStore()
-const monitorSuggestion = computed(() => store.buildMonitorSuggestion(store.detailWarning) || {})
-const runningText = ref('')
-const runningTimers = []
 
-const exampleTexts = [
-  '监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我',
-  '帮我盯着浙江新源动力，法人变更和股权出质时通知我',
-  '关注杭州锐思软件，征信报告过期或审计到期时通知我',
-]
+// ─── 任务列表 ───
+const filteredTasks = computed(() => store.filteredTasks)
 
-const defaultRunningSteps = [
-  { label: '识别企业主体', status: 'pending', loadingText: '正在识别企业名称和统一社会信用代码...', result: '已识别企业主体' },
-  { label: '拆解监测指标', status: 'pending', loadingText: '正在理解监测维度和触发条件...', result: '已识别监测指标和触发条件' },
-  { label: '接入数据源', status: 'pending', loadingText: '正在接入工商、司法、税票、资料有效期数据...', result: '已接入数据源' },
-  { label: '建立监测任务', status: 'pending', loadingText: '正在创建监测任务并加入列表...', result: '已建立监测任务' },
-  { label: '扫描首轮风险', status: 'pending', loadingText: '正在扫描首轮风险变化...', result: '已生成首轮扫描结果' },
-  { label: '生成预警提醒', status: 'pending', loadingText: '正在生成预警提醒...', result: '已生成预警，可查看详情并处置' },
-]
+function setTaskFilter(f) { store.setTaskFilter(f) }
 
-function dimTagType(level) { return { high: 'danger', medium: 'warning', low: 'info' }[level] || 'info' }
-function dimLevelText(level) { return { high: '高', medium: '中', low: '低' }[level] || '低' }
-function levelLabel(l) { return { high: '红色预警', medium: '橙色预警', low: '蓝色预警' }[l] || '' }
-
-function useExample(idx) { store.setMonitorInput(exampleTexts[idx]) }
-
-function handleCreateMonitor() {
-  if (!store.monitorInput.trim()) return
-  runningText.value = store.monitorInput
-  runMonitorWorkflow()
+function sourceCount(source) {
+  return store.monitorTasks.filter(t => t.source === source).length
 }
 
-function handleManualMonitor() {
-  runningText.value = '手工添加企业，监测工商变更和资料有效期'
-  runMonitorWorkflow()
-}
+const warningTaskCount = computed(() => store.monitorTasks.filter(t => t.warningCount > 0).length)
 
-function handleViewCreatedWarning() {
-  const w = store.createdMonitorResult?.warning
-  if (w) store.openDetail(w)
-  else ElMessage.info('暂无预警')
-}
-
-function handlePushCreatedWarning() {
-  const w = store.createdMonitorResult?.warning
-  if (w) { const r = store.pushToDueDiligence(w.id); if (r) ElMessage.success('已生成尽调核查项：' + r.dueTaskName) }
-}
-
-function handleViewTask(task) {
-  if (task.latestWarning) store.openDetail(task.latestWarning)
-  else ElMessage.info('该任务暂无预警')
-}
-
-function handlePushToDueDiligence() {
-  if (!store.detailWarning) return
-  const w = store.pushToDueDiligence(store.detailWarning.id)
-  if (w) ElMessage.success('已生成尽调核查项：' + w.dueTaskName)
-}
-
-function handleAddFocus() {
-  if (!store.detailWarning) return
-  const w = store.addFocus(store.detailWarning.id)
-  if (w) ElMessage.success('已将「' + w.enterprise.name + '」加入重点关注')
-}
-
-function handleRecommendedAction(warning) {
-  if (!warning) return
-  const action = store.getRecommendedAction(warning)
-  if (action.type === 'focus') {
-    const r = store.addFocus(warning.id)
-    if (r) ElMessage.success('已将「' + r.enterprise.name + '」加入重点关注')
-  } else {
-    const r = store.pushToDueDiligence(warning.id)
-    if (r) ElMessage.success('已生成尽调核查项：' + r.dueTaskName)
+function handleTaskAction(cmd, task) {
+  if (cmd === 'detail') openTaskDetail(task.id)
+  else if (cmd === 'edit') openEditIndicators(task.id)
+  else if (cmd === 'pause' || cmd === 'resume') store.toggleTaskStatus(task.id)
+  else if (cmd?.action === 'toggleFocus') {
+    task.focused = !task.focused
+    ElMessage.success(task.focused ? '已加入重点关注' : '已取消关注')
   }
 }
 
-function getActionLabel(warning) { const a = store.getRecommendedAction(warning); return a?.label || '查看详情' }
-function getReasonTags(warning) { return store.getReasonTags(warning) }
+// ─── 任务详情 ───
+const detailTaskOpen = computed({ get: () => store.detailTaskOpen, set: v => { if (!v) store.closeTaskDetail() } })
+const detailTask = computed(() => store.detailTask)
+const detailTab = computed({ get: () => store.detailTab, set: v => store.setDetailTab(v) })
 
-function resetRunningSteps() {
-  runningTimers.splice(0).forEach(t => clearTimeout(t))
-  store.setRunningSteps(defaultRunningSteps.map((s, i) => ({ ...s, status: i === 0 ? 'active' : 'pending' })))
+function openTaskDetail(id) { store.openTaskDetail(id) }
+
+function taskScanItems(taskId) {
+  return store.scanResults.find(s => s.taskId === taskId)?.items || []
 }
 
-function runMonitorWorkflow() {
-  resetRunningSteps()
-  store.setMonitorView('running')
-  const isManual = runningText.value.includes('手工')
-  const delays = [500, 1100, 1700, 2300, 3000, 3700]
-  for (let i = 0; i < delays.length; i++) {
-    runningTimers.push(setTimeout(() => {
-      if (i > 0) store.advanceRunningStep(i - 1, 'done')
-      store.advanceRunningStep(i, 'active')
-    }, delays[i]))
+function taskWarningsList(taskId) {
+  return store.monitorWarnings.filter(w => w.taskId === taskId)
+}
+
+function taskWarningCount(taskId) {
+  return taskWarningsList(taskId).length
+}
+
+// ─── 编辑指标 ───
+const editInputVal = computed({ get: () => store.editInput, set: v => { store.editInput = v } })
+const editParsing = computed(() => store.editParsing)
+const editParsed = computed(() => store.editParsed)
+
+function openEditIndicators(taskId) { store.openEditIndicators(taskId) }
+
+async function doParseEditText() {
+  if (!store.editInput.trim()) return
+  await store.parseEditText()
+}
+
+function addEditIndicator(ind) {
+  const task = store.monitorTasks.find(t => t.id === store.editTaskId)
+  if (task && !task.indicators.find(i => i.id === ind.id)) {
+    task.indicators.push({ ...ind, enabled: true })
+    ElMessage.success('已添加指标：' + ind.name)
+    store.editParsed = null
+    store.editInput = ''
   }
-  runningTimers.push(setTimeout(() => {
-    store.advanceRunningStep(delays.length - 1, 'done')
-    const result = isManual ? store.createManualMonitor() : store.createMonitorFromQuickInput()
-    if (result) ElMessage.success('已加入监测：' + (result.rule?.name || '新监测任务'))
-    store.setMonitorView('results')
-  }, 4400))
 }
 
-function goLaunch() { store.resetMonitorFlow(); resetRunningSteps() }
-onUnmounted(() => { runningTimers.splice(0).forEach(t => clearTimeout(t)) })
+// ─── 新增监控 ───
+const createMode = computed({ get: () => store.createMode, set: v => { store.createMode = v } })
+const createInput = computed({ get: () => store.createInput, set: v => { store.createInput = v } })
+const createParsing = computed(() => store.createParsing)
+const createParsed = computed(() => store.createParsed)
+const createEnterprise = computed({ get: () => store.createEnterprise, set: v => { store.createEnterprise = v } })
+const createSelectedIndicators = computed(() => store.createSelectedIndicators)
+const creating = computed(() => store.creating)
+const creatingSteps = computed(() => store.creatingSteps)
+const createDialogTitle = computed(() => creating.value ? '创建中...' : '新增监控任务')
+
+function openCreateMonitor() { store.openCreateMonitor() }
+function closeCreateMonitor() { store.closeCreateMonitor() }
+
+async function parseCreateText() {
+  await store.parseCreateText()
+}
+
+function confirmCreateMonitor() { store.confirmCreateMonitor() }
+
+function confirmCreateManual() {
+  if (!store.createEnterprise.trim() || !store.createSelectedIndicators.length) return
+  const indicators = store.createSelectedIndicators.map(i => ({ ...i, enabled: true }))
+  const parsed = { enterprises: [store.createEnterprise], indicators }
+  store.createMonitorTask(parsed, 'manual')
+  ElMessage.success('已创建监控任务：' + store.createEnterprise)
+  closeCreateMonitor()
+}
+
+function handleManualCreate() { store.handleManualCreate() }
+
+function toggleCreateIndicatorManual(ind) {
+  store.toggleCreateIndicator(ind.id)
+}
+
+function isIndicatorSelected(indId) {
+  return store.createSelectedIndicators.some(i => i.id === indId)
+}
+
+// ─── 指标库 ───
+const indicatorLibrary = computed(() => store.indicatorLibrary)
+const indicatorLibraryOpen = computed({ get: () => store.indicatorLibraryOpen, set: v => { if (v) store.openIndicatorLibrary(); else store.closeIndicatorLibrary() } })
+
+function openIndicatorLibrary() { store.openIndicatorLibrary() }
+
+// ─── 预警详情 ───
+const warningDetailOpen = computed({ get: () => store.warningDetailOpen, set: v => { if (!v) store.closeWarningDetail() } })
+const warningDetail = computed(() => store.warningDetail)
+
+function openWarningDetail(warning) { store.openWarningDetail(warning) }
+
+function doPushToDueDiligence() {
+  if (!warningDetail.value) return
+  store.pushWarningToDueDiligence(warningDetail.value.id)
+  ElMessage.success('已推送尽调')
+}
+
+function doAddFocus() {
+  if (!warningDetail.value) return
+  store.addWarningToFocus(warningDetail.value.id)
+  ElMessage.success('已加入关注')
+}
+
+function doMarkHandled() {
+  if (!warningDetail.value) return
+  store.markWarningHandled(warningDetail.value.id)
+  ElMessage.success('已标记为已处理')
+}
+
+// ─── 工具函数 ───
+function levelTagType(level) { return { high: 'danger', medium: 'warning', low: 'info' }[level] || 'info' }
+function levelText(level) { return { high: '高', medium: '中', low: '低' }[level] || level }
 </script>
 
 <style scoped>
-.page{padding:var(--space-2xl) 32px;max-width:1120px;margin:0 auto}
-.page-header{margin-bottom:var(--space-2xl)}
-.page-title{font-size:var(--font-size-page-title);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.page-subtitle{font-size:var(--font-size-body);color:var(--text-tertiary)}
-.monitor-launch{max-width:760px}
-.launch-card{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-2xl)}
-.launch-eyebrow{display:inline-flex;align-items:center;gap:var(--space-xs);font-size:var(--font-size-sm);font-weight:700;color:var(--color-primary);background:var(--color-primary-bg);border:1px solid var(--color-primary-border);border-radius:var(--radius-full);padding:4px 10px;margin-bottom:var(--space-md)}
-.launch-title{font-size:22px;line-height:1.3;font-weight:700;color:var(--text-primary);margin:0 0 var(--space-lg)}
-.launch-input-card{border:1px solid var(--border-default);background:var(--surface-card);border-radius:var(--radius-md);padding:var(--space-md);box-shadow:0 8px 24px rgba(15,23,42,.04)}
-.launch-textarea{margin-bottom:var(--space-sm)}
-.launch-textarea :deep(.el-textarea__inner){border:none;box-shadow:none;padding:0;font-size:var(--font-size-body);line-height:1.7;color:var(--text-primary);resize:vertical;background:transparent;min-height:72px}
-.launch-textarea :deep(.el-textarea__inner::placeholder){color:var(--text-disabled)}
-.launch-actions{display:flex;gap:var(--space-sm);justify-content:flex-end;padding-top:var(--space-sm);border-top:1px solid var(--border-light)}
-.recognized-block{margin-top:var(--space-lg);background:var(--surface-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl)}
-.recognized-header{display:flex;align-items:center;gap:var(--space-xs);margin-bottom:var(--space-md)}
-.recognized-icon{color:var(--color-success);font-size:16px}
-.recognized-title-text{font-size:var(--font-size-sm);font-weight:700;color:var(--text-primary)}
-.recognized-items{display:flex;flex-direction:column;gap:var(--space-sm)}
-.recognized-item{display:flex;align-items:flex-start;gap:var(--space-sm)}
-.ri-label-row{display:flex;align-items:center;gap:var(--space-xs);min-width:100px;flex-shrink:0}
-.ri-ent-tag,.ri-dim-tag{font-weight:600}
-.ri-level{font-size:var(--font-size-caption);font-weight:600;padding:1px 6px;border-radius:var(--radius-sm)}
-.ri-level.high{background:var(--color-danger-bg);color:var(--color-danger)}
-.ri-level.medium{background:var(--color-warning-bg);color:var(--color-warning)}
-.ri-level.low{background:var(--color-success-bg);color:var(--color-success)}
-.ri-value{font-size:var(--font-size-sm);color:var(--text-primary);line-height:1.5}
-.recognized-suggestion{margin-top:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--border-light);display:flex;align-items:center;gap:var(--space-xs);font-size:var(--font-size-caption);color:var(--text-secondary)}
-.recognized-suggestion .el-icon{color:var(--color-primary);flex-shrink:0}
-.launch-examples{margin-top:var(--space-lg)}
-.examples-label{font-size:var(--font-size-sm);color:var(--text-tertiary);margin-bottom:var(--space-sm)}
-.examples-list{display:flex;flex-wrap:wrap;gap:var(--space-sm)}
-.example-chip{padding:6px 14px;background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-full);font-size:var(--font-size-xs);color:var(--text-secondary);cursor:pointer;transition:all .15s;line-height:1.4}
-.example-chip:hover{border-color:var(--color-primary);color:var(--color-primary);background:var(--color-primary-bg)}
-.monitor-running{max-width:720px;margin:0 auto;background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-2xl)}
-.running-header{display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-xl)}
-.running-icon{font-size:20px;color:var(--color-primary)}
-.running-icon.spin{animation:spin 1.5s linear infinite}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.running-title-text{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary)}
-.running-subtitle{font-size:var(--font-size-sm);color:var(--color-primary);margin-top:2px}
-.running-recognized{margin-bottom:var(--space-xl);background:var(--surface-page);border:1px solid var(--border-light);border-radius:var(--radius-md);padding:var(--space-md) var(--space-lg)}
-.running-recognized-label{font-size:var(--font-size-caption);color:var(--text-tertiary);margin-bottom:var(--space-xs)}
-.running-recognized-items{display:flex;flex-wrap:wrap;gap:var(--space-xs)}
-.running-progress{display:flex;flex-direction:column;gap:0}
-.running-progress-step{display:flex;align-items:flex-start;gap:var(--space-md);padding:0 0 var(--space-lg);position:relative}
-.running-progress-step:not(:last-child) .rps-line.visible{content:'';position:absolute;left:13px;top:28px;width:2px;bottom:0;background:var(--border-light)}
-.running-progress-step.done:not(:last-child) .rps-line.visible{background:var(--color-success-light)}
-.rps-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border-default);background:var(--surface-card);display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1;font-size:12px;font-weight:800;color:var(--text-tertiary)}
-.running-progress-step.active .rps-dot{border-color:var(--color-primary);background:var(--color-primary);color:#fff}
-.running-progress-step.done .rps-dot{border-color:var(--color-success);background:var(--color-success);color:#fff}
-.rps-done-icon{font-size:14px;color:#fff}
-.rps-spinner{width:10px;height:10px;border-radius:50%;background:#fff;animation:pulseDot 1s infinite ease-in-out}
-@keyframes pulseDot{0%,100%{transform:scale(.65);opacity:.55}50%{transform:scale(1);opacity:1}}
-.rps-content{flex:1}
-.rps-label{font-size:var(--font-size-body);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.running-progress-step.done .rps-label{color:var(--color-success)}
-.running-progress-step.active .rps-label{color:var(--color-primary)}
-.rps-desc{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5}
-.monitor-results{animation:fadeIn .24s ease-out}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.results-header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-lg);background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-xl);margin-bottom:var(--space-lg)}
-.results-eyebrow{font-size:var(--font-size-caption);font-weight:700;color:var(--color-primary);margin-bottom:var(--space-xs)}
-.results-title{font-size:var(--font-size-xl);font-weight:800;color:var(--text-primary)}
-.created-card{display:flex;align-items:center;gap:var(--space-lg);background:var(--color-success-bg);border:1px solid var(--color-success-light);border-radius:var(--radius-md);padding:var(--space-lg) var(--space-xl);margin-bottom:var(--space-lg)}
-.created-icon-wrap{flex-shrink:0}
-.created-icon{font-size:28px;color:var(--color-success)}
-.created-body{flex:1;min-width:0}
-.created-name{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.created-dims{display:flex;flex-wrap:wrap;gap:var(--space-xs);margin-bottom:var(--space-xs)}
-.created-dim-tag{font-size:11px}
-.created-status{font-size:var(--font-size-sm);color:var(--text-secondary)}
-.created-actions{display:flex;gap:var(--space-sm);flex-shrink:0}
-.ai-brief-section{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-xl);margin-bottom:var(--space-lg)}
-.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-lg);margin-bottom:var(--space-lg)}
-.section-title{font-size:var(--font-size-lg);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.section-subtitle{font-size:var(--font-size-sm);color:var(--text-tertiary)}
-.decision-list{display:flex;flex-direction:column;gap:var(--space-sm)}
-.decision-item{display:flex;align-items:flex-start;gap:var(--space-md);padding:var(--space-lg) var(--space-lg);border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface-page);cursor:pointer;transition:all .16s}
-.decision-item:hover{border-color:var(--color-primary);background:var(--surface-card);box-shadow:0 4px 14px rgba(15,23,42,.05)}
-.decision-dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex-shrink:0}
-.decision-dot.high{background:var(--color-danger)}
-.decision-dot.medium{background:var(--color-warning)}
-.decision-dot.low{background:var(--color-success)}
-.decision-main{flex:1;min-width:0}
-.decision-row{display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;margin-bottom:var(--space-xs)}
-.decision-enterprise{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary)}
-.decision-title{font-size:var(--font-size-body);color:var(--text-primary)}
-.decision-explain{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.6;margin-bottom:var(--space-sm)}
-.reason-tag{font-size:10px}
-.decision-action{flex-shrink:0}
-.decision-empty{font-size:var(--font-size-sm);color:var(--text-tertiary);padding:var(--space-lg);text-align:center;background:var(--surface-page);border-radius:var(--radius-md);display:flex;align-items:center;gap:var(--space-sm);justify-content:center}
-.tasks-section{background:var(--surface-card);border:1px solid var(--border-default);border-radius:var(--radius-md);padding:var(--space-xl);margin-bottom:var(--space-xl)}
-.tasks-empty{font-size:var(--font-size-sm);color:var(--text-tertiary);padding:var(--space-lg);text-align:center;background:var(--surface-page);border-radius:var(--radius-md);display:flex;align-items:center;gap:var(--space-sm);justify-content:center}
-.task-list{display:flex;flex-direction:column;gap:var(--space-sm)}
-.task-card{display:flex;align-items:center;justify-content:space-between;gap:var(--space-md);padding:var(--space-lg) var(--space-lg);border:1px solid var(--border-light);border-radius:var(--radius-md);background:var(--surface-page);cursor:pointer;transition:all .16s}
-.task-card:hover{border-color:var(--color-primary);background:var(--surface-card);box-shadow:0 4px 14px rgba(15,23,42,.05)}
-.task-main{flex:1;min-width:0}
-.task-name{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.task-meta{display:flex;flex-wrap:wrap;gap:var(--space-xs);font-size:var(--font-size-caption);color:var(--text-tertiary);margin-bottom:var(--space-xs)}
-.task-dot{margin:0 4px;color:var(--text-disabled)}
-.task-dims{display:flex;flex-wrap:wrap;gap:var(--space-xs)}
-.task-dims span{font-size:var(--font-size-caption);color:var(--text-secondary);background:var(--color-primary-bg);border-radius:var(--radius-sm);padding:2px 8px}
-.task-side{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-xs);flex-shrink:0}
-.task-status{font-size:var(--font-size-caption);font-weight:600;padding:2px 9px;border-radius:var(--radius-sm)}
-.status-running{background:var(--color-success-bg);color:var(--color-success)}
-.status-paused{background:var(--border-divider);color:var(--text-tertiary)}
-.task-count{font-size:var(--font-size-sm);font-weight:700;color:var(--text-primary)}
+.page {
+  padding: var(--space-2xl) 32px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
 
-/* Drawer */
-.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:1000;display:flex;justify-content:flex-end}
-.drawer-panel{width:440px;background:var(--surface-card);height:100vh;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.08);display:flex;flex-direction:column}
-.drawer-enter-active,.drawer-leave-active{transition:opacity .3s}
-.drawer-enter-from,.drawer-leave-to{opacity:0}
-.drawer-enter-active .drawer-panel,.drawer-leave-active .drawer-panel{transition:transform .3s ease-out}
-.drawer-enter-from .drawer-panel,.drawer-leave-to .drawer-panel{transform:translateX(100%)}
-.drawer-header{display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-xl) 24px;border-bottom:1px solid var(--border-divider)}
-.drawer-back{font-size:var(--font-size-page-title);cursor:pointer;color:var(--text-secondary)}
-.drawer-back:hover{color:var(--text-primary)}
-.drawer-title{font-size:var(--font-size-xl);font-weight:600;color:var(--text-primary)}
-.drawer-body{flex:1;padding:var(--space-xl) 24px;overflow-y:auto}
-.drawer-footer{padding:var(--space-lg) 24px;border-top:1px solid var(--border-divider);display:flex;gap:var(--space-sm)}
-.dw-header{margin-bottom:var(--space-xl)}
-.dw-level{display:inline-block;padding:2px 12px;border-radius:var(--radius-sm);font-size:var(--font-size-sm);font-weight:600;margin-bottom:var(--space-sm)}
-.dw-level.high{background:var(--color-danger-bg);color:var(--color-danger)}
-.dw-level.medium{background:var(--color-warning-bg);color:var(--color-warning)}
-.dw-level.low{background:var(--color-success-bg);color:var(--color-success)}
-.dw-title-text{font-size:var(--font-size-assist);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.dw-ent-name{font-size:var(--font-size-sm);color:var(--text-secondary);margin-bottom:var(--space-xs)}
-.dw-rule{font-size:var(--font-size-caption);color:#8b5cf6}
-.dw-section{margin-bottom:var(--space-xl)}
-.dw-section-title{font-size:var(--font-size-body);font-weight:600;color:var(--text-primary);margin-bottom:var(--space-sm)}
-.dw-section-body{font-size:var(--font-size-body);color:var(--text-primary);line-height:1.6}
-.suggest-card{background:var(--color-primary-bg);border:1px solid var(--color-primary-border);border-radius:var(--radius-md);padding:var(--space-lg) 16px}
-.suggest-primary{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.suggest-text{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.6;margin-bottom:var(--space-sm)}
-.suggest-impact{font-size:var(--font-size-caption);color:var(--color-primary);line-height:1.5}
-.impact-item{margin-bottom:var(--space-xs);font-size:12.5px;color:var(--text-secondary);line-height:1.5}
-.trend-chart{display:flex;flex-direction:column;gap:var(--space-sm);background:var(--bg-table-header);border-radius:var(--radius-md);padding:var(--space-lg) 16px}
-.trend-bar{display:flex;align-items:center;gap:var(--space-sm)}
-.trend-label{width:30px;font-size:var(--font-size-caption);color:var(--text-tertiary);flex-shrink:0}
-.trend-fill-wrap{flex:1;height:18px;background:var(--border-light);border-radius:var(--radius-sm);overflow:hidden}
-.trend-fill{height:100%;background:var(--color-primary);border-radius:var(--radius-sm);transition:width .3s}
-.trend-bar.abnormal .trend-fill{background:var(--color-danger)}
-.trend-value{width:50px;font-size:var(--font-size-caption);color:var(--text-primary);font-weight:500;text-align:right;flex-shrink:0}
-.trend-bar.abnormal .trend-value{color:var(--color-danger)}
-.trend-industry{font-size:var(--font-size-caption);color:var(--text-tertiary);padding-top:6px;border-top:1px solid var(--border-light)}
-.action-status-card{border:1px solid var(--border-default);background:var(--bg-table-header);border-radius:var(--radius-md);padding:var(--space-md) 14px;margin-bottom:var(--space-sm)}
-.action-status-card.active{background:var(--color-success-bg);border-color:var(--color-success-light)}
-.action-status-title{font-size:var(--font-size-body);font-weight:700;color:var(--text-primary);margin-bottom:var(--space-xs)}
-.action-status-text{font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5}
-.fade-enter-active,.fade-leave-active{transition:opacity .25s}
-.fade-enter-from,.fade-leave-to{opacity:0}
-@media (max-width:768px){
-  .monitor-launch{max-width:100%}
-  .monitor-running{max-width:100%;margin:0 var(--space-lg)}
-  .task-card{flex-direction:column;align-items:flex-start}
-  .task-side{flex-direction:row;align-items:center;width:100%;justify-content:flex-start}
-  .created-card{flex-direction:column;align-items:flex-start}
-  .created-actions{width:100%;justify-content:flex-start}
-  .results-header{flex-direction:column}
-  .drawer-panel{width:100%}
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--space-2xl);
+}
+
+.page-title {
+  font-size: var(--font-size-page-title);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.page-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--text-tertiary);
+}
+
+/* ─── 筛选栏 ─── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-lg);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.filter-tab:hover {
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+
+.filter-tab.active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.filter-count {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  background: var(--surface-page);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+}
+
+.filter-count--danger {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+/* ─── 任务列表 ─── */
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.task-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.16s;
+}
+
+.task-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.task-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.task-name {
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.focus-badge {
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  padding: 1px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+.task-credit {
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+
+.task-dot {
+  margin: 0 2px;
+}
+
+.task-source-tag {
+  font-size: var(--font-size-xs);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.source-due-diligence { background: var(--color-primary-bg); color: var(--color-primary); }
+.source-screening { background: var(--color-success-bg); color: var(--color-success); }
+.source-diagnosis { background: #f3e8ff; color: #7c3aed; }
+.source-manual { background: var(--border-divider); color: var(--text-tertiary); }
+.source-natural-language { background: #fef3c7; color: #d97706; }
+
+.task-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.ind-tag {
+  font-size: var(--font-size-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-page);
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+}
+
+.ind-tag.level-high { background: var(--color-danger-bg); color: var(--color-danger); border-color: var(--color-danger-border); }
+.ind-tag.level-medium { background: var(--color-warning-bg); color: var(--color-warning); border-color: var(--color-warning-border); }
+
+.ind-more {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.task-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+.task-status-badge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.status-running { background: var(--color-success-bg); color: var(--color-success); }
+.status-paused { background: var(--border-divider); color: var(--text-tertiary); }
+.status-warning { background: var(--color-danger-bg); color: var(--color-danger); }
+
+.task-warning-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-danger);
+  white-space: nowrap;
+}
+
+/* ─── 空状态 ─── */
+.empty-state {
+  text-align: center;
+  padding: 80px var(--space-xl);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-md);
+}
+
+.empty-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.empty-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-lg);
+}
+
+/* ─── 创建 Dialog ─── */
+.create-mode-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: var(--space-sm);
+}
+
+.create-mode-tab {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.create-mode-tab:hover { color: var(--text-primary); }
+
+.create-mode-tab.active {
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  font-weight: 600;
+}
+
+.create-natural {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.create-parse-row { display: flex; justify-content: flex-end; }
+
+.create-recognized {
+  background: var(--surface-page);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-top: var(--space-sm);
+}
+
+.create-recognized-header { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: var(--space-md); font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+.create-recognized-icon { color: var(--color-success); font-size: 16px; }
+.create-recognized-body { display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.create-rec-item { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--font-size-sm); }
+.create-rec-label { color: var(--text-tertiary); min-width: 36px; }
+.create-rec-condition { color: var(--text-secondary); }
+.create-confirm-row { display: flex; justify-content: flex-end; }
+
+/* 手工选择 */
+.create-manual { display: flex; flex-direction: column; gap: var(--space-md); }
+.create-ent-input { margin-bottom: var(--space-sm); }
+.create-ind-selector-label { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm); }
+.create-ind-selector { display: flex; flex-direction: column; gap: var(--space-sm); max-height: 320px; overflow-y: auto; }
+.create-ind-option { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; transition: all 0.15s; }
+.create-ind-option:hover { border-color: var(--color-primary); }
+.create-ind-option.selected { background: var(--color-primary-bg); border-color: var(--color-primary); }
+.create-ind-check { flex-shrink: 0; }
+.check-unchecked { width: 18px; height: 18px; border: 2px solid var(--border-default); border-radius: 4px; }
+.check-checked { color: var(--color-primary); font-size: 18px; }
+.create-ind-info { flex: 1; min-width: 0; }
+.create-ind-name { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.create-ind-meta { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.ind-cat { font-weight: 500; }
+.ind-dot { margin: 0 4px; }
+
+/* 创建中动画 */
+.create-running { display: flex; flex-direction: column; gap: var(--space-md); padding: var(--space-lg) 0; }
+.create-running-header { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--font-size-body); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-md); }
+.create-running-icon { color: var(--color-primary); }
+.create-running-icon.spin { animation: spin 1.5s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.create-step { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) 0; }
+.create-step-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-default); background: var(--surface-card); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 800; color: var(--text-tertiary); }
+.create-step.active .create-step-dot { border-color: var(--color-primary); background: var(--color-primary); color: #fff; }
+.create-step.done .create-step-dot { border-color: var(--color-success); background: var(--color-success); color: #fff; }
+.create-step-done { font-size: 14px; color: #fff; }
+.create-step-spinner { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: pulseDot 1s infinite ease-in-out; }
+@keyframes pulseDot { 0%,100% { transform: scale(0.65); opacity: 0.55; } 50% { transform: scale(1); opacity: 1; } }
+.create-step-label { font-size: var(--font-size-sm); color: var(--text-secondary); }
+.create-step.active .create-step-label { color: var(--color-primary); font-weight: 600; }
+.create-step.done .create-step-label { color: var(--color-success); }
+
+/* 指标库 */
+.indicator-lib-list { display: flex; flex-direction: column; gap: var(--space-sm); max-height: 400px; overflow-y: auto; }
+.indicator-lib-item { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+.indicator-lib-name { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); min-width: 70px; }
+.indicator-lib-meta { flex: 1; font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.indicator-lib-dot { margin: 0 4px; }
+
+/* 任务详情 Drawer */
+.detail-content { padding: 0 var(--space-sm); }
+.detail-header { margin-bottom: var(--space-lg); }
+.detail-ent-name { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); margin: 0 0 var(--space-xs); }
+.detail-meta-row { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.detail-dot { margin: 0 2px; }
+.detail-source-tag { font-size: var(--font-size-xs); padding: 1px 6px; border-radius: var(--radius-sm); font-weight: 600; }
+.detail-source-tag.source-due-diligence { background: var(--color-primary-bg); color: var(--color-primary); }
+.detail-source-tag.source-screening { background: var(--color-success-bg); color: var(--color-success); }
+.detail-source-tag.source-diagnosis { background: #f3e8ff; color: #7c3aed; }
+.detail-source-tag.source-manual { background: var(--border-divider); color: var(--text-tertiary); }
+.detail-source-tag.source-natural-language { background: #fef3c7; color: #d97706; }
+.detail-tabs { display: flex; gap: var(--space-md); border-bottom: 1px solid var(--border-light); margin-bottom: var(--space-lg); }
+.detail-tab { font-size: var(--font-size-sm); color: var(--text-tertiary); padding: var(--space-sm) 0; cursor: pointer; user-select: none; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.detail-tab:hover { color: var(--text-primary); }
+.detail-tab.active { color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary); }
+.detail-tab-content { display: flex; flex-direction: column; gap: var(--space-md); }
+
+/* 指标列表 */
+.detail-ind-item { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--surface-page); border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
+.detail-ind-left { display: flex; align-items: center; gap: var(--space-sm); flex: 1; }
+.detail-ind-name { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+.detail-ind-condition { font-size: var(--font-size-xs); color: var(--text-secondary); }
+
+/* 扫描结果 */
+.detail-section-title { font-size: var(--font-size-body); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm); }
+.detail-scan-results { margin-top: var(--space-md); }
+.scan-result-item { padding: var(--space-md); border: 1px solid var(--border-light); border-radius: var(--radius-md); margin-bottom: var(--space-sm); }
+.scan-result-item.scan-warning { border-left: 3px solid var(--color-danger); }
+.scan-result-item.scan-normal { border-left: 3px solid var(--color-success); }
+.scan-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-xs); }
+.scan-indicator { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+.scan-evidence { font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: var(--space-xs); line-height: 1.5; }
+.scan-ai { font-size: var(--font-size-xs); color: var(--color-primary); line-height: 1.5; }
+
+/* 编辑指标 */
+.detail-edit-section { margin-top: var(--space-lg); padding-top: var(--space-md); border-top: 1px solid var(--border-light); }
+.detail-edit-row { display: flex; gap: var(--space-sm); }
+.edit-recognized { margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-xs); }
+.edit-rec-item { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--surface-page); border-radius: var(--radius-sm); }
+.edit-rec-condition { font-size: var(--font-size-xs); color: var(--text-secondary); flex: 1; }
+
+/* 预警列表 */
+.detail-warning-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.detail-warning-item { display: flex; align-items: flex-start; gap: var(--space-md); padding: var(--space-md); border: 1px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; transition: all 0.15s; }
+.detail-warning-item:hover { border-color: var(--color-primary); background: var(--surface-page); }
+.detail-warning-level { font-size: var(--font-size-xs); font-weight: 600; padding: 2px 8px; border-radius: var(--radius-sm); flex-shrink: 0; }
+.detail-warning-level.level-high { background: var(--color-danger-bg); color: var(--color-danger); }
+.detail-warning-level.level-medium { background: var(--color-warning-bg); color: var(--color-warning); }
+.detail-warning-level.level-low { background: var(--color-success-bg); color: var(--color-success); }
+.detail-warning-body { flex: 1; min-width: 0; }
+.detail-warning-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-xs); }
+.detail-warning-time { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-bottom: var(--space-xs); }
+.detail-warning-tags { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.detail-empty { text-align: center; padding: var(--space-2xl) 0; color: var(--text-tertiary); display: flex; flex-direction: column; align-items: center; gap: var(--space-sm); }
+.detail-empty .el-icon { font-size: 32px; }
+.detail-empty p { margin: 0; font-size: var(--font-size-sm); }
+
+/* 预警详情 Drawer */
+.warning-detail-content { padding: 0 var(--space-xs); }
+.wd-header { display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: var(--space-xl); }
+.wd-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); margin: 0; }
+.wd-ent { font-size: var(--font-size-sm); color: var(--text-secondary); }
+.wd-section { margin-bottom: var(--space-lg); }
+.wd-section-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm); }
+.wd-section-body { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.6; }
+.wd-evidence { background: var(--surface-page); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border-light); }
+.wd-ai-card { background: var(--color-primary-bg); border: 1px solid var(--color-primary-border); border-radius: var(--radius-md); padding: var(--space-lg) var(--space-md); }
+.wd-ai-judgement { font-size: var(--font-size-sm); color: var(--text-primary); line-height: 1.6; margin-bottom: var(--space-sm); }
+.wd-ai-suggestion { font-size: var(--font-size-xs); color: var(--color-primary); line-height: 1.5; }
+.wd-action-logs { display: flex; flex-direction: column; gap: var(--space-xs); }
+.wd-action-log { display: flex; align-items: center; justify-content: space-between; padding: var(--space-sm) var(--space-md); background: var(--surface-page); border-radius: var(--radius-sm); }
+.wd-action-log-title { font-size: var(--font-size-xs); color: var(--text-primary); }
+.wd-action-log-time { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.wd-action-empty { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+.wd-footer { display: flex; gap: var(--space-sm); flex-wrap: wrap; }
+
+/* 动画 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .task-card { flex-direction: column; align-items: flex-start; gap: var(--space-md); }
+  .task-right { flex-direction: row; width: 100%; justify-content: space-between; }
+  .filter-bar { flex-direction: column; align-items: flex-start; gap: var(--space-sm); }
 }
 </style>

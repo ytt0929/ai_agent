@@ -5,6 +5,236 @@
 
 const now = Date.now()
 
+// ════════════════════════════════════════
+// 监控任务列表（monitorTasks）
+// ════════════════════════════════════════
+export const monitorTasks = [
+  {
+    id: 'MT-001',
+    enterpriseName: '明达精工有限公司',
+    creditCode: '91330300MA29XXXX1Z',
+    source: 'due-diligence',
+    sourceLabel: '尽调转入',
+    status: 'warning',
+    indicators: [
+      { id: 'ind-tax', name: '税票波动', condition: '连续下降超过30%', level: 'high', enabled: true },
+      { id: 'ind-judicial', name: '司法风险', condition: '新增被执行/诉讼', level: 'high', enabled: true },
+    ],
+    lastScanAt: '2026-07-01 19:30',
+    warningCount: 2,
+    latestWarning: { title: '税票连续下降超30%', level: 'high' },
+    focused: true,
+    createdAt: '2026-06-25',
+  },
+  {
+    id: 'MT-002',
+    enterpriseName: '宁波天合新材料有限公司',
+    creditCode: '91330200MA2CXXXX8Y',
+    source: 'screening',
+    sourceLabel: '筛客转入',
+    status: 'running',
+    indicators: [
+      { id: 'ind-industry', name: '工商变更', condition: '法人/股东变更', level: 'medium', enabled: true },
+      { id: 'ind-expiry', name: '资料有效期', condition: '过期或即将过期', level: 'medium', enabled: true },
+    ],
+    lastScanAt: '2026-07-01 18:00',
+    warningCount: 0,
+    latestWarning: null,
+    focused: false,
+    createdAt: '2026-06-28',
+  },
+  {
+    id: 'MT-003',
+    enterpriseName: '杭州智造装备有限公司',
+    creditCode: '91330100MA2BXXXX5T',
+    source: 'diagnosis',
+    sourceLabel: '风险探查转入',
+    status: 'running',
+    indicators: [
+      { id: 'ind-tax2', name: '税票波动', condition: '连续下降或异常波动', level: 'high', enabled: true },
+      { id: 'ind-judicial2', name: '司法风险', condition: '新增被执行', level: 'high', enabled: true },
+      { id: 'ind-industry2', name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium', enabled: true },
+    ],
+    lastScanAt: '2026-07-01 17:45',
+    warningCount: 1,
+    latestWarning: { title: '司法风险：新增被执行', level: 'high' },
+    focused: false,
+    createdAt: '2026-06-20',
+  },
+  {
+    id: 'MT-004',
+    enterpriseName: '浙江新源动力有限公司',
+    creditCode: '91330400MA1DXXXX3K',
+    source: 'manual',
+    sourceLabel: '手工新增',
+    status: 'paused',
+    indicators: [
+      { id: 'ind-expiry2', name: '资料有效期', condition: '征信报告/审计报告过期', level: 'medium', enabled: true },
+    ],
+    lastScanAt: '2026-06-30 10:00',
+    warningCount: 1,
+    latestWarning: { title: '征信报告已过期', level: 'medium' },
+    focused: false,
+    createdAt: '2026-06-15',
+  },
+  {
+    id: 'MT-005',
+    enterpriseName: '宁波海诚贸易有限公司',
+    creditCode: '91330200MA2EXXXX7W',
+    source: 'natural-language',
+    sourceLabel: '自然语言',
+    status: 'running',
+    indicators: [
+      { id: 'ind-tax3', name: '税票波动', condition: '开票下降超过20%', level: 'high', enabled: true },
+      { id: 'ind-judicial3', name: '司法风险', condition: '诉讼新增', level: 'high', enabled: true },
+      { id: 'ind-abnormal', name: '经营异常', condition: '经营异常名录新增', level: 'medium', enabled: true },
+    ],
+    lastScanAt: '2026-07-01 16:20',
+    warningCount: 0,
+    latestWarning: null,
+    focused: false,
+    createdAt: '2026-07-01',
+  },
+]
+
+// ════════════════════════════════════════
+// 指标库（indicatorLibrary）
+// ════════════════════════════════════════
+export const indicatorLibrary = [
+  { id: 'ind-tax', name: '税票波动', category: '财务', dataSource: '税票采集系统', defaultCondition: '连续下降超过30%', defaultLevel: 'high', enabled: true },
+  { id: 'ind-judicial', name: '司法风险', category: '司法', dataSource: '司法公开数据', defaultCondition: '新增被执行/诉讼', defaultLevel: 'high', enabled: true },
+  { id: 'ind-industry', name: '工商变更', category: '工商', dataSource: '工商登记系统', defaultCondition: '法人/股东/经营范围变更', defaultLevel: 'medium', enabled: true },
+  { id: 'ind-expiry', name: '资料有效期', category: '资料', dataSource: '内部资料库', defaultCondition: '征信/审计/证照过期或即将过期', defaultLevel: 'medium', enabled: true },
+  { id: 'ind-abnormal', name: '经营异常', category: '工商', dataSource: '企业信用信息公示系统', defaultCondition: '列入经营异常名录', defaultLevel: 'medium', enabled: true },
+  { id: 'ind-pledge', name: '股权出质', category: '工商', dataSource: '工商登记系统', defaultCondition: '股权出质登记', defaultLevel: 'medium', enabled: true },
+  { id: 'ind-penalty', name: '行政处罚', category: '行政', dataSource: '行政处罚公示系统', defaultCondition: '新增行政处罚记录', defaultLevel: 'high', enabled: true },
+  { id: 'ind-sentiment', name: '舆情风险', category: '舆情', dataSource: '舆情监测系统', defaultCondition: '负面舆情集中出现', defaultLevel: 'medium', enabled: true },
+]
+
+// ════════════════════════════════════════
+// 扫描结果（scanResults）
+// ════════════════════════════════════════
+export const scanResults = [
+  {
+    taskId: 'MT-001',
+    items: [
+      { indicatorId: 'ind-tax', indicatorName: '税票波动', status: 'warning', evidence: '近4个月开票金额连续下降，最新月下降超35%，命中阈值。', aiJudgement: '税票连续下降幅度超过监测条件，建议核实企业经营状况，必要时推送尽调。', scannedAt: '2026-07-01 19:30' },
+      { indicatorId: 'ind-judicial', indicatorName: '司法风险', status: 'warning', evidence: '新增1条被执行人记录，执行标的500万元。', aiJudgement: '司法风险触发，建议核实被执行原因及对企业偿付能力的影响。', scannedAt: '2026-07-01 19:30' },
+    ],
+  },
+  {
+    taskId: 'MT-002',
+    items: [
+      { indicatorId: 'ind-industry', indicatorName: '工商变更', status: 'normal', evidence: '近30天内无工商变更。', aiJudgement: '工商状态正常，无重要变更。', scannedAt: '2026-07-01 18:00' },
+      { indicatorId: 'ind-expiry', indicatorName: '资料有效期', status: 'normal', evidence: '所有资料均在有效期内。', aiJudgement: '资料有效期正常。', scannedAt: '2026-07-01 18:00' },
+    ],
+  },
+  {
+    taskId: 'MT-003',
+    items: [
+      { indicatorId: 'ind-tax2', indicatorName: '税票波动', status: 'normal', evidence: '开票数据正常，无连续下降。', aiJudgement: '税票状态正常。', scannedAt: '2026-07-01 17:45' },
+      { indicatorId: 'ind-judicial2', indicatorName: '司法风险', status: 'warning', evidence: '新增1条被执行案件，执行法院为杭州市中级人民法院，执行标的300万元。', aiJudgement: '司法风险触发，建议关注。', scannedAt: '2026-07-01 17:45' },
+      { indicatorId: 'ind-industry2', indicatorName: '工商变更', status: 'normal', evidence: '近30天无重要变更。', aiJudgement: '工商状态正常。', scannedAt: '2026-07-01 17:45' },
+    ],
+  },
+  {
+    taskId: 'MT-004',
+    items: [
+      { indicatorId: 'ind-expiry2', indicatorName: '资料有效期', status: 'warning', evidence: '征信报告已过有效期5天。', aiJudgement: '征信报告过期，建议尽快更新。', scannedAt: '2026-06-30 10:00' },
+    ],
+  },
+  {
+    taskId: 'MT-005',
+    items: [
+      { indicatorId: 'ind-tax3', indicatorName: '税票波动', status: 'normal', evidence: '开票数据正常。', aiJudgement: '无需处置。', scannedAt: '2026-07-01 16:20' },
+      { indicatorId: 'ind-judicial3', indicatorName: '司法风险', status: 'normal', evidence: '无新增司法案件。', aiJudgement: '司法状态正常。', scannedAt: '2026-07-01 16:20' },
+      { indicatorId: 'ind-abnormal', indicatorName: '经营异常', status: 'normal', evidence: '未列入经营异常名录。', aiJudgement: '经营异常状态正常。', scannedAt: '2026-07-01 16:20' },
+    ],
+  },
+]
+
+// ════════════════════════════════════════
+// 预警列表（monitorWarnings）
+// ════════════════════════════════════════
+export const monitorWarnings = [
+  {
+    id: 'MW-001',
+    taskId: 'MT-001',
+    enterpriseName: '明达精工有限公司',
+    indicatorId: 'ind-tax',
+    indicatorName: '税票波动',
+    level: 'high',
+    title: '税票连续下降超过30%',
+    triggerCondition: '连续下降超过30%',
+    triggerEvidence: '近4个月开票金额连续下降，最新月下降超35%，低于同行业均值。',
+    aiJudgement: '税票连续下降幅度超过监测条件，建议核实企业经营状况，必要时推送尽调。',
+    suggestion: '推送到智能尽调并生成重点核查项，确认下降原因及对企业偿付能力的影响。',
+    pushedToDueDiligence: false,
+    focused: true,
+    handled: false,
+    actionLogs: [{ title: '已加入重点关注', time: '2026-07-01 19:35' }],
+    createdAt: '2026-07-01 19:30',
+  },
+  {
+    id: 'MW-002',
+    taskId: 'MT-001',
+    enterpriseName: '明达精工有限公司',
+    indicatorId: 'ind-judicial',
+    indicatorName: '司法风险',
+    level: 'high',
+    title: '司法风险：新增被执行',
+    triggerCondition: '新增被执行/诉讼',
+    triggerEvidence: '新增1条被执行人记录，执行法院宁波市中级人民法院，执行标的500万元。',
+    aiJudgement: '司法风险触发，建议核实被执行原因及对企业偿付能力的影响。',
+    suggestion: '建议同步税票、司法证据到尽调任务，由AI生成风险核查清单。',
+    pushedToDueDiligence: false,
+    focused: false,
+    handled: false,
+    actionLogs: [],
+    createdAt: '2026-07-01 19:30',
+  },
+  {
+    id: 'MW-003',
+    taskId: 'MT-003',
+    enterpriseName: '杭州智造装备有限公司',
+    indicatorId: 'ind-judicial2',
+    indicatorName: '司法风险',
+    level: 'high',
+    title: '司法风险：新增被执行',
+    triggerCondition: '新增被执行',
+    triggerEvidence: '新增1条被执行案件，执行法院杭州市中级人民法院，执行标的300万元。',
+    aiJudgement: '司法风险触发，建议关注。',
+    suggestion: '核实被执行原因，判断是否影响企业信用状况。',
+    pushedToDueDiligence: false,
+    focused: false,
+    handled: false,
+    actionLogs: [],
+    createdAt: '2026-07-01 17:45',
+  },
+  {
+    id: 'MW-004',
+    taskId: 'MT-004',
+    enterpriseName: '浙江新源动力有限公司',
+    indicatorId: 'ind-expiry2',
+    indicatorName: '资料有效期',
+    level: 'medium',
+    title: '征信报告已过期',
+    triggerCondition: '征信报告/审计报告过期',
+    triggerEvidence: '征信报告已过有效期5天。',
+    aiJudgement: '征信报告过期，建议尽快更新。',
+    suggestion: '联系企业补充最新征信报告。',
+    pushedToDueDiligence: false,
+    focused: false,
+    handled: false,
+    actionLogs: [],
+    createdAt: '2026-06-30 10:00',
+  },
+]
+
+// ════════════════════════════════════════
+// 旧数据保留兼容（筛客 addWatchedCompany 等）
+// ════════════════════════════════════════
+
 export const warnings = [
   {
     id: 'W001',

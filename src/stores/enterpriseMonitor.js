@@ -1,19 +1,30 @@
 /**
  * 企业监测 - Pinia Store
- * 核心模型：monitorTasks / scanResults / monitorWarnings
+ * 核心模型：monitorTasks / indicatorLibrary / scanResults / monitorWarnings
  * 旧 rules / warnings 保留兼容（筛客 addWatchedCompany 等）
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { warnings as mockWarnings, rules as mockRules } from '../data/mockEnterpriseMonitor.js'
+import { ElMessage } from 'element-plus'
+import {
+  monitorTasks as mockTasks,
+  indicatorLibrary as mockIndicators,
+  scanResults as mockScanResults,
+  monitorWarnings as mockWarnings,
+  warnings as mockOldWarnings,
+  rules as mockRules,
+} from '../data/mockEnterpriseMonitor.js'
 
 function clone(obj) { return JSON.parse(JSON.stringify(obj)) }
 
-// 自然语言解析
+// ════════════════════════════════════════
+// 自然语言解析（用于新增/编辑监控）
+// ════════════════════════════════════════
 function parseMonitorText(text) {
   const input = (text || '').trim()
-  const parsed = { name: '新监测任务', enterprises: [], dimensions: [], rawText: input }
+  const parsed = { enterprises: [], indicators: [], rawText: input }
 
+  // 识别企业名
   const entPatterns = [
     /(?:监测|监控|盯着|盯住|关注|帮我盯着|帮我监测)([^\uff0c\s,。；;]+)/,
   ]
@@ -26,405 +37,388 @@ function parseMonitorText(text) {
   }
   if (!parsed.enterprises.length) parsed.enterprises = ['杭州智造装备有限公司']
 
+  // 识别监控指标
   if (input.includes('税票') || input.includes('开票')) {
     const cond = input.includes('30%') ? '连续下降超过30%' : '连续下降或异常波动'
-    parsed.dimensions.push({ name: '税票波动', condition: cond, level: 'high' })
+    parsed.indicators.push({ id: 'ind-tax', name: '税票波动', condition: cond, level: 'high', enabled: true })
   }
   if (input.includes('被执行') || input.includes('司法') || input.includes('诉讼')) {
-    parsed.dimensions.push({ name: '司法风险', condition: '新增被执行/诉讼', level: 'high' })
+    parsed.indicators.push({ id: 'ind-judicial', name: '司法风险', condition: '新增被执行/诉讼', level: 'high', enabled: true })
   }
   if (input.includes('法人') || input.includes('股东') || input.includes('工商')) {
-    parsed.dimensions.push({ name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium' })
+    parsed.indicators.push({ id: 'ind-industry', name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium', enabled: true })
   }
   if (input.includes('资料') || input.includes('过期') || input.includes('征信') || input.includes('审计')) {
-    parsed.dimensions.push({ name: '资料有效期', condition: '过期或即将过期', level: 'medium' })
+    parsed.indicators.push({ id: 'ind-expiry', name: '资料有效期', condition: '过期或即将过期', level: 'medium', enabled: true })
   }
-  if (!parsed.dimensions.length) {
-    parsed.dimensions.push({ name: '工商变更', condition: '任意重要变更', level: 'low' })
-    parsed.dimensions.push({ name: '司法风险', condition: '新增被执行/诉讼', level: 'low' })
+  if (input.includes('经营异常') || input.includes('经营异常名录')) {
+    parsed.indicators.push({ id: 'ind-abnormal', name: '经营异常', condition: '列入经营异常名录', level: 'medium', enabled: true })
   }
-  parsed.name = parsed.enterprises[0] + ' - ' + parsed.dimensions.map(d => d.name).join(' / ') + ' 监测'
+  if (input.includes('舆情') || input.includes('负面')) {
+    parsed.indicators.push({ id: 'ind-sentiment', name: '舆情风险', condition: '负面舆情集中出现', level: 'medium', enabled: true })
+  }
+  if (!parsed.indicators.length) {
+    parsed.indicators.push({ id: 'ind-industry', name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium', enabled: true })
+    parsed.indicators.push({ id: 'ind-judicial', name: '司法风险', condition: '新增被执行/诉讼', level: 'medium', enabled: true })
+  }
   return parsed
-}
-
-function buildSuggestion(warning) {
-  if (!warning) return {}
-  if (warning.level === 'high') return {
-    primary: '推送到智能尽调并生成重点核查项',
-    next: '建议同步税票、司法、工商证据到尽调任务，由 AI 生成风险核查清单。',
-    impact: '高风险预警需要在后续授信或贷后回访中形成可追溯处置记录。',
-  }
-  if (warning.level === 'medium') return {
-    primary: '加入重点关注并持续观察',
-    next: '建议保留预警记录，等待下一次数据刷新后自动复核。',
-    impact: '中风险事项当前不一定需要发起尽调，但应保留跟踪状态。',
-  }
-  return { primary: '记录为普通关注', next: '建议归档本次变化。', impact: '低风险事项适合轻量跟踪。' }
 }
 
 function nowLabel() {
   const d = new Date()
-  return `今天 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  return `今天 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 export const useMonitorStore = defineStore('monitor', () => {
-  // ====== 新核心状态 ======
-  const monitorInput = ref('监测杭州智造装备，税票连续下降超过30%或新增被执行时提醒我')
-  const parsedMonitor = ref(null)
-  const monitorView = ref('launch')
-  const runningSteps = ref([])
-  const monitorTasks = ref([])
-  const selectedTaskId = ref(null)
-  const scanResults = ref([])
-  const monitorWarnings = ref([])
+  // ════════════════════════════════════════
+  // 首页：监控任务中心
+  // ════════════════════════════════════════
+  const monitorTasks = ref(clone(mockTasks))
+  const taskFilter = ref('all')  // all | due-diligence | screening | diagnosis | manual | natural-language | warning
 
-  // 详情 / 创建
-  const detailOpen = ref(false)
-  const detailWarning = ref(null)
+  // ════════════════════════════════════════
+  // 指标库
+  // ════════════════════════════════════════
+  const indicatorLibrary = ref(clone(mockIndicators))
+  const indicatorLibraryOpen = ref(false)
+
+  // ════════════════════════════════════════
+  // 新增监控 dialog
+  // ════════════════════════════════════════
+  const createOpen = ref(false)
+  const createMode = ref('natural')  // natural | manual
+  const createInput = ref('')
+  const createParsed = ref(null)
+  const createParsing = ref(false)
+  const createEnterprise = ref('')
+  const createSelectedIndicators = ref([])
+  const createSource = ref('natural-language')
+  const creating = ref(false)
+  const creatingSteps = ref([])
+
+  // ════════════════════════════════════════
+  // 编辑指标 drawer
+  // ════════════════════════════════════════
+  const editOpen = ref(false)
+  const editTaskId = ref(null)
+  const editInput = ref('')
+  const editParsed = ref(null)
+  const editParsing = ref(false)
+
+  // ════════════════════════════════════════
+  // 任务详情 drawer
+  // ════════════════════════════════════════
+  const detailTaskOpen = ref(false)
   const detailTask = ref(null)
-  const createRuleOpen = ref(false)
-  const nlInput = ref('')
-  const nlParsed = ref(null)
-  const nlParsing = ref(false)
-  const createdMonitorResult = ref(null)
+  const detailTab = ref('indicators')  // indicators | warnings
 
-  // 兼容旧数据
+  // ════════════════════════════════════════
+  // 预警详情 drawer
+  // ════════════════════════════════════════
+  const warningDetailOpen = ref(false)
+  const warningDetail = ref(null)
+
+  // ════════════════════════════════════════
+  // 扫描结果 & 预警
+  // ════════════════════════════════════════
+  const scanResults = ref(clone(mockScanResults))
+  const monitorWarnings = ref(clone(mockWarnings))
+
+  // ════════════════════════════════════════
+  // 旧兼容数据
+  // ════════════════════════════════════════
+  const warnings = ref(clone(mockOldWarnings))
+  const rules = ref(clone(mockRules))
   const activeTab = ref('warnings')
   const warningFilter = ref('all')
   const complianceFilter = ref('all')
-  const warnings = ref(clone(mockWarnings))
-  const rules = ref(clone(mockRules))
   const queryHistory = ref([])
   const actionCenter = ref([])
 
-  // ====== 计算属性 ======
-  const parsedQuickMonitor = computed(() => {
-    if (!monitorInput.value.trim()) return null
-    return parseMonitorText(monitorInput.value)
-  })
-
-  const kpi = computed(() => {
-    const w = warnings.value
-    const oneDay = 24 * 3600000
-    return {
-      monitored: 42,
-      todayWarnings: w.filter(w => (Date.now() - w.timeRaw) < oneDay).length,
-      unread: w.filter(w => !w.read).length,
-      expired: w.filter(w => w.type === 'compliance' && w.daysOverdue > 0).length,
+  // ════════════════════════════════════════
+  // 计算属性
+  // ════════════════════════════════════════
+  const filteredTasks = computed(() => {
+    let list = [...monitorTasks.value]
+    const f = taskFilter.value
+    if (f !== 'all' && f !== 'warning') {
+      list = list.filter(t => t.source === f)
+    } else if (f === 'warning') {
+      list = list.filter(t => t.warningCount > 0)
     }
-  })
-
-  const filteredWarnings = computed(() => {
-    let list = [...warnings.value]
-    const f = warningFilter.value
-    if (f === 'high') list = list.filter(w => w.level === 'high')
-    else if (f === 'medium') list = list.filter(w => w.level === 'medium')
-    else if (f === 'low') list = list.filter(w => w.level === 'low')
-    else if (f === 'unread') list = list.filter(w => !w.read)
-    const levelOrder = { high: 0, medium: 1, low: 2 }
-    list.sort((a, b) => levelOrder[a.level] - levelOrder[b.level] || b.timeRaw - a.timeRaw)
     return list
   })
 
-  const complianceWarningsData = computed(() => {
-    let list = warnings.value.filter(w => w.type === 'compliance')
-    const f = complianceFilter.value
-    if (f === 'expired') list = list.filter(w => w.daysOverdue > 0)
-    else if (f === 'expiring') list = list.filter(w => w.daysRemaining > 0)
-    list.sort((a, b) => (b.daysOverdue || 0) - (a.daysOverdue || 0) || (a.daysRemaining || 999) - (b.daysRemaining || 999))
-    return list
+  const currentTaskScanResults = computed(() => {
+    if (!detailTask.value) return []
+    return scanResults.value.find(s => s.taskId === detailTask.value.id)?.items || []
   })
 
-  const runningRules = computed(() => rules.value.filter(r => r.status === 'running'))
-  const pausedRules = computed(() => rules.value.filter(r => r.status === 'paused'))
-  const focusedWarnings = computed(() => warnings.value.filter(w => w.focused))
-
-  const monitoredRules = computed(() => {
-    return rules.value.map(rule => {
-      const related = warnings.value.filter(w =>
-        w.ruleName === rule.name ||
-        rule.enterprises?.some(e => w.enterprise?.name?.includes(e) || e.includes(w.enterprise?.name || ''))
-      )
-      const latest = related.sort((a, b) => b.timeRaw - a.timeRaw)[0]
-      return { ...rule, source: rule.source || '手动规则', warningCount: related.length, latestWarning: latest }
-    })
+  const currentTaskWarnings = computed(() => {
+    if (!detailTask.value) return []
+    return monitorWarnings.value.filter(w => w.taskId === detailTask.value.id)
   })
 
-  const decisionQueue = computed(() => {
-    const levelOrder = { high: 0, medium: 1, low: 2 }
-    return [...warnings.value]
-      .filter(w => !w.pushedToDueDiligence || !w.focused)
-      .sort((a, b) => levelOrder[a.level] - levelOrder[b.level] || b.timeRaw - a.timeRaw)
-      .slice(0, 4)
-      .map(w => ({ ...w, suggestion: buildSuggestion(w) }))
-  })
+  // ════════════════════════════════════════
+  // Actions - 任务筛选
+  // ════════════════════════════════════════
+  function setTaskFilter(f) { taskFilter.value = f }
 
-  // ====== Actions ======
-  function setMonitorInput(text) { monitorInput.value = text }
-
-  function parseMonitorTextAction(text) {
-    parsedMonitor.value = parseMonitorText(text || monitorInput.value)
-    return parsedMonitor.value
+  // ════════════════════════════════════════
+  // Actions - 新增监控
+  // ════════════════════════════════════════
+  function openCreateMonitor() {
+    createOpen.value = true
+    createMode.value = 'natural'
+    createInput.value = ''
+    createParsed.value = null
+    createEnterprise.value = ''
+    createSelectedIndicators.value = []
+    createSource.value = 'natural-language'
+    creating.value = false
+    creatingSteps.value = []
   }
 
-  function setMonitorView(view) { monitorView.value = view }
-
-  function setRunningSteps(steps) { runningSteps.value = steps }
-
-  function advanceRunningStep(idx, status) {
-    if (runningSteps.value[idx]) runningSteps.value[idx].status = status
+  function closeCreateMonitor() {
+    createOpen.value = false
   }
 
-  // 创建监测任务
-  function createMonitorTask(parsed, source = 'AI自然语言') {
-    const id = 'MT' + Date.now()
+  async function parseCreateText() {
+    if (!createInput.value.trim()) return
+    createParsing.value = true
+    await new Promise(r => setTimeout(r, 600))
+    const parsed = parseMonitorText(createInput.value)
+    createParsed.value = parsed
+    createEnterprise.value = parsed.enterprises[0] || '杭州智造装备有限公司'
+    createSelectedIndicators.value = parsed.indicators.map(i => ({ ...i }))
+    createParsing.value = false
+  }
+
+  const createSteps = [
+    { label: '识别企业主体', result: '已识别企业主体' },
+    { label: '拆解监控指标', result: '已识别监控指标' },
+    { label: '匹配指标库', result: '已匹配系统指标库' },
+    { label: '接入数据源', result: '已接入数据源' },
+    { label: '建立监控任务', result: '已建立监控任务' },
+    { label: '完成首轮扫描', result: '已完成首轮扫描' },
+  ]
+
+  function runCreateMonitorSteps(task) {
+    creating.value = true
+    creatingSteps.value = createSteps.map((s, i) => ({ ...s, status: i === 0 ? 'active' : 'pending' }))
+    const delays = [600, 1200, 1800, 2400, 3000, 3600]
+    const timers = []
+    for (let i = 0; i < delays.length; i++) {
+      timers.push(setTimeout(() => {
+        if (i > 0) creatingSteps.value[i - 1].status = 'done'
+        creatingSteps.value[i].status = 'active'
+      }, delays[i]))
+    }
+    timers.push(setTimeout(() => {
+      creatingSteps.value[creatingSteps.value.length - 1].status = 'done'
+      creating.value = false
+      closeCreateMonitor()
+    }, 4200))
+    return timers
+  }
+
+  function createMonitorTask(parsed, source) {
+    const id = 'MT-' + Date.now()
+    const entName = parsed.enterprises[0] || createEnterprise.value || '杭州智造装备有限公司'
     const task = {
       id,
-      name: parsed.name,
-      enterprises: [...parsed.enterprises],
-      dimensions: [...parsed.dimensions],
+      enterpriseName: entName,
+      creditCode: '91330000MOCK' + Date.now().toString().slice(-4),
       source,
+      sourceLabel: source === 'due-diligence' ? '尽调转入' : source === 'screening' ? '筛客转入' : source === 'diagnosis' ? '风险探查转入' : source === 'manual' ? '手工新增' : '自然语言',
       status: 'running',
-      createdAt: new Date().toISOString().slice(0, 10),
-      createdAtLabel: nowLabel(),
-      lastScan: '刚刚',
+      indicators: parsed.indicators.map(i => ({ ...i })),
+      lastScanAt: nowLabel(),
       warningCount: 0,
       latestWarning: null,
-      rawText: parsed.rawText || '',
+      focused: false,
+      createdAt: new Date().toISOString().slice(0, 10),
     }
     monitorTasks.value.unshift(task)
-
-    // 同时在旧 rules 里也加一条，兼容 monitoredRules 展示
-    const compatRule = {
-      id: 'R' + Date.now(),
-      name: parsed.name,
-      enterprises: [...parsed.enterprises],
-      dimensions: [...parsed.dimensions],
-      notifyMethod: '站内消息',
-      status: 'running',
-      source,
-      createdAt: task.createdAt,
-      triggerCount: 0,
-      lastTrigger: '无',
-      history: [],
-    }
-    rules.value.unshift(compatRule)
-
-    selectedTaskId.value = id
     return task
   }
 
-  // 生成首轮扫描结果
-  function createInitialScanResult(taskId) {
+  function confirmCreateMonitor() {
+    const indicators = createSelectedIndicators.value.map(i => ({
+      id: i.id || 'ind-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+      name: i.name,
+      condition: i.condition,
+      level: i.level,
+      enabled: i.enabled !== false,
+    }))
+    const parsed = { enterprises: [createEnterprise.value], indicators }
+    const source = createSource.value
+    const task = createMonitorTask(parsed, source)
+    // 模拟首轮扫描
+    const items = indicators.map(ind => ({
+      indicatorId: ind.id,
+      indicatorName: ind.name,
+      status: 'normal',
+      evidence: '数据正常，未触发条件。',
+      aiJudgement: '当前无需处置，持续监测中。',
+      scannedAt: nowLabel(),
+    }))
+    scanResults.value.push({ taskId: task.id, items })
+    runCreateMonitorSteps(task)
+  }
+
+  function handleManualCreate() {
+    createMode.value = 'manual'
+    createEnterprise.value = ''
+    createSelectedIndicators.value = indicatorLibrary.value.filter(i => i.enabled).map(i => ({
+      id: i.id,
+      name: i.name,
+      condition: i.defaultCondition,
+      level: i.defaultLevel,
+      enabled: true,
+    }))
+  }
+
+  function toggleCreateIndicator(indId) {
+    const idx = createSelectedIndicators.value.findIndex(i => i.id === indId)
+    if (idx >= 0) {
+      createSelectedIndicators.value.splice(idx, 1)
+    }
+  }
+
+  function addCreateIndicator(indicator) {
+    if (!createSelectedIndicators.value.find(i => i.id === indicator.id)) {
+      createSelectedIndicators.value.push({ ...indicator, enabled: true })
+    }
+  }
+
+  // ════════════════════════════════════════
+  // Actions - 编辑指标
+  // ════════════════════════════════════════
+  function openEditIndicators(taskId) {
+    editTaskId.value = taskId
+    editOpen.value = true
+    editInput.value = ''
+    editParsed.value = null
+  }
+
+  function closeEditIndicators() {
+    editOpen.value = false
+    editTaskId.value = null
+  }
+
+  async function parseEditText() {
+    if (!editInput.value.trim()) return
+    editParsing.value = true
+    await new Promise(r => setTimeout(r, 500))
+    editParsed.value = parseMonitorText(editInput.value)
+    editParsing.value = false
+  }
+
+  function confirmEditIndicators() {
+    const task = monitorTasks.value.find(t => t.id === editTaskId.value)
+    if (!task || !editParsed.value) return
+    const newIndicators = editParsed.value.indicators.map(ind => ({
+      id: ind.id || 'ind-' + Date.now(),
+      name: ind.name,
+      condition: ind.condition,
+      level: ind.level,
+      enabled: true,
+    }))
+    // 合并去重
+    const existingIds = new Set(task.indicators.map(i => i.id))
+    for (const ind of newIndicators) {
+      if (!existingIds.has(ind.id)) {
+        task.indicators.push(ind)
+        existingIds.add(ind.id)
+      }
+    }
+    ElMessage.success('已添加指标：' + newIndicators.map(i => i.name).join('、'))
+    editInput.value = ''
+    editParsed.value = null
+  }
+
+  function removeTaskIndicator(taskId, indId) {
     const task = monitorTasks.value.find(t => t.id === taskId)
-    if (!task) return null
-
-    const results = []
-    for (const dim of task.dimensions) {
-      let status = 'normal'
-      let evidence = '数据正常，未触发条件'
-      let aiJudgment = '当前无需处置，持续监测中。'
-
-      if (dim.name === '税票波动') {
-        status = 'abnormal'
-        evidence = '近4个月开票金额连续下降，最新月下降超30%，命中阈值。'
-        aiJudgment = '税票连续下降幅度超过监测条件，建议核实企业经营状况，必要时推送尽调。'
-      }
-      if (dim.name === '司法风险') {
-        status = 'abnormal'
-        evidence = '新增1条被执行人记录，执行标的500万元。'
-        aiJudgment = '司法风险触发，建议核实被执行原因及对企业偿付能力的影响。'
-      }
-      if (dim.name === '工商变更') {
-        status = 'attention'
-        evidence = '近30天内无工商变更。'
-        aiJudgment = '工商状态正常，无重要变更。'
-      }
-      if (dim.name === '资料有效期') {
-        status = 'attention'
-        evidence = '征信报告已过有效期3天。'
-        aiJudgment = '资料过期，建议尽快补充更新。'
-      }
-
-      results.push({
-        dimensionName: dim.name,
-        condition: dim.condition,
-        status,
-        evidence,
-        aiJudgment,
-      })
-    }
-
-    scanResults.value.push({ taskId, results, scannedAt: nowLabel() })
-    return results
+    if (task) task.indicators = task.indicators.filter(i => i.id !== indId)
   }
 
-  // 从扫描结果生成预警
-  function createWarningFromScan(taskId) {
-    const task = monitorTasks.value.find(t => t.id === taskId)
-    const results = scanResults.value.find(s => s.taskId === taskId)?.results || []
-    if (!task || !results.length) return null
+  // ════════════════════════════════════════
+  // Actions - 指标库
+  // ════════════════════════════════════════
+  function openIndicatorLibrary() { indicatorLibraryOpen.value = true }
+  function closeIndicatorLibrary() { indicatorLibraryOpen.value = false }
 
-    const abnormalResults = results.filter(r => r.status === 'abnormal')
-    const generatedWarnings = []
-
-    for (const r of abnormalResults) {
-      const dim = task.dimensions.find(d => d.name === r.dimensionName)
-      const warning = {
-        id: 'MW' + Date.now() + Math.random().toString(36).slice(2, 6),
-        type: 'enterprise',
-        level: dim?.level || 'medium',
-        title: `${r.dimensionName}异常 — ${task.enterprises.join('、')}`,
-        enterprise: { name: task.enterprises[0], creditCode: '91330000MOCK' + Date.now().toString().slice(-4) },
-        ruleName: task.name,
-        summary: r.evidence,
-        time: '刚刚',
-        timeRaw: Date.now(),
-        read: false,
-        triggerReason: r.evidence,
-        aiJudgment: r.aiJudgment,
-        trendData: r.dimensionName === '税票波动' ? [
-          { month: '3月', value: 1680 }, { month: '4月', value: 1580 },
-          { month: '5月', value: 1210 }, { month: '6月', value: 820, abnormal: true },
-        ] : [],
-        industryAvg: r.dimensionName === '税票波动' ? '下降15%' : '',
-        impactAssessment: [
-          `${r.dimensionName}已触发监测条件：${r.condition}`,
-          r.aiJudgment,
-          '建议客户经理确认处置方式。',
-        ],
-        historyWarnings: [],
-        pushedToDueDiligence: false,
-        focused: false,
-        dispositionStatus: '待处置',
-        actionLogs: [],
-      }
-      monitorWarnings.value.unshift(warning)
-      generatedWarnings.push(warning)
-
-      // 也加到旧 warnings 列表，兼容现有功能
-      warnings.value.unshift(warning)
-    }
-
-    task.warningCount = generatedWarnings.length
-    task.lastScan = nowLabel()
-    task.latestWarning = generatedWarnings[0] || null
-
-    // 更新兼容 rule
-    const compatRule = rules.value.find(r => r.name === task.name)
-    if (compatRule) {
-      compatRule.triggerCount += generatedWarnings.length
-      compatRule.lastTrigger = nowLabel()
-    }
-
-    return { task, warnings: generatedWarnings }
-  }
-
-  // 从快速输入开始监测
-  function startMonitorFromInput() {
-    const text = monitorInput.value.trim()
-    if (!text) return null
-    const parsed = parseMonitorText(text)
-    const task = createMonitorTask(parsed, 'AI自然语言')
-    return task
-  }
-
-  // 重置流程
-  function resetMonitorFlow() {
-    monitorView.value = 'launch'
-    parsedMonitor.value = null
-    runningSteps.value = []
-    selectedTaskId.value = null
-    createdMonitorResult.value = null
-  }
-
-  // 打开任务详情
+  // ════════════════════════════════════════
+  // Actions - 任务详情
+  // ════════════════════════════════════════
   function openTaskDetail(taskId) {
     const task = monitorTasks.value.find(t => t.id === taskId)
     if (!task) return
     detailTask.value = task
-    detailOpen.value = true
+    detailTaskOpen.value = true
+    detailTab.value = 'indicators'
   }
 
-  // 打开预警详情（兼容旧接口）
-  function openDetail(warning) {
-    const target = warnings.value.find(w => w.id === warning.id) || warning
-    detailWarning.value = target
-    detailOpen.value = true
-    const idx = warnings.value.findIndex(w => w.id === target.id)
-    if (idx >= 0 && !warnings.value[idx].read) warnings.value[idx].read = true
-  }
-
-  function closeDetail() {
-    detailOpen.value = false
-    detailWarning.value = null
+  function closeTaskDetail() {
+    detailTaskOpen.value = false
     detailTask.value = null
   }
 
-  // 推送尽调
+  function setDetailTab(tab) { detailTab.value = tab }
+
+  // ════════════════════════════════════════
+  // Actions - 预警详情
+  // ════════════════════════════════════════
+  function openWarningDetail(warning) {
+    const target = monitorWarnings.value.find(w => w.id === warning.id) || warning
+    warningDetail.value = target
+    warningDetailOpen.value = true
+  }
+
+  function closeWarningDetail() {
+    warningDetailOpen.value = false
+    warningDetail.value = null
+  }
+
+  // ════════════════════════════════════════
+  // Actions - 预警处置
+  // ════════════════════════════════════════
   function pushWarningToDueDiligence(warningId) {
-    const warning = warnings.value.find(w => w.id === warningId)
+    const warning = monitorWarnings.value.find(w => w.id === warningId)
     if (!warning) return null
     warning.pushedToDueDiligence = true
-    warning.dispositionStatus = '已推送尽调'
-    warning.dueTaskName = `${warning.enterprise.name}-${warning.title}核查`
-    warning.dueTaskProgress = 35
-    if (!warning.actionLogs) warning.actionLogs = []
-    warning.actionLogs.unshift({
-      title: '已推送到智能尽调',
-      detail: `已生成「${warning.dueTaskName}」`,
-      time: nowLabel(),
-    })
+    warning.actionLogs.unshift({ title: '已推送到智能尽调', time: nowLabel() })
     return warning
   }
 
-  // 重点关注
   function addWarningToFocus(warningId) {
-    const warning = warnings.value.find(w => w.id === warningId)
+    const warning = monitorWarnings.value.find(w => w.id === warningId)
     if (!warning) return null
     warning.focused = true
-    warning.dispositionStatus = warning.pushedToDueDiligence ? '已推送尽调 / 重点关注' : '重点关注'
-    if (!warning.actionLogs) warning.actionLogs = []
-    warning.actionLogs.unshift({
-      title: '已加入重点关注',
-      detail: '后续数据刷新时优先复核该企业。',
-      time: nowLabel(),
-    })
+    warning.actionLogs.unshift({ title: '已加入重点关注', time: nowLabel() })
     return warning
   }
 
-  // 兼容旧方法
-  function buildMonitorSuggestion(warning) { return buildSuggestion(warning) }
-  function pushToDueDiligence(warningId) { return pushWarningToDueDiligence(warningId) }
-  function addFocus(warningId) { return addWarningToFocus(warningId) }
-
-  function setActiveTab(tab) { activeTab.value = tab }
-  function setWarningFilter(f) { warningFilter.value = f }
-  function setComplianceFilter(f) { complianceFilter.value = f }
-
-  function openCreateRule() { createRuleOpen.value = true; nlInput.value = ''; nlParsed.value = null }
-  function closeCreateRule() { createRuleOpen.value = false; nlInput.value = ''; nlParsed.value = null }
-
-  async function parseNLRules() {
-    nlParsing.value = true
-    await new Promise(r => setTimeout(r, 800))
-    nlParsed.value = parseMonitorText(nlInput.value)
-    nlParsing.value = false
+  function markWarningHandled(warningId) {
+    const warning = monitorWarnings.value.find(w => w.id === warningId)
+    if (!warning) return null
+    warning.handled = true
+    warning.actionLogs.unshift({ title: '已标记为已处理', time: nowLabel() })
+    return warning
   }
 
-  function confirmCreateRule() {
-    if (!nlParsed.value) return
-    const task = createMonitorTask(nlParsed.value, 'AI自然语言')
-    closeCreateRule()
-    return task
+  // ════════════════════════════════════════
+  // Actions - 任务状态切换
+  // ════════════════════════════════════════
+  function toggleTaskStatus(taskId) {
+    const task = monitorTasks.value.find(t => t.id === taskId)
+    if (task) task.status = task.status === 'running' ? 'paused' : 'running'
   }
 
-  function toggleRuleStatus(ruleId) {
-    const r = rules.value.find(r => r.id === ruleId)
-    if (r) r.status = r.status === 'running' ? 'paused' : 'running'
-  }
-  function deleteRule(ruleId) { rules.value = rules.value.filter(r => r.id !== ruleId) }
-
+  // ════════════════════════════════════════
+  // 兼容旧方法（筛客等调用）
+  // ════════════════════════════════════════
   function addWatchedCompany(info) {
     const w = {
       id: 'w' + Date.now(), type: 'enterprise', title: `新增监控 — ${info.name}`,
@@ -435,55 +429,45 @@ export const useMonitorStore = defineStore('monitor', () => {
     warnings.value.unshift(w)
   }
 
-  function createMonitorFromQuickInput() {
-    const text = monitorInput.value.trim()
-    if (!text) return null
-    const parsed = parseMonitorText(text)
-    const task = createMonitorTask(parsed, 'AI自然语言')
-    const results = createInitialScanResult(task.id)
-    const scanWarnings = createWarningFromScan(task.id)
+  function setActiveTab(tab) { activeTab.value = tab }
+  function setWarningFilter(f) { warningFilter.value = f }
+  function setComplianceFilter(f) { complianceFilter.value = f }
+  function openCreateRule() {}
+  function closeCreateRule() {}
+  async function parseNLRules() {}
+  function confirmCreateRule() {}
+  function toggleRuleStatus() {}
+  function deleteRule() {}
 
-    createdMonitorResult.value = {
-      task,
-      scanResults: results,
-      warning: scanWarnings?.warnings?.[0] || null,
-    }
-
-    // 兼容：也在旧 rules/warnings 中生成
-    const compatRule = rules.value.find(r => r.name === task.name)
-    if (compatRule && scanWarnings?.warnings?.[0]) {
-      compatRule.history.unshift({ time: nowLabel(), title: scanWarnings.warnings[0].title, warningId: scanWarnings.warnings[0].id })
-    }
-
-    return { rule: compatRule || { name: task.name }, warning: scanWarnings?.warnings?.[0] }
+  function openDetail(warning) {
+    openWarningDetail(warning)
+    const idx = warnings.value.findIndex(w => w.id === warning.id)
+    if (idx >= 0 && !warnings.value[idx].read) warnings.value[idx].read = true
   }
 
-  function createManualMonitor() {
-    const parsed = {
-      name: '手工监测 - 工商/资料有效期',
-      enterprises: ['手工添加企业'],
-      dimensions: [
-        { name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium' },
-        { name: '资料有效期', condition: '过期或即将过期', level: 'medium' },
-      ],
-      rawText: '手工添加监控',
-    }
-    const task = createMonitorTask(parsed, '手工添加')
-    const results = createInitialScanResult(task.id)
-    const scanWarnings = createWarningFromScan(task.id)
-
-    createdMonitorResult.value = {
-      task,
-      scanResults: results,
-      warning: scanWarnings?.warnings?.[0] || null,
-    }
-
-    const compatRule = rules.value.find(r => r.name === task.name)
-    return { rule: compatRule || { name: task.name }, warning: scanWarnings?.warnings?.[0] }
+  function closeDetail() {
+    closeWarningDetail()
   }
+
+  function buildMonitorSuggestion(warning) {
+    if (!warning) return {}
+    if (warning.level === 'high') return {
+      primary: '推送到智能尽调并生成重点核查项',
+      next: '建议同步税票、司法、工商证据到尽调任务，由 AI 生成风险核查清单。',
+      impact: '高风险预警需要在后续授信或贷后回访中形成可追溯处置记录。',
+    }
+    if (warning.level === 'medium') return {
+      primary: '加入重点关注并持续观察',
+      next: '建议保留预警记录，等待下一次数据刷新后自动复核。',
+      impact: '中风险事项当前不一定需要发起尽调，但应保留跟踪状态。',
+    }
+    return { primary: '记录为普通关注', next: '建议归档本次变化。', impact: '低风险事项适合轻量跟踪。' }
+  }
+
+  function pushToDueDiligence(warningId) { return pushWarningToDueDiligence(warningId) }
+  function addFocus(warningId) { return addWarningToFocus(warningId) }
 
   function findWarning(warningId) { return warnings.value.find(w => w.id === warningId) || null }
-
   function ensureActionLog(warning) { if (!warning.actionLogs) warning.actionLogs = []; return warning.actionLogs }
 
   function getRecommendedAction(warning) {
@@ -505,33 +489,46 @@ export const useMonitorStore = defineStore('monitor', () => {
     return tags.slice(0, 3)
   }
 
+  function parseMonitorTextAction(text) { return parseMonitorText(text) }
+  function getMonitorSourceLabel(source) {
+    return { 'due-diligence': '尽调转入', 'screening': '筛客转入', 'diagnosis': '风险探查转入', 'manual': '手工新增', 'natural-language': '自然语言' }[source] || source
+  }
+
   return {
     // 新核心
-    monitorInput, parsedMonitor, monitorView, runningSteps,
-    monitorTasks, selectedTaskId, scanResults, monitorWarnings,
-    // 详情
-    detailOpen, detailWarning, detailTask,
-    createRuleOpen, nlInput, nlParsed, nlParsing,
-    createdMonitorResult,
-    // 兼容
-    activeTab, warningFilter, complianceFilter,
-    warnings, rules, queryHistory, actionCenter,
-    // 计算
-    kpi, filteredWarnings, complianceWarnings: complianceWarningsData,
-    runningRules, pausedRules, focusedWarnings, monitoredRules,
-    decisionQueue, parsedQuickMonitor,
+    monitorTasks, taskFilter, filteredTasks,
+    indicatorLibrary, indicatorLibraryOpen,
+    createOpen, createMode, createInput, createParsed, createParsing,
+    createEnterprise, createSelectedIndicators, createSource,
+    creating, creatingSteps,
+    editOpen, editTaskId, editInput, editParsed, editParsing,
+    detailTaskOpen, detailTask, detailTab,
+    warningDetailOpen, warningDetail,
+    scanResults, monitorWarnings,
+    currentTaskScanResults, currentTaskWarnings,
     // Actions
-    setMonitorInput, parseMonitorTextAction, setMonitorView, setRunningSteps, advanceRunningStep,
-    createMonitorTask, createInitialScanResult, createWarningFromScan,
-    startMonitorFromInput, resetMonitorFlow,
-    openTaskDetail, openDetail, closeDetail,
-    pushWarningToDueDiligence, addWarningToFocus,
-    pushToDueDiligence, addFocus,
-    buildMonitorSuggestion,
+    setTaskFilter,
+    openCreateMonitor, closeCreateMonitor,
+    parseCreateText, confirmCreateMonitor, runCreateMonitorSteps,
+    handleManualCreate, toggleCreateIndicator, addCreateIndicator,
+    createMonitorTask,
+    openEditIndicators, closeEditIndicators,
+    parseEditText, confirmEditIndicators, removeTaskIndicator,
+    openIndicatorLibrary, closeIndicatorLibrary,
+    openTaskDetail, closeTaskDetail, setDetailTab,
+    openWarningDetail, closeWarningDetail,
+    pushWarningToDueDiligence, addWarningToFocus, markWarningHandled,
+    toggleTaskStatus,
+    // 兼容
+    addWatchedCompany,
     setActiveTab, setWarningFilter, setComplianceFilter,
     openCreateRule, closeCreateRule, parseNLRules, confirmCreateRule,
-    toggleRuleStatus, deleteRule, addWatchedCompany,
-    createMonitorFromQuickInput, createManualMonitor,
+    toggleRuleStatus, deleteRule,
+    openDetail, closeDetail,
+    buildMonitorSuggestion, pushToDueDiligence, addFocus,
     findWarning, ensureActionLog, getRecommendedAction, getReasonTags,
+    parseMonitorTextAction, getMonitorSourceLabel,
+    warnings, rules, queryHistory, actionCenter,
+    activeTab, warningFilter, complianceFilter,
   }
 })
