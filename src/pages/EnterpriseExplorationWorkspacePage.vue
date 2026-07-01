@@ -598,9 +598,16 @@
                 </div>
               </main>
 
-              <!-- 右侧 AI 对话面板 -->
-      <aside class="edw-chat-panel ai-assistant-panel">
-        <div class="edw-chat-header ai-assistant-panel__header"><h3 class="ai-assistant-panel__title">AI 探查助手</h3></div>
+              <!-- 右侧 AI 对话面板（支持收起/展开） -->
+      <div v-if="chatPanelCollapsed" class="edw-chat-panel-collapsed" @click="toggleChatPanel">
+        <span class="edw-chat-panel-collapsed__icon">AI</span>
+        <span class="edw-chat-panel-collapsed__label">展开</span>
+      </div>
+      <aside v-else class="edw-chat-panel ai-assistant-panel">
+        <div class="edw-chat-header ai-assistant-panel__header">
+          <h3 class="ai-assistant-panel__title">AI 探查助手</h3>
+          <el-button size="small" text @click="toggleChatPanel" title="收起面板">收起</el-button>
+        </div>
         <div class="edw-chat-messages ai-assistant-panel__messages" ref="chatRef">
           <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="msg.role === 'ai' && msg.type !== 'engine' ? 'ai-message--ai' : (msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai')">
             <template v-if="msg.role === 'ai' || msg.type === 'engine'">
@@ -884,6 +891,7 @@ const activeEvidenceList = ref([])
 
 const chatInput = ref('')
 const chatMessages = ref([])
+const chatPanelCollapsed = ref(false)
 const chatRef = ref(null)
 const isExploring = ref(false)
 const hasResult = ref(false)
@@ -1459,14 +1467,17 @@ function scrollToBottom() { nextTick(() => { if (chatRef.value) chatRef.value.sc
 function viewFullReport() { openReportView('diagnosis') }
 function generateReport() { openReportView('diagnosis') }
 function gradeColor(grade) { if (['D','E','F'].includes(grade)) return 'danger'; if (grade === 'C') return 'warning'; return 'success' }
+function toggleChatPanel() { chatPanelCollapsed.value = !chatPanelCollapsed.value }
+
 function goBack() { router.push('/enterprise-diagnosis') }
 </script>
 
 <style scoped>
-/* ══ 阶段 A：对话优先 ══ */
-.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; }
+/* ══ 阶段 A：轻量 AI 对话流 ══ */
+.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; background: transparent; border: none; border-radius: 0; overflow: visible; }
+.edw-chat-only .ai-message--ai .ai-message__bubble { background: #fff; border: 1px solid var(--border-default); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .edw-chat-only .ai-assistant-panel__messages { padding: 14px 16px; }
-.edw-chat-only__input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-divider); }
+.edw-chat-only__input { display: flex; gap: 8px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin: 0 16px; box-shadow: 0 -1px 4px rgba(0,0,0,0.03); }
 
 /* ══ 阶段 B：左右布局 ══ */
 .edw-workspace-layout { display: grid; grid-template-columns: 1fr 420px; gap: 20px; height: calc(100vh - 100px); }
@@ -1684,4 +1695,10 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-detail-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; color: #64748b; }
 .edw-table-note { font-size: var(--font-size-xs); color: #94a3b8; margin-top: 8px; }
 
+
+/* 收起态 */
+.edw-chat-panel-collapsed { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 44px; min-width: 44px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; transition: all .15s; }
+.edw-chat-panel-collapsed:hover { border-color: var(--color-primary); background: var(--color-primary-bg); }
+.edw-chat-panel-collapsed__icon { font-size: 14px; font-weight: 700; color: var(--color-primary); }
+.edw-chat-panel-collapsed__label { font-size: 10px; color: var(--text-tertiary); writing-mode: vertical-rl; }
 </style>

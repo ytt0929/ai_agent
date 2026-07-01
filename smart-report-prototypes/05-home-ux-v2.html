@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>智能报告工作台 - UX V2</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand">
+        <div class="logo">AI</div>
+        <div><strong>客户经理 AI Copilot</strong><span>懂金融，更懂客户经理</span></div>
+      </div>
+      <nav class="nav">
+        <a href="#">工作台</a>
+        <div class="nav-title">核心</div>
+        <a href="#">智能筛客</a>
+        <a href="#">企业探查</a>
+        <a href="#">智能尽调</a>
+        <a href="#">企业监测</a>
+        <div class="nav-title">工具</div>
+        <a class="active" href="./05-home-ux-v2.html">智能报告</a>
+        <a href="#">税票采集</a>
+        <a href="#">资料识别</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1>智能报告工作台</h1>
+          <p>处理尽调报告、按模板生成报告和材料包、维护模板规则，并完成提交前检查。</p>
+        </div>
+        <a class="btn" href="./04-template-center.html">模板中心</a>
+      </div>
+
+      <div class="workspace workspace--focus">
+        <div>
+          <section class="section card hero-panel">
+            <div class="hero-head">
+              <div>
+                <div class="hero-kicker">先选择一个开始方式</div>
+                <h2>你今天要交付哪类报告工作？</h2>
+                <p>智能报告不会替代尽调采集，它负责把已有报告、资料包和模板组织成可确认、可检查、可导出的交付件。</p>
+              </div>
+              <div class="actions">
+                <a class="btn" href="./02-task-confirm.html">查看缺失材料</a>
+                <a class="btn primary" href="./03-report-editor.html">继续最近报告</a>
+              </div>
+            </div>
+
+            <div class="start-rail">
+              <a class="start-option active" href="./03-report-editor.html">
+                <div class="start-option__num">1</div>
+                <div>
+                  <h3>处理尽调报告</h3>
+                  <p>确认智能尽调生成的报告草稿、章节证据链和待补材料。</p>
+                  <div class="meta"><span class="tag orange">1 份待确认</span></div>
+                </div>
+              </a>
+              <a class="start-option" href="./02-task-confirm.html">
+                <div class="start-option__num">2</div>
+                <div>
+                  <h3>按模板生成报告和材料</h3>
+                  <p>用已有报告、资料包或尽调结果生成新版报告和附件目录。</p>
+                  <div class="meta"><span class="tag">支持模板重排</span></div>
+                </div>
+              </a>
+              <a class="start-option" href="./04-template-center.html">
+                <div class="start-option__num">3</div>
+                <div>
+                  <h3>维护报告模板</h3>
+                  <p>维护银行模板、章节规则、资料要求、禁用词和导出规则。</p>
+                  <div class="meta"><span class="tag red">1 个草稿模板</span></div>
+                </div>
+              </a>
+            </div>
+
+            <div class="composer">
+              <textarea placeholder="也可以直接告诉 AI：例如，把明达精工报告按浙江分行 V2024 模板生成新报告和材料包，并检查缺失资料"></textarea>
+              <div class="composer-side">
+                <span class="tag">先生成任务卡</span>
+                <a class="btn primary" href="./02-task-confirm.html">生成任务卡</a>
+              </div>
+            </div>
+
+            <div class="prompt-examples">
+              <a class="prompt-example" href="./03-report-editor.html">处理明达精工待确认授信调查报告</a>
+              <a class="prompt-example" href="./02-task-confirm.html">把旧版报告按浙江分行 V2024 模板重排</a>
+              <a class="prompt-example" href="./02-task-confirm.html">检查宁波天合报告缺哪些模板必填材料</a>
+              <a class="prompt-example" href="./04-template-center.html">上传浙江分行新版模板并生成章节规则</a>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>AI 建议优先处理</h2>
+            <div class="priority-list">
+              <div class="priority-card">
+                <div class="priority-mark"></div>
+                <div>
+                  <h3>明达精工有限公司 - 授信调查报告待确认</h3>
+                  <p>来自智能尽调，3 个章节待确认，收入真实性章节缺少银行流水支撑。</p>
+                  <div class="meta"><span class="tag">来源：智能尽调</span><span class="tag orange">待确认</span><span>下一步：进入报告工作台逐项确认</span></div>
+                </div>
+                <a class="btn primary" href="./03-report-editor.html">开始确认</a>
+              </div>
+              <div class="priority-card">
+                <div class="priority-mark red"></div>
+                <div>
+                  <h3>宁波天合新材料有限公司 - 模板必填材料缺失</h3>
+                  <p>缺少税票核验和银行流水，可上传材料或转入智能尽调补充。</p>
+                  <div class="meta"><span class="tag">来源：资料包</span><span class="tag red">资料缺失</span><span>下一步：生成缺失材料清单</span></div>
+                </div>
+                <a class="btn primary" href="./02-task-confirm.html">检查材料</a>
+              </div>
+              <div class="priority-card">
+                <div class="priority-mark green"></div>
+                <div>
+                  <h3>杭州智造装备有限公司 - 企业全景报告可导出</h3>
+                  <p>报告和附件目录已通过检查，可生成 Word、附件目录和交付包。</p>
+                  <div class="meta"><span class="tag">来源：企业诊断</span><span class="tag green">可导出</span><span>下一步：导出交付包</span></div>
+                </div>
+                <a class="btn primary" href="./02-task-confirm.html">生成导出包</a>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>底层资源</h2>
+            <div class="resource-strip">
+              <div class="resource-card">
+                <h3>报告库</h3>
+                <p>8 份草稿，5 份已导出，3 份需要客户经理确认。</p>
+                <div class="actions"><a class="btn">查看报告</a></div>
+              </div>
+              <div class="resource-card">
+                <h3>模板库</h3>
+                <p>10 个模板，覆盖授信调查、企业全景、诊断报告。</p>
+                <div class="actions"><a class="btn" href="./04-template-center.html">维护模板</a></div>
+              </div>
+              <div class="resource-card">
+                <h3>资料包</h3>
+                <p>3 个资料包，2 个存在模板必填材料缺失。</p>
+                <div class="actions"><a class="btn">查看资料包</a></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="context">
+          <div class="card context-card">
+            <h3>今日待办</h3>
+            <div class="mini-metrics">
+              <div class="mini-metric"><strong>1</strong><span>待确认</span></div>
+              <div class="mini-metric"><strong>1</strong><span>资料缺失</span></div>
+              <div class="mini-metric"><strong>1</strong><span>可导出</span></div>
+              <div class="mini-metric"><strong>1</strong><span>模板草稿</span></div>
+            </div>
+          </div>
+          <div class="card context-card">
+            <h3>下一步建议</h3>
+            <div class="side-action">
+              <div><strong>先处理待确认报告</strong><p>影响授信报告交付</p></div>
+              <a class="btn" href="./03-report-editor.html">开始</a>
+            </div>
+            <div class="side-action">
+              <div><strong>再检查缺失材料</strong><p>可转入尽调补充</p></div>
+              <a class="btn" href="./02-task-confirm.html">检查</a>
+            </div>
+            <div class="side-action">
+              <div><strong>最后导出交付包</strong><p>生成报告和附件目录</p></div>
+              <a class="btn" href="./02-task-confirm.html">导出</a>
+            </div>
+          </div>
+          <div class="card context-card">
+            <h3>最近报告</h3>
+            <div class="todo">
+              <div class="todo-row"><span>明达精工</span><span class="tag orange">待确认</span></div>
+              <div class="todo-row"><span>宁波天合</span><span class="tag red">资料缺失</span></div>
+              <div class="todo-row"><span>杭州智造</span><span class="tag green">待导出</span></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

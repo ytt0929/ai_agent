@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 报告交付任务卡 - 原型</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="main task-confirm">
+    <div class="topbar">
+      <div>
+        <h1>AI 报告交付任务卡</h1>
+        <p>自然语言输入后先原地确认任务，再进入报告详情或模板流程。</p>
+      </div>
+      <a class="btn" href="./01-home.html">返回首页</a>
+    </div>
+
+    <div class="confirm-grid">
+      <section class="card confirm-card">
+        <h2>AI 已理解你的任务</h2>
+        <p>把明达精工报告按浙江分行 V2024 模板生成新报告和材料包，并检查缺失资料。</p>
+        <div class="facts">
+          <div class="fact"><span>任务类型</span><strong>按新模板生成报告和材料包</strong></div>
+          <div class="fact"><span>关联企业</span><strong>明达精工有限公司</strong></div>
+          <div class="fact"><span>来源材料</span><strong>旧版授信调查报告 + 智能尽调证据包</strong></div>
+          <div class="fact"><span>目标模板</span><strong>浙江分行单一客户授信调查报告 V2024</strong></div>
+          <div class="fact"><span>预计产物</span><strong>新报告草稿、材料清单、附件目录、缺失材料清单</strong></div>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="./03-report-editor.html">生成新版本草稿</a>
+          <a class="btn" href="#">查看模板差异</a>
+          <a class="btn" href="#">检查缺失材料</a>
+          <a class="btn text" href="./01-home.html">取消</a>
+        </div>
+      </section>
+
+      <aside class="card confirm-card">
+        <h2>AI 初步判断</h2>
+        <div class="steps">
+          <div class="step"><span>1</span><div><h3>12 个章节可直接迁移</h3><p>基本信息、股权结构、经营情况等章节可以按新模板重排。</p></div></div>
+          <div class="step"><span>2</span><div><h3>3 个章节需要人工确认</h3><p>收入真实性、主要风险分析、授信方案需要客户经理复核。</p></div></div>
+          <div class="step"><span>3</span><div><h3>2 类材料缺失</h3><p>近 12 个月银行流水、征信授权文件缺失，可上传或转入智能尽调补充。</p></div></div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="section card confirm-card" style="margin-top:16px;">
+      <h2>缺失材料处理路径</h2>
+      <div class="task-list">
+        <div class="task-card card">
+          <div>
+            <h3>近 12 个月银行流水</h3>
+            <p>影响章节：收入真实性核实、经营现金流分析。</p>
+            <div class="meta"><span class="tag red">模板必填</span><span>建议：转入智能尽调补充采集</span></div>
+          </div>
+          <div class="actions"><a class="btn" href="#">上传材料</a><a class="btn primary" href="#">转入尽调补充</a></div>
+        </div>
+        <div class="task-card card">
+          <div>
+            <h3>征信授权文件</h3>
+            <p>影响章节：信用状况、重大负面信息核查。</p>
+            <div class="meta"><span class="tag red">模板必填</span><span>建议：上传附件或转入智能尽调</span></div>
+          </div>
+          <div class="actions"><a class="btn" href="#">关联已有资料</a><a class="btn primary" href="#">转入尽调补充</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

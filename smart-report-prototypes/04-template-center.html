@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>模板中心 - 原型</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>报告模板中心</h1>
+        <p>维护不同银行/分行的报告模板、章节规则、资料要求、AI 生成提示词和禁用词。</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="./01-home.html">返回首页</a>
+        <a class="btn primary">上传新模板</a>
+      </div>
+    </div>
+
+    <div class="template-layout">
+      <aside class="card template-list">
+        <h2>模板库</h2>
+        <div class="template-item">
+          <h3>单一客户授信调查报告通用版 V2021</h3>
+          <div class="meta"><span class="tag green">启用</span><span>浙江银行总行</span></div>
+        </div>
+        <div class="template-item">
+          <h3>浙江分行授信调查报告 V2024</h3>
+          <div class="meta"><span class="tag orange">草稿</span><span>浙江分行</span></div>
+        </div>
+        <div class="template-item">
+          <h3>企业全景报告模板 V1</h3>
+          <div class="meta"><span class="tag green">启用</span><span>公司金融部</span></div>
+        </div>
+      </aside>
+
+      <section class="card template-detail">
+        <h2>浙江分行授信调查报告 V2024</h2>
+        <p>模板状态：草稿｜章节数：16｜资料规则：12 条｜禁用词规则：8 条</p>
+        <div class="actions">
+          <a class="btn primary">设为默认模板</a>
+          <a class="btn">生成章节规则</a>
+          <a class="btn">检查资料映射</a>
+          <a class="btn">启用模板</a>
+        </div>
+
+        <table class="chapter-table">
+          <thead>
+            <tr>
+              <th>章节</th>
+              <th>是否必填</th>
+              <th>所需资料</th>
+              <th>生成规则</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>申请人基本信息</td>
+              <td>是</td>
+              <td>工商资料、营业执照</td>
+              <td>按工商登记信息生成，不做风险判断</td>
+              <td><span class="tag green">已配置</span></td>
+            </tr>
+            <tr>
+              <td>股权结构及历史沿革</td>
+              <td>是</td>
+              <td>工商变更记录、股东名册</td>
+              <td>需说明重要变更和实控人情况</td>
+              <td><span class="tag orange">待确认</span></td>
+            </tr>
+            <tr>
+              <td>收入真实性核实</td>
+              <td>是</td>
+              <td>税票、银行流水、合同、发票</td>
+              <td>必须引用证据，结论需审慎表达</td>
+              <td><span class="tag red">缺资料规则</span></td>
+            </tr>
+            <tr>
+              <td>主要风险分析</td>
+              <td>是</td>
+              <td>风险清单、诉讼信息、征信资料</td>
+              <td>禁止无证据风险结论</td>
+              <td><span class="tag green">已配置</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

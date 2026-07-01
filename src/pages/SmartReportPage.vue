@@ -1,75 +1,122 @@
 <template>
   <div class="sr-page">
     <div v-if="view === 'home'" class="sr-home">
+      <!-- 顶部标题区 -->
       <div class="sr-home__header">
-        <h1 class="sr-home__title">智能报告工作台</h1>
-        <p class="sr-home__subtitle">基于模板、资料包和尽调产物生成报告，支持 AI 快速修改正文并打包导出</p>
-      </div>
-      <div class="sr-ai-task">
-        <div class="sr-ai-task__label">你想让 AI 处理哪份报告？</div>
-        <div class="sr-ai-task__input-wrap">
-          <textarea v-model="aiTaskInput" class="sr-ai-task__input" placeholder="例如：用新版单户授信调查模板重新生成明达精工报告" rows="2" @keydown.enter.exact.prevent="handleAiTask"></textarea>
-          <button class="sr-ai-task__btn" :disabled="!aiTaskInput.trim()" @click="handleAiTask">发送</button>
+        <div>
+          <h1 class="sr-home__title">智能报告工作台</h1>
+          <p class="sr-home__subtitle">按模板生成报告和材料，确认尽调报告证据链，检查缺失资料并导出交付</p>
         </div>
-        <div class="sr-ai-task__quick">
-          <button v-for="q in quickTasks" :key="q.label" class="sr-ai-task__chip" @click="handleAiTask(q.label)">{{ q.label }}</button>
-        </div>
+        <button class="sr-btn sr-btn--sm" @click="handleStartTemplate">模板中心</button>
       </div>
-      <div class="sr-mini-stats">
-        <div v-for="s in statCards" :key="s.key" class="sr-mini-stat" :class="s.tone">
-          <span class="sr-mini-stat__num">{{ s.value }}</span>
-          <span class="sr-mini-stat__label">{{ s.label }}</span>
-        </div>
-      </div>
-      <div class="sr-home__section">
-        <h2 class="sr-home__section-title">待处理报告</h2>
-        <div v-for="task in reportTasks" :key="task.id" class="sr-task-card" @click="openReport(task)">
-          <div class="sr-task-card__left">
-            <div class="sr-task-card__name">{{ task.enterpriseName }} - {{ task.reportName }}</div>
-            <div class="sr-task-card__meta">
-              <span>来源：{{ task.source }}</span>
-              <span>模板：{{ task.templateName }}</span>
-            </div>
-          </div>
-          <div class="sr-task-card__right">
-            <span class="sr-task-card__complete">{{ task.materialComplete }}%</span>
-            <span class="sr-task-card__status-badge" :class="statusBadgeClass(task.status)">{{ task.status }}</span>
-            <span v-if="task.pendingCount" class="sr-task-card__pending">{{ task.pendingCount }} 项待确认</span>
-            <div class="sr-task-card__ai-note">AI：{{ task.aiNote }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="sr-home__section">
-        <h2 class="sr-home__section-title">报告模板</h2>
-        <div class="sr-tpl-list">
-          <div v-for="tpl in reportTemplates" :key="tpl.id" class="sr-tpl-item" @click="handleUseTemplate(tpl)">
-            <div class="sr-tpl-item__name">{{ tpl.name }}</div>
-            <div class="sr-tpl-item__meta">
-              <span>{{ tpl.sectionsCount }} 章</span>
-              <span>需 {{ tpl.requiredMaterials }} 份资料</span>
-              <span class="sr-tpl-item__version">{{ tpl.version }}</span>
-            </div>
-            <div class="sr-tpl-item__desc">{{ tpl.desc }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="sr-home__section">
-        <h2 class="sr-home__section-title">资料包</h2>
-        <div class="sr-mat-list">
-          <div v-for="pkg in materialPackages" :key="pkg.id" class="sr-mat-item" @click="openMaterialPkg(pkg)">
-            <div class="sr-mat-item__top">
-              <div>
-                <div class="sr-mat-item__name">{{ pkg.packageName }}</div>
-                <div class="sr-mat-item__ent">{{ pkg.enterpriseName }}</div>
+
+      <!-- 主体两栏 -->
+      <div class="sr-workspace">
+        <div class="sr-workspace__main">
+
+          <!-- 三张开始方式卡 -->
+          <section class="sr-section">
+            <h2 class="sr-section__title">你想怎么开始？</h2>
+            <div class="sr-start-grid">
+              <div class="sr-start-card">
+                <div class="sr-start-card__icon">1</div>
+                <h3 class="sr-start-card__title">处理尽调报告</h3>
+                <p class="sr-start-card__desc">继续处理来自智能尽调的授信调查报告，确认章节、证据链和待补资料。</p>
+                <div class="sr-start-card__actions">
+                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartProcess">处理待确认报告</button>
+                  <button class="sr-btn sr-btn--sm" @click="handleStartMissing">查看待补资料</button>
+                </div>
               </div>
-              <div class="sr-mat-item__badges">
-                <span class="sr-mat-item__src">{{ pkg.source }}</span>
-                <span class="sr-mat-item__count">{{ pkg.materialCount }} 份</span>
-                <span v-if="pkg.missingCount" class="sr-mat-item__missing">{{ pkg.missingCount }} 份缺失</span>
+              <div class="sr-start-card">
+                <div class="sr-start-card__icon">2</div>
+                <h3 class="sr-start-card__title">按模板生成报告和材料</h3>
+                <p class="sr-start-card__desc">选择已有报告、资料包或尽调结果，按指定模板生成新报告、材料清单和附件包。</p>
+                <div class="sr-start-card__actions">
+                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartGenerate">按模板生成</button>
+                  <button class="sr-btn sr-btn--sm" @click="handleStartGenerate">检查材料完整性</button>
+                </div>
+              </div>
+              <div class="sr-start-card">
+                <div class="sr-start-card__icon">3</div>
+                <h3 class="sr-start-card__title">维护报告模板</h3>
+                <p class="sr-start-card__desc">维护不同银行/分行的报告模板、章节规则、资料要求和禁用词。</p>
+                <div class="sr-start-card__actions">
+                  <button class="sr-btn sr-btn--primary sr-btn--sm" @click="handleStartTemplate">进入模板中心</button>
+                  <button class="sr-btn sr-btn--sm" @click="handleStartUploadTemplate">上传新模板</button>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <!-- AI 输入区 -->
+          <section class="sr-section sr-ai-box">
+            <h2 class="sr-section__title">告诉 AI 你要交付哪份报告</h2>
+            <p class="sr-ai-box__desc">AI 会先生成报告交付任务卡，确认报告、模板、资料包和下一步动作，不会直接跳转。</p>
+            <div class="sr-input-row">
+              <input v-model="aiTaskInput" class="sr-input-row__input" placeholder="例如：把明达精工报告按浙江分行 V2024 模板生成新报告和材料包" @keydown.enter.exact.prevent="handleAiTask" />
+              <button class="sr-btn sr-btn--primary" :disabled="!aiTaskInput.trim()" @click="handleAiTask">生成任务卡</button>
+            </div>
+            <div class="sr-suggestions">
+              <button v-for="(chip, ci) in aiSuggestions" :key="ci" class="sr-chip" @click="handleAiTask(chip)">{{ chip }}</button>
+            </div>
+          </section>
+
+          <!-- 待处理报告交付任务 -->
+          <section class="sr-section">
+            <h2 class="sr-section__title">待处理报告交付任务</h2>
+            <div class="sr-task-list">
+              <div v-for="task in pendingDeliveryTasks" :key="task.id" class="sr-pending-task-card">
+                <div class="sr-pending-task-card__body">
+                  <h3 class="sr-pending-task-card__title">{{ task.title }}</h3>
+                  <p class="sr-pending-task-card__desc">{{ task.desc }}</p>
+                  <div class="sr-pending-task-card__meta">
+                    <span class="sr-tag">来源：{{ task.source }}</span>
+                    <span class="sr-tag" :class="task.tagClass">{{ task.tag }}</span>
+                    <span>下一步：{{ task.nextStep }}</span>
+                  </div>
+                </div>
+                <button class="sr-btn sr-btn--primary sr-btn--sm" @click="task.action()">{{ task.actionLabel }}</button>
+              </div>
+            </div>
+          </section>
         </div>
+
+        <!-- 右侧上下文 -->
+        <aside class="sr-context">
+          <div class="sr-context-card">
+            <h3 class="sr-context-card__title">今日待办</h3>
+            <div class="sr-todo-list">
+              <div class="sr-todo-row"><span>待确认报告</span><strong>{{ pendingReportCount }} 份</strong></div>
+              <div class="sr-todo-row"><span>资料缺失</span><strong>{{ missingMaterialCount }} 份</strong></div>
+              <div class="sr-todo-row"><span>可导出</span><strong>{{ exportableCount }} 份</strong></div>
+              <div class="sr-todo-row"><span>模板待维护</span><strong>{{ draftTplCount }} 个</strong></div>
+            </div>
+          </div>
+          <div class="sr-context-card">
+            <h3 class="sr-context-card__title">最近报告</h3>
+            <div class="sr-todo-list">
+              <div class="sr-todo-row" v-for="task in reportTasks.slice(0, 3)" :key="task.id" @click="openReport(task)" style="cursor:pointer">
+                <span>{{ task.enterpriseName }}</span>
+                <span class="sr-tag" :class="task.status.includes('待确认') ? 'sr-tag--warn' : task.status.includes('缺失') ? 'sr-tag--danger' : 'sr-tag--success'">{{ task.status }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="sr-context-card">
+            <h3 class="sr-context-card__title">模板库</h3>
+            <div class="sr-facts">
+              <div class="sr-fact"><span>模板总数</span><strong>{{ reportTemplates.length }}</strong></div>
+              <div class="sr-fact"><span>默认模板</span><strong>{{ defaultTemplateName }}</strong></div>
+              <div class="sr-fact"><span>草稿模板</span><strong>{{ draftTplCount }} 个</strong></div>
+            </div>
+          </div>
+          <div class="sr-context-card">
+            <h3 class="sr-context-card__title">资料包</h3>
+            <div class="sr-facts">
+              <div class="sr-fact"><span>资料包总数</span><strong>{{ materialPackages.length }}</strong></div>
+              <div class="sr-fact"><span>缺失资料包</span><strong>{{ missingPkgCount }} 个</strong></div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -355,6 +402,13 @@ const editingSectionId = ref('')
 const editText = ref('')
 
 const aiTaskInput = ref('')
+const aiSuggestions = [
+  '处理明达精工待确认授信调查报告',
+  '把旧版报告按浙江分行 V2024 模板重排',
+  '检查宁波天合报告缺哪些模板必填材料',
+  '上传浙江分行新版模板并生成章节规则',
+  '生成杭州智造企业全景报告交付包',
+]
 const quickTasks = [
   { label: '从尽调产物生成报告' },
   { label: '上传资料附件生成报告' },
@@ -384,6 +438,80 @@ const statCards = [
   { key: 'template', label: '模板版本', value: 6, tone: 'primary' },
   { key: 'export', label: '待导出', value: 4, tone: 'success' },
 ]
+
+// 待处理报告交付任务（按 01-home.html 原型）
+const pendingDeliveryTasks = computed(() => [
+  {
+    id: 'task-pending-confirm',
+    title: '明达精工有限公司 - 授信调查报告待确认',
+    desc: '3 个章节需要客户经理确认，涉及收入真实性、主要风险分析和授信方案。',
+    source: '智能尽调',
+    tag: '待确认',
+    tagClass: 'sr-tag--warn',
+    nextStep: '进入报告工作台逐项确认',
+    actionLabel: '开始确认',
+    action: () => { if (reportTasks.length) openReport(reportTasks[0]) },
+  },
+  {
+    id: 'task-missing-materials',
+    title: '宁波天合新材料有限公司 - 材料缺失',
+    desc: '模板必填材料缺少近 12 个月银行流水和征信授权，会影响收入真实性章节。',
+    source: '资料包',
+    tag: '资料缺失',
+    tagClass: 'sr-tag--danger',
+    nextStep: '查看缺失材料或转入尽调补充',
+    actionLabel: '检查材料',
+    action: () => handleStartMissing(),
+  },
+  {
+    id: 'task-export-ready',
+    title: '杭州智造装备有限公司 - 企业全景报告可导出',
+    desc: '报告已通过材料完整性检查，可生成 Word、附件目录和交付包。',
+    source: '企业诊断',
+    tag: '可导出',
+    tagClass: 'sr-tag--success',
+    nextStep: '生成导出包',
+    actionLabel: '生成导出包',
+    action: () => { handleExportReport() },
+  },
+])
+
+function handleStartProcess() {
+  if (reportTasks.length) openReport(reportTasks[0])
+}
+
+function handleStartMissing() {
+  ElMessage.info('正在生成缺失材料检查任务…')
+  if (reportTasks.length) openReport(reportTasks[0])
+}
+
+function handleStartGenerate() {
+  ElMessage.info('正在生成报告交付任务卡…')
+  if (reportTasks.length) openReport(reportTasks[0])
+}
+
+function handleStartTemplate() {
+  ElMessage.info('正在进入模板维护…')
+}
+
+function handleStartUploadTemplate() {
+  ElMessage.info('模板上传功能已就绪，请选择模板文件。')
+}
+
+// 右侧上下文 computed
+const pendingReportCount = computed(() => reportTasks.filter(t => t.status.includes('待确认')).length)
+const missingMaterialCount = computed(() => {
+  let c = 0
+  for (const pkg of materialPackages) c += (pkg.missingCount || 0)
+  return c
+})
+const exportableCount = computed(() => reportTasks.filter(t => t.status.includes('待导出') || t.status.includes('已导出')).length)
+const draftTplCount = computed(() => reportTemplates.filter(t => t.status === 'draft').length)
+const defaultTemplateName = computed(() => {
+  const d = reportTemplates.find(t => t.isDefault)
+  return d ? d.name : '无'
+})
+const missingPkgCount = computed(() => materialPackages.filter(p => p.missingCount > 0).length)
 
 const uploadTplId = ref('credit-v2021')
 const uploadNote = ref('')
@@ -603,74 +731,65 @@ function openMaterialPkg(pkg) {
 }
 </script>
 <style scoped>
-.sr-page { padding: var(--space-2xl) 32px; max-width: 1440px; margin: 0 auto; min-height: 100vh; }
+.sr-page { padding: 28px 34px; max-width: 1440px; margin: 0 auto; }
 
 /* ═══ 首页 ═══ */
-.sr-home { max-width: 1100px; margin: 0 auto; }
-.sr-home__header { margin-bottom: var(--space-xl); }
-.sr-home__title { font-size: var(--font-size-page-title); font-weight: 600; color: var(--text-primary); margin: 0 0 var(--space-xs); }
-.sr-home__subtitle { font-size: var(--font-size-body); color: var(--text-tertiary); margin: 0; }
+.sr-home { max-width: 1200px; margin: 0 auto; }
 
-/* AI 任务输入区（第一视觉） */
-.sr-ai-task { background: var(--surface-card); border: 1.5px solid var(--color-primary); border-radius: var(--radius-lg); padding: var(--space-lg) 20px; margin-bottom: var(--space-lg); }
-.sr-ai-task__label { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm); }
-.sr-ai-task__input-wrap { display: flex; gap: var(--space-sm); align-items: flex-end; }
-.sr-ai-task__input { flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-sm) 12px; font-size: var(--font-size-body); outline: none; resize: none; font-family: var(--font-family); min-height: 44px; }
-.sr-ai-task__input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
-.sr-ai-task__btn { padding: 10px 20px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: var(--font-size-body); font-weight: 500; cursor: pointer; white-space: nowrap; }
-.sr-ai-task__btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.sr-ai-task__btn:hover:not(:disabled) { background: #2563eb; }
-.sr-ai-task__quick { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-sm); }
-.sr-ai-task__chip { padding: 4px 12px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: var(--radius-full); font-size: var(--font-size-xs); cursor: pointer; color: var(--text-secondary); transition: all .15s; }
-.sr-ai-task__chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-bg); }
+/* 顶部标题区 */
+.sr-home__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; }
+.sr-home__title { font-size: 24px; font-weight: 600; color: var(--text-primary); margin: 0 0 6px; }
+.sr-home__subtitle { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0; line-height: 1.6; }
 
-/* 弱化统计卡 */
-.sr-mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-xl); }
-.sr-mini-stat { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-md) 16px; text-align: center; }
-.sr-mini-stat__num { font-size: var(--font-size-metric); font-weight: 700; display: block; }
-.sr-mini-stat__label { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 4px; }
-.sr-mini-stat.warning .sr-mini-stat__num { color: var(--color-warning); }
-.sr-mini-stat.danger .sr-mini-stat__num { color: var(--color-danger); }
-.sr-mini-stat.primary .sr-mini-stat__num { color: var(--color-primary); }
-.sr-mini-stat.success .sr-mini-stat__num { color: var(--color-success); }
+/* 主体两栏 */
+.sr-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
 
-.sr-home__section { margin-bottom: var(--space-xl); }
-.sr-home__section-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); margin: 0 0 var(--space-md); }
+/* 主区域 */
+.sr-workspace__main { min-width: 0; }
+.sr-section { margin-bottom: 18px; }
+.sr-section__title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 14px; }
 
-/* 任务卡 */
-.sr-task-card { display: flex; justify-content: space-between; gap: var(--space-md); background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-md) 16px; margin-bottom: var(--space-sm); cursor: pointer; transition: all .15s; }
-.sr-task-card:hover { border-color: var(--color-primary); }
-.sr-task-card__left { flex: 1; min-width: 0; }
-.sr-task-card__name { font-size: var(--font-size-body); font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.sr-task-card__meta { display: flex; gap: var(--space-md); font-size: var(--font-size-xs); color: var(--text-tertiary); }
-.sr-task-card__right { flex-shrink: 0; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.sr-task-card__complete { font-size: var(--font-size-metric); font-weight: 700; color: var(--color-primary); }
-.sr-task-card__status-badge { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm); }
-.sr-task-card__pending { font-size: var(--font-size-xs); padding: 2px 8px; background: var(--color-warning-bg); color: var(--color-warning); border-radius: var(--radius-sm); }
-.sr-task-card__ai-note { font-size: var(--font-size-xs); color: var(--text-tertiary); max-width: 320px; line-height: 1.4; }
+/* 三张开始方式卡 */
+.sr-start-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sr-start-card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.sr-start-card__icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px; background: var(--color-primary-bg); color: var(--color-primary); font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+.sr-start-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px; }
+.sr-start-card__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); margin: 0; line-height: 1.6; flex: 1; }
+.sr-start-card__actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
-/* 模板列表 */
-.sr-tpl-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.sr-tpl-item { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-md) 16px; cursor: pointer; transition: all .15s; }
-.sr-tpl-item:hover { border-color: var(--color-primary); }
-.sr-tpl-item__name { font-size: var(--font-size-body); font-weight: 600; color: var(--text-primary); }
-.sr-tpl-item__meta { display: flex; gap: var(--space-sm); font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 2px; }
-.sr-tpl-item__version { padding: 1px 6px; background: var(--bg-page); border-radius: var(--radius-sm); }
-.sr-tpl-item__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); margin-top: 4px; }
+/* AI 输入区 */
+.sr-ai-box { padding: 18px; border-color: var(--color-primary); }
+.sr-ai-box__desc { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0 0 12px; line-height: 1.6; }
+.sr-input-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 12px; }
+.sr-input-row__input { height: 44px; border: 1px solid var(--border-default); border-radius: 7px; padding: 0 14px; font-size: var(--font-size-sm); outline: none; font-family: var(--font-family); }
+.sr-input-row__input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+.sr-suggestions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sr-chip { border: 1px solid var(--border-default); border-radius: 999px; padding: 7px 10px; color: var(--text-secondary); background: var(--bg-page); font-size: 13px; cursor: pointer; transition: all .15s; }
+.sr-chip:hover { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-bg); }
 
-/* 资料包列表 */
-.sr-mat-list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.sr-mat-item { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-md) 16px; cursor: pointer; transition: all .15s; }
-.sr-mat-item:hover { border-color: var(--color-primary); }
-.sr-mat-item__top { display: flex; justify-content: space-between; align-items: flex-start; }
-.sr-mat-item__name { font-size: var(--font-size-body); font-weight: 600; color: var(--text-primary); }
-.sr-mat-item__ent { font-size: var(--font-size-xs); color: var(--text-tertiary); }
-.sr-mat-item__badges { display: flex; gap: var(--space-xs); align-items: center; flex-shrink: 0; }
-.sr-mat-item__src { font-size: var(--font-size-xs); padding: 2px 6px; background: var(--bg-page); border-radius: var(--radius-sm); color: var(--text-tertiary); }
-.sr-mat-item__count { font-size: var(--font-size-xs); color: var(--text-secondary); }
-.sr-mat-item__missing { font-size: var(--font-size-xs); color: var(--color-danger); }
+/* 待处理报告交付任务 */
+.sr-task-list { display: grid; gap: 10px; }
+.sr-pending-task-card { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 14px; background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); }
+.sr-pending-task-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px; }
+.sr-pending-task-card__desc { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0 0 8px; line-height: 1.6; }
+.sr-pending-task-card__meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--text-tertiary); }
 
-.sr-empty { text-align: center; color: var(--text-tertiary); padding: var(--space-2xl) 0; font-size: var(--font-size-body); }
+/* 右侧上下文 */
+.sr-context { display: grid; gap: 10px; align-content: start; position: sticky; top: 20px; }
+.sr-context-card { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 14px; }
+.sr-context-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0 0 10px; }
+.sr-todo-list { display: grid; gap: 8px; }
+.sr-todo-row { display: grid; grid-template-columns: 1fr auto; align-items: center; min-height: 34px; padding: 0 10px; border-radius: 6px; background: var(--bg-page); color: var(--text-secondary); font-size: 13px; }
+.sr-facts { display: grid; gap: 10px; margin-top: 12px; }
+.sr-fact { display: grid; grid-template-columns: 100px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); color: var(--text-secondary); font-size: 14px; }
+.sr-fact strong { color: var(--text-primary); }
+.sr-fact:last-child { border-bottom: none; }
+
+/* 标签 */
+.sr-tag { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: var(--bg-page); color: var(--text-tertiary); }
+.sr-tag--warn { background: #fff7ed; color: #b45309; }
+.sr-tag--danger { background: #fef2f2; color: #b91c1c; }
+.sr-tag--success { background: #f0fdf4; color: #15803d; }
 
 /* ═══ 通用 badge ═══ */
 .sr-badge { font-size: var(--font-size-xs); padding: 2px 8px; border-radius: var(--radius-sm); display: inline-block; }
@@ -840,6 +959,10 @@ function openMaterialPkg(pkg) {
 .sr-modal__mapping-text { margin: 0; line-height: 1.5; }
 
 @media (max-width: 1200px) {
+  .sr-workspace { grid-template-columns: 1fr; }
+  .sr-context { position: static; }
+  .sr-start-grid { grid-template-columns: 1fr; }
+  .sr-pending-task-card { grid-template-columns: 1fr; }
   .sr-editor__body { grid-template-columns: 1fr; }
   .sr-editor__toc { max-height: 200px; }
   .sr-editor__sidebar { max-height: 400px; }

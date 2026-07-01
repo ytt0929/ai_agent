@@ -5,14 +5,44 @@
  */
 
 // ════════════════════════════════════════
-// 新数据（AI 报告交付工作台）
+// 银行机构数据
 // ════════════════════════════════════════
 
+export const bankOrgs = [
+  { id: 'bank-zj', name: '浙江银行', shortName: '浙银', orgIds: ['zj-hq', 'zj-nb'] },
+  { id: 'bank-nb', name: '宁波银行', shortName: '宁银', orgIds: ['nb-hq', 'nb-yz'] },
+  { id: 'bank-hz', name: '杭州银行', shortName: '杭银', orgIds: ['hz-hq', 'hz-xh'] },
+  { id: 'bank-js', name: '江苏银行', shortName: '苏银', orgIds: ['js-hq', 'js-nj'] },
+  { id: 'bank-sh', name: '上海银行', shortName: '沪银', orgIds: ['sh-hq', 'sh-pd'] },
+  { id: 'bank-icbc-zj', name: '工商银行浙江分行', shortName: '工行浙江', orgIds: ['icbc-zj-hq'] },
+  { id: 'bank-ccb-zj', name: '建设银行浙江分行', shortName: '建行浙江', orgIds: ['ccb-zj-hq'] },
+  { id: 'bank-abc-nb', name: '农业银行宁波分行', shortName: '农行宁波', orgIds: ['abc-nb-hq'] },
+]
+
+export const orgUnits = [
+  { id: 'zj-hq', bankId: 'bank-zj', name: '浙江银行总行', city: '杭州' },
+  { id: 'zj-nb', bankId: 'bank-zj', name: '浙江银行宁波分行', city: '宁波' },
+  { id: 'nb-hq', bankId: 'bank-nb', name: '宁波银行总行', city: '宁波' },
+  { id: 'nb-yz', bankId: 'bank-nb', name: '宁波银行鄞州支行', city: '宁波' },
+  { id: 'hz-hq', bankId: 'bank-hz', name: '杭州银行总行', city: '杭州' },
+  { id: 'hz-xh', bankId: 'bank-hz', name: '杭州银行下城支行', city: '杭州' },
+  { id: 'js-hq', bankId: 'bank-js', name: '江苏银行总行', city: '南京' },
+  { id: 'js-nj', bankId: 'bank-js', name: '江苏银行南京分行', city: '南京' },
+  { id: 'sh-hq', bankId: 'bank-sh', name: '上海银行总行', city: '上海' },
+  { id: 'sh-pd', bankId: 'bank-sh', name: '上海银行浦东支行', city: '上海' },
+  { id: 'icbc-zj-hq', bankId: 'bank-icbc-zj', name: '工商银行浙江分行公司部', city: '杭州' },
+  { id: 'ccb-zj-hq', bankId: 'bank-ccb-zj', name: '建设银行浙江分行公司部', city: '杭州' },
+  { id: 'abc-nb-hq', bankId: 'bank-abc-nb', name: '农业银行宁波分行公司部', city: '宁波' },
+]
+
+// ════════════════════════════════════════
 // 交付概览统计
+// ════════════════════════════════════════
+
 export const deliveryStats = {
   pendingReports: 3,
   missingMaterials: 2,
-  templateVersion: 6,
+  templateVersion: 10,
   pendingExport: 4,
 }
 
@@ -23,7 +53,9 @@ export const reportTasks = [
     enterpriseName: '明达精工有限公司',
     reportName: '单户授信调查报告',
     source: '智能尽调',
+    templateId: 'credit-v2021',
     templateName: '单户授信调查报告通用版 V2021',
+    materialPackageId: 'MAT-001',
     status: '待确认',
     pendingCount: 3,
     materialComplete: 86,
@@ -35,7 +67,9 @@ export const reportTasks = [
     enterpriseName: '宁波天合新材料有限公司',
     reportName: '授信调查报告',
     source: '资料附件生成',
+    templateId: 'credit-v2021',
     templateName: '单户授信调查报告通用版 V2021',
+    materialPackageId: 'MAT-002',
     status: '资料缺失',
     missingMaterials: ['税票数据', '银行流水'],
     materialComplete: 62,
@@ -47,7 +81,9 @@ export const reportTasks = [
     enterpriseName: '杭州智造装备有限公司',
     reportName: '企业全景报告',
     source: '上传资料生成',
+    templateId: 'panorama-v2',
     templateName: '企业全景报告模板 V2',
+    materialPackageId: 'MAT-003',
     status: '待导出',
     materialComplete: 94,
     aiNote: '报告正文已完成，可连同资料包导出',
@@ -55,41 +91,346 @@ export const reportTasks = [
   },
 ]
 
-// 报告模板库
+// ════════════════════════════════════════
+// AI 推荐任务
+// ════════════════════════════════════════
+
+export const aiRecommendedTasks = [
+  { id: 'ai-rec-1', type: 'pending-confirm', title: '处理明达精工待确认报告', reportId: 'RPT-001', priority: 'high', summary: '3 个待确认项需要处理', label: '🔶 待确认' },
+  { id: 'ai-rec-2', type: 'missing-materials', title: '检查宁波天合缺失资料', reportId: 'RPT-002', priority: 'high', summary: '2 份资料缺失，影响收入真实性章节', label: '🔴 缺资料' },
+  { id: 'ai-rec-3', type: 'export', title: '导出杭州智造全景报告交付包', reportId: 'RPT-003', priority: 'medium', summary: '报告已完成，可导出交付', label: '🟢 可导出' },
+  { id: 'ai-rec-4', type: 'template-upload', title: '上传浙江分行新版授信模板', reportId: null, priority: 'medium', summary: '当前模板 V2021，建议更新到分行 V2024', label: '📋 模板维护' },
+  { id: 'ai-rec-5', type: 'regenerate', title: '按新模板重排明达精工报告', reportId: 'RPT-001', priority: 'medium', summary: '将明达精工报告重排为浙江分行 V2024 模板', label: '🔄 重排' },
+]
+
+// AI 任务卡预设
+export const aiTaskCardPresets = [
+  {
+    id: 'preset-regenerate', type: 'regenerate', title: '按新模板重排报告',
+    userGoal: '按浙江分行新模板重排明达精工授信调查报告',
+    targetReportId: 'RPT-001', targetTemplateId: 'credit-v2021', targetNewTemplateId: 'credit-zj-v2024', targetMaterialPackageId: 'MAT-001',
+    summary: '将明达精工报告从总行通用版重排为浙江分行新版',
+    steps: [
+      { label: '读取旧报告', status: 'pending' }, { label: '匹配新模板章节', status: 'pending' },
+      { label: '检查资料包覆盖', status: 'pending' }, { label: '生成重排预览', status: 'pending' }, { label: '标记待确认项', status: 'pending' },
+    ],
+    actions: [{ key: 'check-template-diff', label: '查看模板差异' }, { key: 'start-regenerate', label: '开始重排' }, { key: 'check-missing-materials', label: '先检查资料缺口' }],
+    result: null, status: 'planned',
+  },
+  {
+    id: 'preset-missing-materials', type: 'missing-materials', title: '检查缺失资料',
+    userGoal: '检查宁波天合缺失资料',
+    targetReportId: 'RPT-002', targetTemplateId: 'credit-v2021', targetMaterialPackageId: 'MAT-002',
+    summary: '宁波天合报告缺失银行流水和税票数据',
+    steps: [
+      { label: '扫描资料包', status: 'pending' }, { label: '比对模板资料要求', status: 'pending' },
+      { label: '生成缺失清单', status: 'pending' }, { label: '标记阻断项', status: 'pending' },
+    ],
+    actions: [{ key: 'scan-materials', label: '扫描缺失' }, { key: 'supplement-material', label: '补充资料' }, { key: 'export-missing-list', label: '导出缺失清单' }],
+    result: null, status: 'planned',
+  },
+  {
+    id: 'preset-upload-template', type: 'upload-template', title: '上传并解析模板',
+    userGoal: '上传浙江分行新版授信模板',
+    targetReportId: null, targetTemplateId: null, targetMaterialPackageId: null,
+    summary: '上传浙江分行 V2024 授信模板并解析章节结构',
+    steps: [
+      { label: '解析 Word 模板章节', status: 'pending' }, { label: '提取占位字段', status: 'pending' },
+      { label: '推断资料要求', status: 'pending' }, { label: '与当前默认模板比较', status: 'pending' },
+    ],
+    actions: [{ key: 'upload-template', label: '上传模板' }, { key: 'parse-template', label: '解析模板' }, { key: 'compare-default', label: '比较差异' }],
+    result: null, status: 'planned',
+  },
+  {
+    id: 'preset-export', type: 'export-package', title: '导出交付包',
+    userGoal: '导出杭州智造全景报告交付包',
+    targetReportId: 'RPT-003', targetTemplateId: 'panorama-v2', targetMaterialPackageId: 'MAT-003',
+    summary: '杭州智造报告已完成，导出报告正文+资料包+证据目录',
+    steps: [
+      { label: '执行交付前检查', status: 'pending' }, { label: '确认导出内容', status: 'pending' }, { label: '生成导出包', status: 'pending' },
+    ],
+    actions: [{ key: 'submit-check', label: '提交前检查' }, { key: 'export-package', label: '确认导出' }],
+    result: null, status: 'planned',
+  },
+  {
+    id: 'preset-pending-confirm', type: 'pending-confirm', title: '处理待确认项',
+    userGoal: '处理明达精工待确认报告',
+    targetReportId: 'RPT-001', targetTemplateId: 'credit-v2021', targetMaterialPackageId: 'MAT-001',
+    summary: '明达精工报告有 3 个待确认项需要处理',
+    steps: [
+      { label: '定位待确认章节', status: 'pending' }, { label: '展示修改建议', status: 'pending' },
+      { label: '逐项处理', status: 'pending' }, { label: '更新确认状态', status: 'pending' },
+    ],
+    actions: [{ key: 'process-pending', label: '逐项处理' }, { key: 'apply-ai-edit', label: '应用 AI 修改' }, { key: 'view-pending', label: '查看待确认' }],
+    result: null, status: 'planned',
+  },
+]
+
+// AI 任务执行结果预设
+export const aiTaskExecutions = [
+  { id: 'exec-regenerate-done', type: 'regenerate', reportId: 'RPT-001', oldTemplateId: 'credit-v2021', newTemplateId: 'credit-zj-v2024', mappedChapters: 12, needSupplement: 2, needConfirm: 1, status: 'completed' },
+  { id: 'exec-missing-done', type: 'missing-materials', reportId: 'RPT-002', missingCount: 2, missingItems: ['银行流水', '税票数据'], blockingItems: 1, status: 'completed' },
+]
+
+// ════════════════════════════════════════
+// 5.1 模板维护数据（含 chapters / versions）— 扩展到 10 个+
+// ════════════════════════════════════════
+
 export const reportTemplates = [
   {
     id: 'credit-v2021',
     name: '单户授信调查报告通用版 V2021',
     desc: '适用于单一客户授信审批的标准调查报告模板',
-    version: 'V2021',
-    type: '授信调查',
-    sectionsCount: 15,
-    requiredMaterials: 8,
-    updatedAt: '2026-05-15',
-    status: 'active',
+    version: 'V2021', type: '授信调查', bankId: 'bank-zj', bankName: '浙江银行',
+    orgId: 'zj-hq', orgName: '浙江银行总行', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 15, requiredMaterials: 8, updatedAt: '2026-05-15',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 128,
+    chapters: [
+      { id: 'c1', no: '一', title: '履职声明与基本信息', requiredMaterials: ['营业执照'], optionalMaterials: ['公司章程'], blockingMissingMaterials: [] },
+      { id: 'c2', no: '二', title: '重要说明事项', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c3', no: '三', title: '行内评级及授信情况', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c4', no: '四', title: '申请人基本信息', requiredMaterials: ['营业执照'], optionalMaterials: ['法人身份证明'], blockingMissingMaterials: [] },
+      { id: 'c5', no: '五', title: '股权结构及实控人', requiredMaterials: ['营业执照', '公司章程'], optionalMaterials: [], blockingMissingMaterials: ['公司章程'] },
+      { id: 'c6', no: '六', title: '经营情况', requiredMaterials: ['销售合同', '现场照片'], optionalMaterials: ['上下游清单'], blockingMissingMaterials: [] },
+      { id: 'c7', no: '七', title: '财务状况', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: ['银行流水'] },
+      { id: 'c8', no: '八', title: '收入真实性核实', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: ['银行流水', '纳税申报表'] },
+      { id: 'c9', no: '九', title: '信用状况', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c10', no: '十', title: '行业地位比较', requiredMaterials: [], optionalMaterials: ['行业协会资料'], blockingMissingMaterials: [] },
+      { id: 'c11', no: '十一', title: '诉讼与负面信息', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c12', no: '十二', title: '主要风险分析', requiredMaterials: ['审计报告', '纳税申报表'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c13', no: '十三', title: '授信额度依据', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c14', no: '十四', title: '调查结论与授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'c15', no: '十五', title: '附件清单', requiredMaterials: ['营业执照', '审计报告', '纳税申报表'], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2021', status: '启用', updatedAt: '2026-05-15', changeNote: '正式版，调整收入核实章节资料要求' },
+      { version: 'V2020', status: '已归档', updatedAt: '2024-12-01', changeNote: '初始版本' },
+    ],
+  },
+  {
+    id: 'credit-zj-v2024',
+    name: '浙江分行单户授信调查报告 V2024',
+    desc: '浙江分行2024版授信调查模板，增加风险预警章节',
+    version: 'V2024', type: '授信调查', bankId: 'bank-zj', bankName: '浙江银行',
+    orgId: 'zj-hq', orgName: '浙江银行总行', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 16, requiredMaterials: 9, updatedAt: '2026-06-20',
+    status: 'active', isDefault: false, isDefaultForOrg: false, usageCount: 12,
+    chapters: [
+      { id: 'z1', no: '一', title: '履职声明与基本信息', requiredMaterials: ['营业执照'], optionalMaterials: ['公司章程'], blockingMissingMaterials: [] },
+      { id: 'z2', no: '二', title: '重要说明事项', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z3', no: '三', title: '行内评级及授信情况', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z4', no: '四', title: '申请人基本信息', requiredMaterials: ['营业执照'], optionalMaterials: ['法人身份证明'], blockingMissingMaterials: [] },
+      { id: 'z5', no: '五', title: '股权结构及实控人', requiredMaterials: ['营业执照', '公司章程'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z6', no: '六', title: '经营情况', requiredMaterials: ['销售合同', '现场照片'], optionalMaterials: ['上下游清单'], blockingMissingMaterials: [] },
+      { id: 'z7', no: '七', title: '财务状况', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z8', no: '八', title: '收入真实性核实', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z9', no: '九', title: '信用状况', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z10', no: '十', title: '行业地位比较', requiredMaterials: [], optionalMaterials: ['行业协会资料'], blockingMissingMaterials: [] },
+      { id: 'z11', no: '十一', title: '诉讼与负面信息', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z12', no: '十二', title: '主要风险分析', requiredMaterials: ['审计报告', '纳税申报表'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z13', no: '十三', title: '风险预警事项', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z14', no: '十四', title: '授信额度依据', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z15', no: '十五', title: '调查结论与授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'z16', no: '十六', title: '附件清单', requiredMaterials: ['营业执照', '审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2024', status: '启用', updatedAt: '2026-06-20', changeNote: '新增风险预警章节，强化附件要求' },
+      { version: 'V2023', status: '已归档', updatedAt: '2025-03-01', changeNote: '上一版本' },
+    ],
   },
   {
     id: 'panorama-v2',
     name: '企业全景报告模板 V2',
     desc: '整合工商、税票、监测与经营视图的全景报告',
-    version: 'V2',
-    type: '全景报告',
-    sectionsCount: 12,
-    requiredMaterials: 6,
-    updatedAt: '2026-06-01',
-    status: 'active',
+    version: 'V2', type: '全景报告', bankId: 'bank-hz', bankName: '杭州银行',
+    orgId: 'hz-hq', orgName: '杭州银行总行', businessLine: '公司金融', scenario: '全景报告',
+    sectionsCount: 12, requiredMaterials: 6, updatedAt: '2026-06-01',
+    status: 'active', isDefault: false, isDefaultForOrg: true, usageCount: 45,
+    chapters: [
+      { id: 'p1', no: '一', title: '企业概况', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'p2', no: '二', title: '工商视图', requiredMaterials: ['营业执照'], optionalMaterials: ['公司章程'], blockingMissingMaterials: [] },
+      { id: 'p3', no: '三', title: '财务视图', requiredMaterials: ['审计报告', '纳税申报表'], optionalMaterials: ['银行流水'], blockingMissingMaterials: ['审计报告'] },
+      { id: 'p4', no: '四', title: '经营视图', requiredMaterials: ['销售合同'], optionalMaterials: ['上下游清单'], blockingMissingMaterials: [] },
+      { id: 'p5', no: '五', title: '风险视图', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'p6', no: '六', title: '税票视图', requiredMaterials: ['纳税申报表'], optionalMaterials: [], blockingMissingMaterials: ['纳税申报表'] },
+      { id: 'p7', no: '七', title: '授信建议', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2', status: '启用', updatedAt: '2026-06-01', changeNote: '新增税票视图章节' },
+      { version: 'V1', status: '已归档', updatedAt: '2025-09-01', changeNote: '初始版本' },
+    ],
   },
   {
     id: 'diagnosis-v1',
     name: '企业诊断报告模板 V1',
     desc: '基于企业诊断评分和风险信号生成的诊断报告',
-    version: 'V1',
-    type: '诊断报告',
-    sectionsCount: 8,
-    requiredMaterials: 5,
-    updatedAt: '2026-04-20',
-    status: 'active',
+    version: 'V1', type: '诊断报告', bankId: 'bank-zj', bankName: '浙江银行',
+    orgId: 'zj-hq', orgName: '浙江银行总行', businessLine: '风险管理', scenario: '诊断报告',
+    sectionsCount: 8, requiredMaterials: 5, updatedAt: '2026-04-20',
+    status: 'active', isDefault: false, isDefaultForOrg: false, usageCount: 67,
+    chapters: [
+      { id: 'd1', no: '一', title: '诊断结论', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd2', no: '二', title: '企业基本信息', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd3', no: '三', title: '评分详情', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd4', no: '四', title: '风险信号清单', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd5', no: '五', title: '财务分析', requiredMaterials: ['审计报告'], optionalMaterials: [], blockingMissingMaterials: ['审计报告'] },
+      { id: 'd6', no: '六', title: '经营分析', requiredMaterials: ['销售合同'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd7', no: '七', title: '建议方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'd8', no: '八', title: '附录', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V1', status: '启用', updatedAt: '2026-04-20', changeNote: '初始版本' },
+    ],
   },
+  {
+    id: 'credit-nb-v2023',
+    name: '宁波银行单户授信调查报告 V2023',
+    desc: '宁波银行标准授信调查模板',
+    version: 'V2023', type: '授信调查', bankId: 'bank-nb', bankName: '宁波银行',
+    orgId: 'nb-hq', orgName: '宁波银行总行', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 14, requiredMaterials: 7, updatedAt: '2026-03-10',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 34,
+    chapters: [
+      { id: 'nb1', no: '一', title: '企业基本信息', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'nb2', no: '二', title: '股权结构', requiredMaterials: ['营业执照'], optionalMaterials: ['公司章程'], blockingMissingMaterials: [] },
+      { id: 'nb3', no: '三', title: '经营分析', requiredMaterials: ['销售合同', '现场照片'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'nb4', no: '四', title: '财务分析', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'nb5', no: '五', title: '信用状况', requiredMaterials: ['征信报告'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'nb6', no: '六', title: '担保分析', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'nb7', no: '七', title: '授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2023', status: '启用', updatedAt: '2026-03-10', changeNote: '简化章节结构' },
+    ],
+  },
+  {
+    id: 'credit-icbc-zj-v2024',
+    name: '工商银行浙江分行授信调查报告 V2024',
+    desc: '工商银行浙江分行标准授信模板',
+    version: 'V2024', type: '授信调查', bankId: 'bank-icbc-zj', bankName: '工商银行浙江分行',
+    orgId: 'icbc-zj-hq', orgName: '工商银行浙江分行公司部', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 18, requiredMaterials: 10, updatedAt: '2026-06-15',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 22,
+    chapters: [
+      { id: 'ic1', no: '一', title: '企业概况', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'ic2', no: '二', title: '行业分析', requiredMaterials: [], optionalMaterials: ['行业协会资料'], blockingMissingMaterials: [] },
+      { id: 'ic3', no: '三', title: '财务分析', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'ic4', no: '四', title: '授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2024', status: '启用', updatedAt: '2026-06-15', changeNote: '工行浙江标准版' },
+    ],
+  },
+  {
+    id: 'credit-ccb-zj-v2023',
+    name: '建设银行浙江分行综合授信报告 V2023',
+    desc: '建设银行浙江分行综合授信模板',
+    version: 'V2023', type: '授信调查', bankId: 'bank-ccb-zj', bankName: '建设银行浙江分行',
+    orgId: 'ccb-zj-hq', orgName: '建设银行浙江分行公司部', businessLine: '公司金融', scenario: '综合授信',
+    sectionsCount: 16, requiredMaterials: 8, updatedAt: '2026-04-01',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 18,
+    chapters: [
+      { id: 'cb1', no: '一', title: '企业基本信息', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'cb2', no: '二', title: '财务分析', requiredMaterials: ['审计报告', '纳税申报表'], optionalMaterials: ['银行流水'], blockingMissingMaterials: [] },
+      { id: 'cb3', no: '三', title: '授信建议', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2023', status: '启用', updatedAt: '2026-04-01', changeNote: '建行浙江标准版' },
+    ],
+  },
+  {
+    id: 'credit-abc-nb-v2024',
+    name: '农业银行宁波分行农户授信报告 V2024',
+    desc: '农业银行宁波分行农户和小微授信模板',
+    version: 'V2024', type: '授信调查', bankId: 'bank-abc-nb', bankName: '农业银行宁波分行',
+    orgId: 'abc-nb-hq', orgName: '农业银行宁波分行公司部', businessLine: '普惠金融', scenario: '小微授信',
+    sectionsCount: 10, requiredMaterials: 5, updatedAt: '2026-05-20',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 56,
+    chapters: [
+      { id: 'ab1', no: '一', title: '客户基本信息', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'ab2', no: '二', title: '经营情况', requiredMaterials: ['销售合同'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'ab3', no: '三', title: '授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2024', status: '启用', updatedAt: '2026-05-20', changeNote: '农行宁波普惠版' },
+    ],
+  },
+  {
+    id: 'credit-js-nb-v2022',
+    name: '江苏银行南京分行授信调查报告 V2022',
+    desc: '江苏银行南京分行授信模板',
+    version: 'V2022', type: '授信调查', bankId: 'bank-js', bankName: '江苏银行',
+    orgId: 'js-nj', orgName: '江苏银行南京分行', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 14, requiredMaterials: 7, updatedAt: '2025-11-01',
+    status: 'active', isDefault: true, isDefaultForOrg: true, usageCount: 15,
+    chapters: [
+      { id: 'js1', no: '一', title: '企业概况', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'js2', no: '二', title: '财务分析', requiredMaterials: ['审计报告', '纳税申报表'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'js3', no: '三', title: '授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2022', status: '启用', updatedAt: '2025-11-01', changeNote: '江苏银行南京版' },
+    ],
+  },
+  {
+    id: 'credit-sh-pd-v2024',
+    name: '上海银行浦东支行授信调查报告 V2024',
+    desc: '上海银行浦东支行授信模板',
+    version: 'V2024', type: '授信调查', bankId: 'bank-sh', bankName: '上海银行',
+    orgId: 'sh-pd', orgName: '上海银行浦东支行', businessLine: '公司金融', scenario: '单户授信',
+    sectionsCount: 15, requiredMaterials: 8, updatedAt: '2026-06-10',
+    status: 'draft', isDefault: false, isDefaultForOrg: false, usageCount: 0,
+    chapters: [
+      { id: 'sh1', no: '一', title: '企业基本信息', requiredMaterials: ['营业执照'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'sh2', no: '二', title: '经营分析', requiredMaterials: ['销售合同'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'sh3', no: '三', title: '财务分析', requiredMaterials: ['审计报告', '纳税申报表', '银行流水'], optionalMaterials: [], blockingMissingMaterials: [] },
+      { id: 'sh4', no: '四', title: '授信方案', requiredMaterials: [], optionalMaterials: [], blockingMissingMaterials: [] },
+    ],
+    versions: [
+      { version: 'V2024', status: '草稿', updatedAt: '2026-06-10', changeNote: '浦东支行待审版' },
+    ],
+  },
+]
+
+// ════════════════════════════════════════
+// 5.2 模板解析结果数据
+// ════════════════════════════════════════
+
+export const templateParseResult = {
+  fileName: '自定义授信调查报告模板.docx',
+  status: '解析成功',
+  recognizedChapters: 14,
+  placeholders: ['{{企业名称}}', '{{统一社会信用代码}}', '{{授信额度}}', '{{授信期限}}', '{{担保方式}}', '{{还款方式}}'],
+  requiredMaterials: ['营业执照', '审计报告', '纳税申报表', '银行流水', '销售合同', '征信报告'],
+  warnings: ['第 3 章缺少必需的财务数据占位符', '第 8 章风险分析未关联具体资料类型'],
+}
+
+// ════════════════════════════════════════
+// 5.3 章节映射数据
+// ════════════════════════════════════════
+
+export const templateMappingPreview = [
+  { oldChapter: '一、履职声明与基本信息', newChapter: '一、企业概况', mappingStatus: '已映射', note: '内容基本对应' },
+  { oldChapter: '二、重要说明事项', newChapter: '二、工商视图', mappingStatus: '部分映射', note: '需补充工商查询数据' },
+  { oldChapter: '三、行内评级及授信情况', newChapter: '三、财务视图', mappingStatus: '已映射', note: '评级信息将整合至财务视图' },
+  { oldChapter: '四、申请人基本信息', newChapter: '四、经营视图', mappingStatus: '已映射', note: '基本信息保留，经营内容合并' },
+  { oldChapter: '五、股权结构及实控人', newChapter: '五、风险视图', mappingStatus: '待映射', note: '股权信息将迁移至风险视图' },
+  { oldChapter: '六、经营情况', newChapter: '六、税票视图', mappingStatus: '部分映射', note: '经营数据保留，税票需补充' },
+  { oldChapter: '七、财务状况', newChapter: '七、授信建议', mappingStatus: '已映射', note: '财务数据将用于授信建议' },
+  { oldChapter: '八、收入真实性核实', newChapter: '（新增）行业对比', mappingStatus: '新增章节', note: '将基于资料包自动生成' },
+  { oldChapter: '九至十五章', newChapter: '（合并）附录', mappingStatus: '已合并', note: '附件、结论等合并为附录章节' },
+]
+
+// ════════════════════════════════════════
+// 5.4 交付检查数据
+// ════════════════════════════════════════
+
+export const deliveryCheckItems = [
+  { id: 'dc1', type: 'blocking', title: '银行流水缺失', level: 'block', status: '未解决', relatedSection: '八、收入真实性核实', actionText: '补充银行流水' },
+  { id: 'dc2', type: 'blocking', title: '税票数据不完整', level: 'block', status: '未解决', relatedSection: '七、财务状况', actionText: '补充完整纳税申报表' },
+  { id: 'dc3', type: 'warning', title: '待确认项 3 条未确认', level: 'warn', status: '待处理', relatedSection: '多章节', actionText: '逐章确认' },
+  { id: 'dc4', type: 'info', title: '行业协会资料未关联', level: 'info', status: '可跳过', relatedSection: '十、行业地位比较', actionText: '忽略或补充' },
+  { id: 'dc5', type: 'info', title: '现场调查照片不足', level: 'info', status: '可跳过', relatedSection: '六、经营情况', actionText: '忽略或补充' },
 ]
 
 // 资料包管理
@@ -101,14 +442,15 @@ export const materialPackages = [
     source: '智能尽调',
     materialCount: 6,
     missingCount: 0,
+    relatedReportId: 'RPT-001',
     updatedAt: '2026-06-28',
     materials: [
-      { id: 'm1', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['duty', 'basic'], extractedSummary: '企业名称：明达精工有限公司，统一信用代码：91330300MA29XXXX1Z，注册资本3000万' },
-      { id: 'm2', name: '审计报告', type: '财务', source: '用户上传', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '2025年度审计报告，资产总额6200万，负债总额3180万，净利润420万' },
-      { id: 'm3', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '2025年度企业所得税申报表，申报收入5480万' },
-      { id: 'm4', name: '银行流水', type: '银行', source: '资料识别', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '2025年1-12月主要账户流水，月均流入约480万' },
-      { id: 'm5', name: '销售合同', type: '合同', source: '用户上传', status: '已关联', relatedSections: ['operation'], extractedSummary: '与杭州智造装备签订的主合同，金额1200万，账期90天' },
-      { id: 'm6', name: '现场照片', type: '影像', source: '人工补充', status: '已关联', relatedSections: ['operation', 'duty'], extractedSummary: '生产经营场所照片12张，含车间、仓库、办公区' },
+      { id: 'm1', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['duty', 'basic'], extractedSummary: '企业名称：明达精工有限公司，统一信用代码：91330300MA29XXXX1Z，注册资本3000万', usedInGeneration: true, confidence: 0.96, updatedAt: '2026-06-28' },
+      { id: 'm2', name: '审计报告', type: '财务', source: '用户上传', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '2025年度审计报告，资产总额6200万，负债总额3180万，净利润420万', usedInGeneration: true, confidence: 0.98, updatedAt: '2026-06-28' },
+      { id: 'm3', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '2025年度企业所得税申报表，申报收入5480万', usedInGeneration: true, confidence: 0.91, updatedAt: '2026-06-28' },
+      { id: 'm4', name: '银行流水', type: '银行', source: '资料识别', status: '缺失', relatedSections: ['finance', 'income'], extractedSummary: '2025年1-12月主要账户流水缺失', usedInGeneration: false, confidence: 0, updatedAt: '2026-06-28' },
+      { id: 'm5', name: '销售合同', type: '合同', source: '用户上传', status: '已关联', relatedSections: ['operation'], extractedSummary: '与杭州智造装备签订的主合同，金额1200万，账期90天', usedInGeneration: true, confidence: 0.95, updatedAt: '2026-06-28' },
+      { id: 'm6', name: '现场照片', type: '影像', source: '人工补充', status: '已关联', relatedSections: ['operation', 'duty'], extractedSummary: '生产经营场所照片12张，含车间、仓库、办公区', usedInGeneration: true, confidence: 0.82, updatedAt: '2026-06-28' },
     ],
   },
   {
@@ -118,12 +460,13 @@ export const materialPackages = [
     source: '用户上传',
     materialCount: 4,
     missingCount: 2,
+    relatedReportId: 'RPT-002',
     updatedAt: '2026-06-27',
     materials: [
-      { id: 'm7', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['duty', 'basic'], extractedSummary: '统一信用代码：91330200MA2CXXXX8Y，注册资本5000万' },
-      { id: 'm8', name: '审计报告', type: '财务', source: '资料识别', status: '已关联', relatedSections: ['finance'], extractedSummary: '2025年度审计报告，资产总额9800万' },
-      { id: 'm9', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '部分纳税申报表，缺2024年Q3-Q4数据' },
-      { id: 'm10', name: '访谈记录', type: '笔录', source: '人工补充', status: '已关联', relatedSections: ['duty', 'operation'], extractedSummary: '与法人张某的访谈记录，确认主营业务及主要客户' },
+      { id: 'm7', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['duty', 'basic'], extractedSummary: '统一信用代码：91330200MA2CXXXX8Y，注册资本5000万', usedInGeneration: true, confidence: 0.94, updatedAt: '2026-06-27' },
+      { id: 'm8', name: '审计报告', type: '财务', source: '资料识别', status: '已关联', relatedSections: ['finance'], extractedSummary: '2025年度审计报告，资产总额9800万', usedInGeneration: true, confidence: 0.97, updatedAt: '2026-06-27' },
+      { id: 'm9', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance', 'income'], extractedSummary: '部分纳税申报表，缺2024年Q3-Q4数据', usedInGeneration: true, confidence: 0.73, updatedAt: '2026-06-27' },
+      { id: 'm10', name: '访谈记录', type: '笔录', source: '人工补充', status: '已关联', relatedSections: ['duty', 'operation'], extractedSummary: '与法人张某的访谈记录，确认主营业务及主要客户', usedInGeneration: true, confidence: 0.88, updatedAt: '2026-06-27' },
     ],
   },
   {
@@ -133,13 +476,14 @@ export const materialPackages = [
     source: '资料识别',
     materialCount: 5,
     missingCount: 1,
+    relatedReportId: 'RPT-003',
     updatedAt: '2026-06-26',
     materials: [
-      { id: 'm11', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['basic'], extractedSummary: '统一信用代码：91330100MA2BXXXX5T，注册资本2000万' },
-      { id: 'm12', name: '审计报告', type: '财务', source: '用户上传', status: '已关联', relatedSections: ['finance'], extractedSummary: '2024-2025两年审计报告' },
-      { id: 'm13', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance'], extractedSummary: '2025年度完整纳税申报' },
-      { id: 'm14', name: '销售合同', type: '合同', source: '用户上传', status: '已关联', relatedSections: ['operation'], extractedSummary: '主要销售合同3份，总额2800万' },
-      { id: 'm15', name: '现场照片', type: '影像', source: '人工补充', status: '已关联', relatedSections: ['operation'], extractedSummary: '生产车间及办公区域照片8张' },
+      { id: 'm11', name: '营业执照', type: '证照', source: '资料识别', status: '已关联', relatedSections: ['basic'], extractedSummary: '统一信用代码：91330100MA2BXXXX5T，注册资本2000万', usedInGeneration: true, confidence: 0.95, updatedAt: '2026-06-26' },
+      { id: 'm12', name: '审计报告', type: '财务', source: '用户上传', status: '已关联', relatedSections: ['finance'], extractedSummary: '2024-2025两年审计报告', usedInGeneration: true, confidence: 0.93, updatedAt: '2026-06-26' },
+      { id: 'm13', name: '纳税申报表', type: '税务', source: '资料识别', status: '已关联', relatedSections: ['finance'], extractedSummary: '2025年度完整纳税申报', usedInGeneration: true, confidence: 0.97, updatedAt: '2026-06-26' },
+      { id: 'm14', name: '销售合同', type: '合同', source: '用户上传', status: '已关联', relatedSections: ['operation'], extractedSummary: '主要销售合同3份，总额2800万', usedInGeneration: true, confidence: 0.91, updatedAt: '2026-06-26' },
+      { id: 'm15', name: '现场照片', type: '影像', source: '人工补充', status: '已关联', relatedSections: ['operation'], extractedSummary: '生产车间及办公区域照片8张', usedInGeneration: true, confidence: 0.85, updatedAt: '2026-06-26' },
     ],
   },
 ]

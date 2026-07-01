@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>报告详情工作台 - 原型</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>明达精工有限公司 - 单一客户授信调查报告 V2</h1>
+        <p>目标模板：浙江分行 V2024｜来源：智能尽调证据包｜状态：3 个章节待确认</p>
+      </div>
+      <div class="actions">
+        <a class="btn" href="./01-home.html">返回首页</a>
+        <a class="btn">提交前检查</a>
+        <a class="btn primary">导出报告和材料包</a>
+      </div>
+    </div>
+
+    <div class="editor">
+      <aside class="card toc">
+        <h3>报告目录</h3>
+        <a href="#"><span>履职声明</span><span class="tag green">完成</span></a>
+        <a href="#"><span>重要说明事项</span><span class="tag green">完成</span></a>
+        <a href="#"><span>申请人基本信息</span><span class="tag green">完成</span></a>
+        <a href="#"><span>股权结构及历史沿革</span><span class="tag green">完成</span></a>
+        <a class="active" href="#"><span>收入真实性核实</span><span class="tag orange">待确认</span></a>
+        <a href="#"><span>财务状况</span><span class="tag red">缺资料</span></a>
+        <a href="#"><span>主要风险分析</span><span class="tag orange">待确认</span></a>
+        <a href="#"><span>授信方案</span><span class="tag orange">待确认</span></a>
+        <a href="#"><span>附件清单</span><span class="tag red">缺资料</span></a>
+      </aside>
+
+      <article class="card doc">
+        <h2>收入真实性核实</h2>
+        <p>根据企业提供的销售合同、发票明细及税票汇总资料，明达精工有限公司主营业务收入主要来自精密零部件加工和设备配套销售。报告期内收入规模整体保持稳定，主要客户集中在汽车零部件和装备制造领域。</p>
+        <div class="evidence">
+          引用证据：2025 年税票汇总、销售合同抽样、近 12 个月银行流水。当前流水资料缺失，需补充后确认收入回款匹配情况。
+        </div>
+        <p>AI 建议将原文中“收入稳定、回款良好”的表述调整为“收入具备一定稳定性，但仍需结合银行流水进一步核验回款连续性”。该调整不改变原始事实，只降低结论性表达强度。</p>
+        <h2>AI 改写预览</h2>
+        <p>结合现有税票和合同资料，申请人收入来源具有一定连续性，收入结构与主营业务匹配度较高。但由于近 12 个月银行流水尚未完整归集，回款真实性和连续性仍需进一步核验。建议在补齐流水资料后，对收入确认和回款匹配情况进行最终确认。</p>
+      </article>
+
+      <aside class="card assistant">
+        <h3>AI 报告助手</h3>
+        <div class="ai-card">
+          <h3>当前章节状态</h3>
+          <p>收入真实性核实｜待确认｜缺少 1 类关键材料</p>
+          <div class="meta"><span class="tag orange">待确认</span><span class="tag red">缺银行流水</span></div>
+        </div>
+        <div class="ai-card">
+          <h3>AI 修改建议</h3>
+          <p>建议将结论改为审慎表述，并明确“待补银行流水后最终确认”。</p>
+          <div class="actions">
+            <a class="btn primary">应用修改</a>
+            <a class="btn">继续调整</a>
+          </div>
+        </div>
+        <div class="ai-card">
+          <h3>章节证据链</h3>
+          <div class="todo">
+            <div class="todo-row"><span>税票汇总</span><span class="tag green">已引用</span></div>
+            <div class="todo-row"><span>销售合同抽样</span><span class="tag green">已引用</span></div>
+            <div class="todo-row"><span>银行流水</span><span class="tag red">缺失</span></div>
+          </div>
+          <div class="actions">
+            <a class="btn">上传补充材料</a>
+            <a class="btn">转入尽调补充</a>
+          </div>
+        </div>
+        <div class="ai-card">
+          <h3>继续对 AI 说</h3>
+          <div class="input-row" style="grid-template-columns:1fr;">
+            <input placeholder="例如：改得更审慎，并保留证据引用">
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
