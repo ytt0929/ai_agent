@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <div class="due-task__body">
+    <div class="due-task__body" :class="{ collapsed: chatCollapsed }">
       <main class="due-task__content">
 
         <!-- ═══ 工商核验 ═══ -->
@@ -293,6 +293,10 @@
           <DueChatPanel :step-key="selectedStageKey" :task-id="task.id" @stage-change="(k) => selectedStageKey = k" @action-trigger="handleChipAction" />
         </div>
       </aside>
+      <div v-else class="due-task__chat-collapsed" @click="chatCollapsed = false">
+        <span class="due-task__chat-collapsed__icon">AI</span>
+        <span class="due-task__chat-collapsed__label">展开</span>
+      </div>
     </div>
   </div>
   <div v-else class="due-task__empty"><el-empty description="未找到尽调任务" /></div>
@@ -479,6 +483,9 @@ function handleChipAction(chip) {
   align-items: stretch;
   height: calc(100vh - 220px);
 }
+.due-task__body.collapsed {
+  grid-template-columns: minmax(0, 1fr) 56px;
+}
 
 .due-task__content { min-width: 0; height: 100%; overflow-y: auto; padding-right: var(--space-xs); }
 
@@ -614,6 +621,9 @@ function handleChipAction(chip) {
 .chat-panel-inner { flex: 1; overflow: hidden; }
 .chat-panel-inner > .ai-assistant-panel { height: 100%; }
 .chat-collapse-bar { display: flex; justify-content: flex-end; padding: var(--space-xs) var(--space-sm); border-bottom: 1px solid var(--border-light); }
+.due-task__chat-collapsed { border: 1px solid var(--border-light); border-radius: var(--radius-md); height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: var(--bg-subtle, #f8fafc); gap: 4px; }
+.due-task__chat-collapsed__icon { width: 28px; height: 28px; border-radius: 50%; background: var(--color-primary-bg); color: var(--color-primary); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.due-task__chat-collapsed__label { font-size: 11px; color: var(--text-tertiary); }
 
 /* ── Empty ── */
 .due-task__empty { display: flex; justify-content: center; align-items: center; min-height: 60vh; }

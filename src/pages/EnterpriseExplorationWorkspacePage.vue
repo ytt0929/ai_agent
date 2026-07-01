@@ -67,7 +67,6 @@
           <h2 class="edw-view-title">{{ currentViewTitle }}</h2>
         </div>
         <div class="edw-view-content">
-                  <div class="edw-view-content">
                     <template v-if="currentView === 'overview'">
                       <div class="edw-card edw-card--conclusion">
                         <div class="edw-card-label">探查结论</div>
@@ -594,7 +593,6 @@
                         </div>
                       </div>
                     </template>
-                  </div>
                 </div>
               </main>
 
@@ -1474,14 +1472,14 @@ function goBack() { router.push('/enterprise-diagnosis') }
 
 <style scoped>
 /* ══ 阶段 A：轻量 AI 对话流 ══ */
-.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; background: transparent; border: none; border-radius: 0; overflow: visible; }
+.edw-chat-only { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 860px; margin: 20px auto; background: transparent; border: none; border-radius: 0; overflow: visible; }
 .edw-chat-only .ai-message--ai .ai-message__bubble { background: #f1f5f9; border: none; box-shadow: none; }
-.edw-chat-only__input { display: flex; gap: 8px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); margin: 0 16px; box-shadow: 0 -1px 4px rgba(0,0,0,0.03); }
+.edw-chat-only__input { display: flex; align-items: center; gap: 10px; width: calc(100% - 72px); max-width: 780px; padding: 8px 10px; background: rgba(255, 255, 255, 0.48); border: 1px solid rgba(203, 213, 225, 0.72); border-radius: var(--radius-md); box-shadow: none; margin: 6px 0 0 42px; box-sizing: border-box; }
 
 /* ══ 阶段 B：左右布局 ══ */
 .edw-workspace-layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; height: calc(100vh - 100px); }
 .edw-workspace-layout.collapsed { grid-template-columns: minmax(0, 1fr) 56px; }
-.edw-workspace-panel { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 12px; }
+.edw-workspace-panel { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 12px; min-width: 0; }
 .edw-chat-panel { /* inherits .ai-assistant-panel from tokens */ }
 
 /* ══ 顶部信息栏 ══ */
@@ -1491,16 +1489,10 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-topbar__tag { font-size: var(--font-size-xs); color: var(--text-secondary); background: var(--bg-subtle, #f1f5f9); padding: 2px 8px; border-radius: 999px; }
 .edw-topbar__view { color: var(--color-primary); font-weight: 500; font-size: var(--font-size-xs); }
 
-/* ══ 旧类名兼容（对话阶段用） ══ */
-.edw-chat-first { display: flex; flex-direction: column; height: calc(100vh - 80px); max-width: 720px; margin: 20px auto; }
-.edw-chat-first__header { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-divider); margin-bottom: 12px; }
-.edw-chat-first__info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
-.edw-chat-first__name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
-.edw-chat-first__tag { font-size: var(--font-size-xs); color: var(--text-secondary); background: var(--bg-subtle, #f1f5f9); padding: 2px 8px; border-radius: 999px; }
-.edw-chat-first__body { flex: 1; overflow-y: auto; padding: 16px 0; display: flex; flex-direction: column; gap: 10px; }
-.edw-chat-first__input { display: flex; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border-divider); }
+/* ══ 旧类名兼容（未使用，已注释） ══ */
+/* .edw-chat-first, .edw-chat-first__header, .edw-chat-first__info, .edw-chat-first__name,
+   .edw-chat-first__tag, .edw-chat-first__body, .edw-chat-first__input — removed */
 
-/* ══ 旧类名兼容 ══ */
 .edw-result-topbar { display: flex; align-items: center; gap: 12px; padding: 8px 0; margin-bottom: var(--space-md); }
 .edw-result-topbar__info { flex: 1; min-width: 0; }
 .edw-result-topbar__name { font-size: 18px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; }
@@ -1508,20 +1500,19 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-result-topbar__view { color: var(--color-primary); font-weight: 500; }
 .edw-page { padding: var(--space-xl) var(--space-3xl); max-width: 1280px; margin: 0 auto; }
 .edw-back-btn { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-/* ══ 旧结果模式布局 ══ */
-.edw-result-mode { display: flex; flex-direction: column; gap: 16px; padding: 20px 28px; }
-.edw-result-layout { display: grid; grid-template-columns: minmax(680px, 1fr) minmax(420px, 480px); gap: 20px; max-width: 1520px; margin: 0 auto; align-items: stretch; }
+/* ══ 旧结果模式布局（未使用） ══ */
+/* .edw-result-mode, .edw-result-layout — removed */
 
 /* ══ AI 诊断引擎过程卡 ══ */
-.edw-engine-card { width: 100%; max-width: 100%; background: #f8fbff; border: 1px solid #d1e3f7; border-radius: 8px; padding: 14px 16px; box-sizing: border-box; }
-.edw-engine-card__header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.edw-engine-card__header strong { font-size: 13px; color: var(--text-primary); }
-.edw-engine-card__header p { font-size: var(--font-size-xs); color: var(--text-secondary); margin: 0; }
-.edw-engine-spinner { width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: var(--color-primary, #3b82f6); border-radius: 50%; animation: edw-spin 0.8s linear infinite; flex-shrink: 0; }
+.edw-engine-card { width: 100%; max-width: 100%; background: transparent; border: none; border-radius: 0; padding: 0; box-sizing: border-box; }
+.edw-engine-card__header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.edw-engine-card__header strong { font-size: 12px; color: var(--text-primary); }
+.edw-engine-card__header p { font-size: 11px; color: var(--text-secondary); margin: 0; }
+.edw-engine-spinner { width: 14px; height: 14px; border: 2px solid #e5e7eb; border-top-color: var(--color-primary, #3b82f6); border-radius: 50%; animation: edw-spin 0.8s linear infinite; flex-shrink: 0; }
 @keyframes edw-spin { to { transform: rotate(360deg); } }
-.edw-engine-steps { display: flex; flex-direction: column; gap: 4px; }
-.edw-engine-step { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; min-height: 34px; font-size: var(--font-size-xs); }
-.edw-engine-step__icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.edw-engine-steps { display: flex; flex-direction: column; gap: 3px; }
+.edw-engine-step { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; min-height: 26px; font-size: 12px; }
+.edw-engine-step__icon { width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .edw-engine-step__dot--active { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary, #3b82f6); display: inline-block; animation: edw-pulse 1.5s ease-in-out infinite; }
 .edw-engine-step__dot--pending { width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; display: inline-block; }
 .edw-engine-step--done { background: transparent; }
@@ -1533,8 +1524,8 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-engine-step:not(.edw-engine-step--done):not(.edw-engine-step--active) { background: transparent; }
 .edw-engine-step:not(.edw-engine-step--done):not(.edw-engine-step--active) strong { color: var(--text-tertiary); }
 .edw-engine-step:not(.edw-engine-step--done):not(.edw-engine-step--active) p { color: var(--text-tertiary); }
-.edw-engine-step strong { font-size: var(--font-size-xs); margin: 0; line-height: 1.3; }
-.edw-engine-step p { font-size: 11px; margin: 0; color: var(--text-secondary); line-height: 1.3; }
+.edw-engine-step strong { font-size: 12px; margin: 0; line-height: 1.3; }
+.edw-engine-step p { font-size: 11px; margin: 0; color: var(--text-tertiary); line-height: 1.3; }
 .edw-workspace { display: flex; flex-direction: column; gap: 14px; width: 100%; }
 .edw-view-header { display: flex; justify-content: space-between; align-items: center; }
 .edw-view-title { font-size: var(--font-size-body-lg); font-weight: 600; color: var(--text-primary); margin: 0; }
@@ -1585,8 +1576,8 @@ function goBack() { router.push('/enterprise-diagnosis') }
 .edw-chat-panel.ai-assistant-panel {
   background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px;
   display: flex; flex-direction: column; overflow: hidden;
+  height: calc(100vh - 100px); position: sticky; top: 0;
 }
-.edw-chat-panel.ai-assistant-panel { height: calc(100vh - 100px); position: sticky; top: 0; }
 
 .edw-chat-header.ai-assistant-panel__header { height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-divider); flex-shrink: 0; }
 .edw-chat-header h3.ai-assistant-panel__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
@@ -1595,33 +1586,21 @@ function goBack() { router.push('/enterprise-diagnosis') }
 /* Unified message items — delegated to tokens.css */
 .edw-chat-input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
 .edw-chat-only__input.ai-assistant-panel__footer { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
-.edw-chat-field.ai-assistant-panel__input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
+.edw-chat-field.ai-assistant-panel__input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
 .edw-chat-field:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08); }
-.edw-chat-send-btn { padding: 8px 16px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 13px; cursor: pointer; font-family: var(--font-family); white-space: nowrap; }
+.edw-chat-send-btn { height: 38px; min-width: 72px; padding: 0 16px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-md); font-size: 13px; cursor: pointer; font-family: var(--font-family); white-space: nowrap; flex-shrink: 0; }
 .edw-chat-send-btn:hover { background: #2563eb; }
 .edw-chat-send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Legacy alias: old edw-* message classes → unified ai-message (tokens.css) */
-.edw-msg { display: flex; gap: 10px; align-items: flex-start; }
-.edw-msg--ai { justify-content: flex-start; }
-.edw-msg--user { justify-content: flex-end; }
-.edw-msg-content { display: flex; flex-direction: column; gap: 6px; max-width: calc(100% - 40px); }
-.edw-msg--ai .edw-msg-content { width: calc(100% - 40px); }
-.edw-msg--user .edw-msg-content { max-width: 76%; }
-.edw-msg-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; }
-.edw-msg-avatar--ai { background: #2563eb; color: #fff; }
-.edw-msg-avatar--user { background: #dbeafe; color: #1d4ed8; }
-.edw-msg-bubble { max-width: 82%; padding: 8px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; word-break: break-word; }
-.edw-msg--ai .edw-msg-bubble { background: #f1f5f9; color: #344054; border-top-left-radius: 2px; }
-.edw-msg--user .edw-msg-bubble { background: var(--color-primary); color: #fff; border-top-right-radius: 2px; }
-.edw-msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; padding-left: 42px; }
-.edw-chat { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 160px); max-height: none; position: sticky; top: 16px; }
+/* Legacy alias: old edw-msg classes — no longer used in template (now ai-message) */
+/* .edw-msg, .edw-msg--ai, .edw-msg--user, .edw-msg-content, .edw-msg-avatar, .edw-msg-bubble, .edw-msg-actions — removed */
+/* .edw-chat — removed (replaced by ai-assistant-panel) */
 .edw-chat-panel { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 100px); position: sticky; top: 0; }
 .edw-chat-header { height: 52px; padding: 0 16px; display: flex; align-items: center; border-bottom: 1px solid var(--border-divider); flex-shrink: 0; }
 .edw-chat-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .edw-chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 .edw-chat-input { padding: 10px 12px; border-top: 1px solid var(--border-divider); flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end; }
-.edw-chat-field { flex: 1; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); }
+.edw-chat-field { flex: 1; min-width: 0; height: 38px; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-md); font-size: 13px; outline: none; font-family: var(--font-family); box-sizing: border-box; }
 .edw-danger { color: #dc2626; }
 .edw-warning { color: #b45309; }
 .edw-success { color: #16a34a; }
