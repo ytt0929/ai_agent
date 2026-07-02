@@ -1,28 +1,43 @@
 /**
- * 工作台 AI 助手 v3 — 三态工作流：对话启动态 / 工作区态 / 沉浸编辑态
- * 支持：智能筛客 → 企业探查 → 加入监控/新建尽调(并列) → 尽调流程 → 报告编辑
+ * 工作台 AI 助手 v4 — 第一阶段：主流程骨架与状态机
+ * 主链路：智能筛客 → 企业探查 → 加入监控/新建尽调 → 尽调流程 → 报告编辑
  *
- * 数据流规范（2026-07-02 修复）：
- * 1. 每个阶段先构造完整 artifactData（含 steps）
- * 2. 再 upsertStage({ id, label, status, artifactData })
- * 3. 再 setActiveStage(id) — 内部从 stage.artifactData 同步 leftPanelData
- * 4. 不再先插入空 artifactData 的 stage
- * 5. setActiveStage 对空 artifactData 自动填入兜底对象
+ * 统一阶段 key：
+ *   screen → explore → monitor → dueDiligence → business → judicial → tax
+ *   → materials → evidence → riskDiagnosis → deliverables → reportEditor
  */
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
 
 // ====== 阶段定义 ======
 const STAGE_LABEL_MAP = {
-  screen: '智能筛客', explore: '企业探查', monitor: '加入监控', dueDiligence: '新建尽调',
-  business: '工商校验', tax: '税票采集', materials: '资料收集',
-  riskDiagnosis: '风险诊断', deliverables: '产物生成', reportEditor: '报告编辑',
+  screen: '智能筛客',
+  explore: '企业探查',
+  monitor: '加入监控',
+  dueDiligence: '新建尽调',
+  business: '工商核验',
+  judicial: '司法查询',
+  tax: '税票采集',
+  materials: '资料补充',
+  evidence: '证据整合',
+  riskDiagnosis: '风险诊断',
+  deliverables: '产物确认',
+  reportEditor: '报告编辑',
 }
 
 const STAGE_TOOL_MAP = {
-  screen: 'screening', explore: 'exploration', monitor: 'monitor', dueDiligence: 'dueDiligence',
-  business: 'business', tax: 'tax', materials: 'materials',
-  riskDiagnosis: 'riskDiagnosis', deliverables: 'deliverables', reportEditor: 'reportEditor',
+  screen: 'screening',
+  explore: 'exploration',
+  monitor: 'monitor',
+  dueDiligence: 'dueDiligence',
+  business: 'business',
+  judicial: 'judicial',
+  tax: 'tax',
+  materials: 'materials',
+  evidence: 'evidence',
+  riskDiagnosis: 'riskDiagnosis',
+  deliverables: 'deliverables',
+  reportEditor: 'reportEditor',
 }
 
 export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () => {
@@ -57,12 +72,33 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   const selectedEnterprise = ref(null)
   const selectedDueTemplate = ref(null)
   const leftPanelData = reactive({})
+  const contextSuggestions = reactive([])
 
   /** 统一设置左侧面板数据源 */
   function setLeftPanel(tool, payload = {}) {
     activeTool.value = tool
     Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
     Object.assign(leftPanelData, payload)
+  }
+
+  /** 处理建议按钮点击 */
+  async function handleSuggestionClick(suggestion) {
+    const value = suggestion.value || ''
+    contextSuggestions.length = 0
+
+    if (value === 'confirm_tax_send') { await confirmTaxSend(); return }
+    if (value === 'tax_authorized') { await mockTaxAuthorized(); return }
+    if (value === 'mock_material_upload') { await mockMaterialUpload(); return }
+    if (value === 'enter_evidence') { await enterEvidenceMerge(); return }
+    if (value === 'enter_risk') { await enterRiskDiagnosis(); return }
+    if (value === 'enter_deliverables') { await enterDeliverables(); return }
+    if (value === 'edit_report') { await startReportEditor(); return }
+    if (value === 'export_report') { await pushStreamingMessage('报告已导出为 PDF。'); return }
+    if (value === 'start_monitor') { await startMonitor(); return }
+
+    // 文本建议：塞入输入框走自然语言
+    dialogInput.value = suggestion.label || value
+    await sendMessage()
   }
 
   // ===================== Mock 数据 =====================
@@ -89,19 +125,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     { id: 'tpl-tax', name: '税票专项尽调', sections: 4, requiredDocs: 8, estimatedDays: '3-5' },
     { id: 'tpl-custom', name: '自定义资料包', sections: 0, requiredDocs: 0, estimatedDays: '自定义' },
   ]
-
-  const mockRiskDiagnosis = {
-    score: 72, grade: 'B', riskLevel: '中',
-    commercialRisk: '低风险', taxRisk: '中风险', operationRisk: '低风险', dataConsistencyRisk: '低风险',
-    evidenceSummary: '工商正常存续，税务评级A，近一年营收稳定',
-    conclusion: '综合评分72，建议有条件授信',
-    riskItems: [
-      { category: '工商风险', level: '低', detail: '主体正常存续，无重大诉讼', suggestion: '持续关注' },
-      { category: '税务风险', level: '中', detail: '税负率偏低，低于行业均值29%', suggestion: '核实税负结构' },
-      { category: '经营风险', level: '低', detail: '近12个月营收稳定，社保人数正常', suggestion: '持续关注' },
-      { category: '一致性', level: '低', detail: '工商、税务、社保数据一致性良好', suggestion: '无' },
-    ],
-  }
 
   // ====== 主线企业「唐山物桥商贸有限公司」风险事项 mock ======
   const tangshanRiskIssues = [
@@ -130,67 +153,16 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     { label: '关联企业', value: '3 家' },
   ]
 
-  const mockDeliverables = [
-    { name: '尽调资料包', status: '已生成', count: '18份' },
-    { name: '风险诊断报告', status: '已生成', count: '1份' },
-    { name: '智能报告草稿', status: '待确认', count: '1份' },
-    { name: '附件与证据链', status: '已归档', count: '24份' },
-  ]
+  // ====== 尽调流程条数据（可复用的深拷贝工厂） ======
+  function freshDueFlowSteps(initialKey = 'business') {
+    const order = ['business', 'judicial', 'tax', 'materials', 'evidence', 'riskDiagnosis', 'deliverables']
+    const labels = { business: '工商核验', judicial: '司法查询', tax: '税票采集', materials: '资料补充', evidence: '证据整合', riskDiagnosis: '风险诊断', deliverables: '产物确认' }
+    return order.map(key => ({ key, label: labels[key], status: key === initialKey ? 'active' : 'pending' }))
+  }
 
-  // ====== 尽调流程条数据 ======
-  const dueFlowSteps = [
-    { key: 'business', label: '工商核验', status: 'done' },
-    { key: 'judicial', label: '司法查询', status: 'done' },
-    { key: 'tax', label: '税票采集', status: 'active' },
-    { key: 'materials', label: '资料补充', status: 'pending' },
-    { key: 'evidence', label: '证据整合', status: 'pending' },
-    { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
-    { key: 'deliverables', label: '产物确认', status: 'pending' },
-  ]
-
-  const dueFlowStepsCompleted = [
-    { key: 'business', label: '工商核验', status: 'done' },
-    { key: 'judicial', label: '司法查询', status: 'done' },
-    { key: 'tax', label: '税票采集', status: 'done' },
-    { key: 'materials', label: '资料补充', status: 'active' },
-    { key: 'evidence', label: '证据整合', status: 'pending' },
-    { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
-    { key: 'deliverables', label: '产物确认', status: 'pending' },
-  ]
-
-  const dueFlowStepsInitial = [
-    { key: 'business', label: '工商核验', status: 'active' },
-    { key: 'judicial', label: '司法查询', status: 'pending' },
-    { key: 'tax', label: '税票采集', status: 'pending' },
-    { key: 'materials', label: '资料补充', status: 'pending' },
-    { key: 'evidence', label: '证据整合', status: 'pending' },
-    { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
-    { key: 'deliverables', label: '产物确认', status: 'pending' },
-  ]
-
-  const collectionItemsPending = [
-    { name: '进项发票', status: 'pending', statusText: '等待中' },
-    { name: '销项发票', status: 'pending', statusText: '等待中' },
-    { name: '纳税申报', status: 'pending', statusText: '等待中' },
-  ]
-
-  const collectionItemsDone = [
-    { name: '进项发票', status: 'done', statusText: '已采集 128 份' },
-    { name: '销项发票', status: 'done', statusText: '已采集 96 份' },
-    { name: '纳税申报', status: 'done', statusText: '已采集' },
-  ]
-
-  // 兼容旧版
-  const processSteps = computed(() => {
-    const steps = []
-    for (const stage of flowStages) {
-      if (stage.artifactData?.steps) {
-        steps.push(...stage.artifactData.steps.map(s => ({ ...s, phase: stage.label })))
-      }
-    }
-    return steps
-  })
-  const sidebarMode = computed(() => currentArtifactType.value)
+  function orderIndex(key) {
+    return ['business', 'judicial', 'tax', 'materials', 'evidence', 'riskDiagnosis', 'deliverables'].indexOf(key)
+  }
 
   // ===================== 工具函数 =====================
   function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
@@ -201,7 +173,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   }
 
   async function pushMessage(type, text, extra = {}) {
-    // 去重：不重复推送相同 AI 消息
     if (type === 'ai' && messages.length > 0) {
       const last = messages[messages.length - 1]
       if (last.type === 'ai' && last.text === text && !last.streaming) return
@@ -260,67 +231,41 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       Object.assign(existing, stage)
       return existing
     }
-    flowStages.push(stage)
-    return stage
+    flowStages.push({ ...stage })
+    return flowStages[flowStages.length - 1]
   }
 
   /**
    * setActiveStage — 从 flowStages 同步左侧面板
-   * 1. 找到 stage
-   * 2. 映射 activeTool
-   * 3. 若 artifactData 为空 → 兜底对象
-   * 4. 同步 leftPanelData
    */
   function setActiveStage(id) {
     activeStageId.value = id
-    Object.keys(artifactData).forEach(k => delete artifactData[k])
-
     const stage = flowStages.find(s => s.id === id)
-    if (!stage) {
-      const fallback = { status: 'empty', title: id, placeholder: '节点尚未就绪' }
-      Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
-      Object.assign(leftPanelData, fallback)
-      return
-    }
-
+    if (!stage) return
     currentArtifactType.value = id
     Object.assign(artifactData, stage.artifactData || {})
-
     layoutMode.value = 'workspace'
-
     const mappedTool = STAGE_TOOL_MAP[id]
-    if (mappedTool) {
-      activeTool.value = mappedTool
-      // 兜底：如果 artifactData 为空，填入默认结构
-      let data = stage.artifactData
-      if (!data || Object.keys(data).length === 0) {
-        data = { status: 'empty', title: stage.label || id, placeholder: '当前节点暂无产物，请继续流程' }
-      }
-      Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
-      Object.assign(leftPanelData, data)
+    if (mappedTool) activeTool.value = mappedTool
+    let data = stage.artifactData
+    if (!data || Object.keys(data).length === 0) {
+      data = { status: 'empty', title: stage.label || id, placeholder: '当前节点暂无产物，请继续流程' }
     }
+    Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
+    Object.assign(leftPanelData, data)
   }
 
   /**
-   * 统一更新左侧面板产物（新增辅助函数）
+   * 统一更新左侧面板产物
    */
   function updateWorkbenchArtifact(stageId, tool, payload, stageStatus = 'active') {
     layoutMode.value = 'workspace'
     activeTool.value = tool
-
-    upsertStage({
-      id: stageId,
-      label: STAGE_LABEL_MAP[stageId] || stageId,
-      status: stageStatus,
-      artifactData: { ...payload },
-    })
-
+    upsertStage({ id: stageId, label: STAGE_LABEL_MAP[stageId] || stageId, status: stageStatus, artifactData: { ...payload } })
     activeStageId.value = stageId
     currentArtifactType.value = stageId
-
     Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
     Object.assign(leftPanelData, payload)
-
     Object.keys(artifactData).forEach(k => delete artifactData[k])
     Object.assign(artifactData, payload)
   }
@@ -359,10 +304,11 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   async function runScreening(inputText) {
     const lower = inputText.toLowerCase()
     const filters = []
-    if (lower.includes('深圳')) filters.push('深圳市')
-    if (lower.includes('软件')) filters.push('软件业')
-    if (lower.includes('风险')) filters.push('关注风险')
-    if (lower.includes('进度')) filters.push('关注尽调进度')
+    if (lower.includes('浙江')) filters.push('浙江省')
+    if (lower.includes('制造')) filters.push('制造业')
+    if (lower.includes('低风险')) filters.push('低风险')
+    if (lower.includes('开票')) filters.push('近一年有开票记录')
+    if (lower.includes('尽调')) filters.push('适合转尽调')
     if (filters.length === 0) filters.push('制造业', '低风险')
 
     layoutMode.value = 'chat-center'
@@ -370,14 +316,11 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     await pushStreamingMessage('已收到需求，正在识别你的操作意图。')
     await delay(800)
-    await pushStreamingMessage(`识别到：智能筛客工具。筛选条件：${filters.join(' / ')}。正在生成候选客户列表...`)
+    await pushStreamingMessage(`识别到"智能筛客"工具。筛选条件为：${filters.join('、')}。`)
     await delay(600)
 
-    const enterprises = (lower.includes('深圳') && lower.includes('软件'))
-      ? [...shenzhenSoftwareEnterprises]
-      : [...mockEnterprises]
+    const enterprises = [...mockEnterprises]
 
-    // 构造完整 steps
     const steps = [
       { title: '解析筛选条件', status: 'done', details: filters.map(f => ({ label: '条件', value: f })) },
       { title: '执行筛选', status: 'done', details: [
@@ -403,15 +346,14 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     lastScreeningResults.length = 0
     lastScreeningResults.push(...enterprises)
 
-    // 先构造完整数据，再 upsert + setActiveStage
-    upsertStage({ id: 'screen', label: '智能筛客', icon: '🔍', status: 'done', artifactData: { ...screenArtifactData } })
+    upsertStage({ id: 'screen', label: STAGE_LABEL_MAP.screen, icon: '🔍', status: 'done', artifactData: { ...screenArtifactData } })
     setActiveStage('screen')
 
     currentFlowStatus.value = 'waiting_selection'
     currentStageId.value = 'screen'
     waitingForInput.value = true
 
-    await pushStreamingMessage(`已完成智能筛客，识别到 ${enterprises.length} 家候选企业。请在左侧选择一家企业进行探查，或者继续调整筛选条件。`)
+    await pushStreamingMessage(`已完成筛客，识别到 ${enterprises.length} 家候选企业。请在左侧选择一家企业继续探查，或继续调整筛选条件。`)
   }
 
   // ===================== 选择企业 → 企业探查 =====================
@@ -428,7 +370,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     layoutMode.value = 'workspace'
     activeTool.value = 'exploration'
 
-    // 是否为唐山物桥主线企业
     const isTsWq = enterprise.id === 'ts-wq-sm'
 
     const steps = [
@@ -472,14 +413,19 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       fullIndicators: isTsWq ? tangshanIndicators : [],
       evidenceSummary: '工商登记 + 司法公开 + 税务评级 + 社保记录',
       steps,
+      // 企业探查阶段的后续动作（并列）
+      actions: ['start_monitor', 'start_due_diligence'],
     }
 
-    upsertStage({ id: 'explore', label: '企业探查', icon: '🏢', status: 'done', artifactData: { ...exploreArtifactData } })
+    upsertStage({ id: 'explore', label: STAGE_LABEL_MAP.explore, icon: '🏢', status: 'done', artifactData: { ...exploreArtifactData } })
     setActiveStage('explore')
 
-    await pushStreamingMessage('已完成企业探查。你可以将该企业加入监控，也可以新建尽调任务。这两个动作是并列选择，也可以后续互相转入。')
+    await pushStreamingMessage('已完成企业探查。该企业主体状态正常，存在部分经营和税务风险事项，左侧已展示探查结果。')
+    await delay(400)
+    await pushStreamingMessage('你可以将该企业加入监控，也可以新建尽调任务。两个动作是并列选择，后续也可以互相转入。')
     currentFlowStatus.value = 'waiting_action'
     waitingForInput.value = true
+    fillSuggestions('waiting_action')
   }
 
   // ===================== 并列动作：加入监控 =====================
@@ -494,28 +440,33 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     const steps = [
       { title: '配置监控规则', status: 'done', details: [
         { label: '工商变更', value: '已启用' },
-        { label: '税务评级异常', value: '已启用' },
-        { label: '重大风险预警', value: '已启用' },
+        { label: '司法风险', value: '已启用' },
+        { label: '税务异常', value: '已启用' },
+        { label: '舆情风险', value: '已启用' },
       ]},
       { title: '创建监控任务', status: 'done', details: [
         { label: '监控频率', value: '每日' },
-        { label: '监控维度', value: '工商 / 税票 / 司法' },
+        { label: '监控维度', value: '工商变更 / 司法风险 / 税务异常 / 舆情风险' },
       ]},
     ]
 
     const monitorArtifactData = {
       enterprise: ent,
-      rules: ['工商变更监控', '税务评级异常', '重大风险预警'],
+      rules: ['工商变更', '司法风险', '税务异常', '舆情风险'],
       frequency: '每日',
-      dimensions: ['工商', '税票', '司法'],
+      dimensions: ['工商变更', '司法风险', '税务异常', '舆情风险'],
       created: true,
+      status: '监控中',
+      lastCheck: '暂无新增异常',
       steps,
+      // 保留"新建尽调"动作
+      actions: ['start_due_diligence'],
     }
 
-    upsertStage({ id: 'monitor', label: '加入监控', icon: '📡', status: 'done', artifactData: { ...monitorArtifactData } })
+    upsertStage({ id: 'monitor', label: STAGE_LABEL_MAP.monitor, icon: '📡', status: 'done', artifactData: { ...monitorArtifactData } })
     setActiveStage('monitor')
 
-    await pushStreamingMessage('已创建企业监控任务。后续如果监控发现工商变更、税务异常或经营风险，可以从监控预警转入复核尽调。')
+    await pushStreamingMessage('已将该企业加入监控。后续如果监控发现异常，也可以从监控转入尽调。')
     currentFlowStatus.value = 'waiting_next_action'
     waitingForInput.value = true
   }
@@ -539,10 +490,12 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       steps: [],
     }
 
-    upsertStage({ id: 'dueDiligence', label: '新建尽调', icon: '📋', status: 'active', artifactData: { ...ddArtifactData } })
+    upsertStage({ id: 'dueDiligence', label: STAGE_LABEL_MAP.dueDiligence, icon: '📋', status: 'active', artifactData: { ...ddArtifactData } })
     setActiveStage('dueDiligence')
 
     await pushStreamingMessage('请先选择尽调模板。')
+    await delay(400)
+    await pushStreamingMessage('建议使用「标准授信尽调」，适用于制造业客户授信前审查。')
     currentFlowStatus.value = 'waiting_template'
     waitingForInput.value = true
   }
@@ -553,8 +506,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     await pushMessage('user', `选择模板「${template.name}」`)
     await delay(300)
 
-    const ddStage = flowStages.find(s => s.id === 'dueDiligence')
     const ent = selectedEnterprise.value
+    const dueFlowSteps = freshDueFlowSteps('business')
 
     const ddArtifactData = {
       enterprise: ent,
@@ -562,7 +515,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       selectedTemplateId: template.id,
       selectedTemplate: template,
       step: 'task-created',
-      stages: dueFlowStepsInitial.map(s => ({ ...s })),
+      stages: dueFlowSteps.map(s => ({ ...s })),
       steps: [
         { title: '创建尽调任务', status: 'done', details: [
           { label: '企业名称', value: ent?.name || '—' },
@@ -572,550 +525,761 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       ],
       dueFlow: {
         statusText: '等待开始',
-        progress: 28,
+        progress: 0,
         activeKey: 'business',
-        steps: JSON.parse(JSON.stringify(dueFlowStepsInitial)),
+        steps: JSON.parse(JSON.stringify(dueFlowSteps)),
       },
     }
 
+    const ddStage = flowStages.find(s => s.id === 'dueDiligence')
     if (ddStage) {
       Object.assign(ddStage, { status: 'done', artifactData: { ...ddArtifactData } })
     } else {
-      upsertStage({ id: 'dueDiligence', label: '新建尽调', icon: '📋', status: 'done', artifactData: { ...ddArtifactData } })
+      upsertStage({ id: 'dueDiligence', label: STAGE_LABEL_MAP.dueDiligence, icon: '📋', status: 'done', artifactData: { ...ddArtifactData } })
     }
 
     setActiveStage('dueDiligence')
 
-    await pushStreamingMessage('已创建尽调任务。正在进入智能尽调流程。')
-    await delay(500)
+    await pushStreamingMessage('已创建尽调任务。正在进入智能尽调流程，第一步是工商核验。')
+    await delay(800)
     await runBusinessVerification()
   }
 
-  // ===================== 工商校验 =====================
+  // ===================== 工商核验 =====================
   async function runBusinessVerification() {
-    const steps = [
-      { title: '工商数据校验', status: 'done', details: [
-        { label: '主体状态', value: '正常存续' },
-        { label: '司法风险', value: '无重大诉讼' },
-        { label: '关联企业', value: '3 家' },
-      ]},
-    ]
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
+
+    const dueFlowSteps = freshDueFlowSteps('judicial')
 
     const businessArtifactData = {
-      enterprise: selectedEnterprise.value,
+      enterprise: ent,
       entityStatus: '正常存续',
       judicialRisk: '无重大诉讼',
       relatedCompanies: '3 家',
-      conclusion: '工商校验通过',
-      legalPerson: '—',
-      registeredCapital: '—',
-      establishedDate: '—',
+      conclusion: '主体状态正常，未发现重大工商异常',
+      legalPerson: isTsWq ? '马丽' : '—',
+      registeredCapital: isTsWq ? '500万' : '—',
+      establishedDate: isTsWq ? '2021-12-24' : '—',
+      industry: isTsWq ? '建材批发' : '—',
+      region: isTsWq ? '河北唐山' : '—',
+      staffSize: '—',
       judicialDetails: [],
-      relatedCompaniesList: [],
+      relatedCompaniesList: [
+        { name: '唐山某建材公司', relation: '关联法人', status: '正常' },
+        { name: '唐山某物流公司', relation: '关联股东', status: '正常' },
+        { name: '唐山某贸易公司', relation: '同地址', status: '正常' },
+      ],
+      steps: [
+        { title: '查询工商登记信息', status: 'done' },
+        { title: '核验主体状态', status: 'done' },
+        { title: '查询关联企业', status: 'done' },
+        { title: '生成工商核验结论', status: 'done' },
+      ],
       dueFlow: {
-        statusText: '等待税票RPA',
-        progress: 42,
-        activeKey: 'tax',
-        steps: [...dueFlowSteps],
+        statusText: '工商核验已完成',
+        progress: 14,
+        activeKey: 'judicial',
+        steps: JSON.parse(JSON.stringify(dueFlowSteps)),
       },
-      steps,
     }
 
-    upsertStage({ id: 'business', label: '工商校验', icon: '🏛', status: 'done', artifactData: { ...businessArtifactData } })
+    upsertStage({ id: 'business', label: STAGE_LABEL_MAP.business, icon: '🏛', status: 'done', artifactData: { ...businessArtifactData } })
     setActiveStage('business')
 
-    await pushStreamingMessage('工商校验已完成，下一步进入税票采集。')
-    await delay(500)
+    await pushStreamingMessage('正在核验工商登记、主体状态、注册资本、法定代表人和关联企业。')
+    await delay(1000)
+    await pushStreamingMessage('工商核验已完成。企业主体正常存续，暂未发现重大工商异常。')
+    await delay(400)
+    await pushStreamingMessage('下一步将进入司法查询，继续核验诉讼、执行和处罚风险。')
+    await delay(800)
+    await runJudicialQuery()
+  }
+
+  // ===================== 司法查询 =====================
+  async function runJudicialQuery() {
+    const ent = selectedEnterprise.value
+
+    const dueFlowSteps = freshDueFlowSteps('tax')
+    dueFlowSteps[0].status = 'done'
+
+    const judicialArtifactData = {
+      enterprise: ent,
+      majorLawsuit: 0,
+      execution: 0,
+      dishonest: 0,
+      judgment: 2,
+      judgmentText: '普通记录',
+      penalty: 0,
+      hearing: 1,
+      conclusions: [
+        { type: 'ok', text: '未发现失信被执行记录' },
+        { type: 'ok', text: '未发现重大未结诉讼' },
+        { type: 'ok', text: '未发现影响持续经营的行政处罚' },
+        { type: 'warn', text: '存在少量历史裁判文书，建议归档备查' },
+      ],
+      records: [
+        { type: '裁判文书', level: '低风险', summary: '买卖合同纠纷已结案' },
+        { type: '开庭公告', level: '低风险', summary: '历史供应商争议' },
+      ],
+      steps: [
+        { title: '查询司法诉讼', status: 'done' },
+        { title: '查询被执行信息', status: 'done' },
+        { title: '查询失信记录', status: 'done' },
+        { title: '查询行政处罚', status: 'done' },
+        { title: '生成司法查询结论', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '司法查询已完成',
+        progress: 28,
+        activeKey: 'tax',
+        steps: JSON.parse(JSON.stringify(dueFlowSteps)),
+      },
+    }
+
+    upsertStage({ id: 'judicial', label: STAGE_LABEL_MAP.judicial, icon: '⚖', status: 'done', artifactData: { ...judicialArtifactData } })
+    setActiveStage('judicial')
+
+    await pushStreamingMessage('正在查询司法诉讼、被执行、失信、行政处罚和裁判文书信息。')
+    await delay(1000)
+    await pushStreamingMessage('司法查询已完成。未发现重大司法风险，存在少量历史普通记录，已归入证据链。')
+    await delay(400)
+    await pushStreamingMessage('下一步将进入税票采集，需要企业授权后才能继续采集税票数据。')
+    await delay(800)
     await runTaxCollectionStep()
   }
 
   // ===================== 税票采集 =====================
   async function runTaxCollectionStep() {
-    const steps = [
-      { title: '生成税票采集授权链接', status: 'done', details: [
-        { label: '进项发票', value: '待采集' },
-        { label: '销项发票', value: '待采集' },
-        { label: '纳税申报', value: '待采集' },
-      ]},
-    ]
-
+    const ent = selectedEnterprise.value
     const taxArtifactData = {
-      enterprise: selectedEnterprise.value,
-      chain: '生成授权链接 → 企业扫码授权 → RPA采集 → 数据入库',
-      status: '待确认发送',
-      authStatus: '待确认发送',
-      linkStatus: '未发送',
+      enterprise: ent,
+      status: '等待企业授权',
+      authStatus: '等待授权',
+      linkStatus: '待发送',
       authUrl: 'https://ai-copilot.demo/auth/rpa002',
-      collectedCount: 0,
-      totalCount: 12,
-      progressPercent: 0,
-      collectionItems: [...collectionItemsPending],
-      input: { count: 0, total: 0, unit: '份' },
-      output: { count: 0, total: 0, unit: '份' },
+      input: { count: 0, total: 150 },
+      output: { count: 0, total: 120 },
       filing: { status: '未采集' },
-      dueFlow: {
-        statusText: '等待税票RPA',
-        progress: 42,
-        activeKey: 'tax',
-        steps: [...dueFlowSteps],
-      },
-      autoLog: [
-        { time: '10:33', desc: '已生成税票采集授权链接', status: 'done' },
-        { time: '—', desc: '等待用户确认发送', status: 'waiting' },
+      logs: [
+        { time: '09:10', desc: '已生成税票采集授权链接', status: 'done' },
+        { time: '—', desc: '等待发送给企业授权', status: 'waiting' },
       ],
-      steps,
+      steps: [
+        { title: '生成授权链接', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '等待税票授权',
+        progress: 43,
+        activeKey: 'tax',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'active' },
+          { key: 'materials', label: '资料补充', status: 'pending' },
+          { key: 'evidence', label: '证据整合', status: 'pending' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
+          { key: 'deliverables', label: '产物确认', status: 'pending' },
+        ])),
+      },
     }
 
-    upsertStage({ id: 'tax', label: '税票采集', icon: '🎫', status: 'active', artifactData: { ...taxArtifactData } })
+    upsertStage({ id: 'tax', label: STAGE_LABEL_MAP.tax, icon: '🧾', status: 'active', artifactData: { ...taxArtifactData } })
     setActiveStage('tax')
 
-    await pushStreamingMessage('已生成采集链接并发送，等待企业授权。点击下方按钮模拟企业已授权，继续采集。')
     currentFlowStatus.value = 'waiting_tax_confirmation'
     waitingForInput.value = true
+    fillSuggestions('waiting_tax_confirmation')
+
+    await pushStreamingMessage('已生成税票采集授权链接。请发送给企业扫码授权，有效期 24 小时。')
+    await delay(600)
+    await pushStreamingMessage('授权完成前，左侧会展示等待授权状态和采集清单。')
   }
 
+  /** 用户确认发送采集链接 */
   async function confirmTaxSend() {
-    const stage = flowStages.find(s => s.id === 'tax')
-    if (!stage) return
-
     waitingForInput.value = false
     await pushMessage('user', '确认发送采集链接')
     await delay(300)
 
-    stage.artifactData.linkStatus = '已发送'
-    stage.artifactData.authStatus = '等待授权'
-    stage.artifactData.status = '等待授权'
-    stage.artifactData.autoLog = [
-      { time: '10:33', desc: '已生成税票采集授权链接', status: 'done' },
-      { time: '10:35', desc: '授权链接已发送', status: 'done' },
-      { time: '—', desc: '等待企业扫码授权', status: 'waiting' },
-    ]
-    stage.artifactData.dueFlow = {
-      statusText: '等待企业授权',
-      progress: 42,
-      activeKey: 'tax',
-      steps: JSON.parse(JSON.stringify(dueFlowSteps)),
+    const taxStage = flowStages.find(s => s.id === 'tax')
+    if (taxStage && taxStage.artifactData) {
+      taxStage.artifactData.linkStatus = '已发送'
+      taxStage.artifactData.authStatus = '等待授权'
+      taxStage.artifactData.logs.push({ time: '09:20', desc: '采集链接已发送给企业', status: 'done' })
+      taxStage.artifactData.logs.push({ time: '—', desc: '等待企业扫码授权…', status: 'waiting' })
+      Object.assign(artifactData, taxStage.artifactData)
+      Object.assign(leftPanelData, taxStage.artifactData)
     }
-    Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
-    Object.assign(leftPanelData, JSON.parse(JSON.stringify(stage.artifactData)))
-    Object.keys(artifactData).forEach(k => delete artifactData[k])
-    Object.assign(artifactData, JSON.parse(JSON.stringify(stage.artifactData)))
 
-    await pushStreamingMessage('采集链接已发送。等待企业线下扫码授权完成后，点击"模拟企业已授权"继续。')
-    currentFlowStatus.value = 'waiting_tax_auth'
+    currentFlowStatus.value = 'waiting_tax_authorization'
     waitingForInput.value = true
+    fillSuggestions('waiting_tax_authorization')
+
+    await pushStreamingMessage('采集链接已发送。等待企业线下扫码授权完成后，可以点击"模拟企业已授权"继续。')
   }
 
+  /** 模拟企业已完成授权 → 税票采集完成 → 停在等待资料补充 */
   async function mockTaxAuthorized() {
-    const stage = flowStages.find(s => s.id === 'tax')
-    if (!stage) return
-
     waitingForInput.value = false
-    await pushMessage('user', '企业已授权，继续采集')
+    await pushMessage('user', '模拟企业已授权')
     await delay(300)
 
-    await pushStep('tax', '企业已授权，开始采集', 'done')
-    await delay(500)
-    await pushStep('tax', '进项发票采集完成', 'done', [{ label: '进项发票', value: '已采集 128 份' }])
-    await delay(400)
-    await pushStep('tax', '销项发票采集完成', 'done', [{ label: '销项发票', value: '已采集 96 份' }])
-    await delay(400)
-    await pushStep('tax', '纳税申报数据采集完成', 'done')
-
-    stage.artifactData.status = '已完成'
-    stage.artifactData.authStatus = '已授权'
-    stage.artifactData.linkStatus = '已使用'
-    stage.artifactData.collectedCount = 8
-    stage.artifactData.progressPercent = 67
-    stage.artifactData.input = { count: 128, total: 150, unit: '份' }
-    stage.artifactData.output = { count: 96, total: 120, unit: '份' }
-    stage.artifactData.filing = { status: '已采集' }
-    stage.artifactData.collectionItems = [...collectionItemsDone]
-    stage.artifactData.autoLog = [
-      { time: '10:33', desc: '已生成税票采集授权链接', status: 'done' },
-      { time: '10:35', desc: '企业完成扫码授权', status: 'done' },
-      { time: '10:36', desc: 'RPA 登录税局系统', status: 'done' },
-      { time: '10:42', desc: '进项发票采集 128 份', status: 'done' },
-      { time: '10:48', desc: '销项发票采集 96 份', status: 'done' },
-      { time: '10:50', desc: '纳税申报数据已采集', status: 'done' },
-      { time: '10:51', desc: '数据入库完成', status: 'done' },
-    ]
-    stage.artifactData.dueFlow = {
-      statusText: '税票采集完成',
-      progress: 60,
-      activeKey: 'materials',
-      steps: JSON.parse(JSON.stringify(dueFlowStepsCompleted)),
+    const taxArtifactData = {
+      enterprise: selectedEnterprise.value,
+      status: '已完成',
+      authStatus: '已授权',
+      linkStatus: '已使用',
+      authUrl: 'https://ai-copilot.demo/auth/rpa002',
+      input: { count: 128, total: 150 },
+      output: { count: 96, total: 120 },
+      filing: { status: '已采集' },
+      logs: [
+        { time: '09:10', desc: '已生成税票采集授权链接', status: 'done' },
+        { time: '09:20', desc: '采集链接已发送给企业', status: 'done' },
+        { time: '09:25', desc: '企业已完成授权', status: 'done' },
+        { time: '09:30', desc: '进项发票采集中… 128/150', status: 'running' },
+        { time: '09:35', desc: '销项发票采集中… 96/120', status: 'running' },
+        { time: '09:40', desc: '纳税申报数据已采集', status: 'done' },
+      ],
+      steps: [
+        { title: '生成授权链接', status: 'done' },
+        { title: '企业扫码授权', status: 'done' },
+        { title: 'RPA 采集税票数据', status: 'done' },
+        { title: '数据入库校验', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '税票采集已完成',
+        progress: 43,
+        activeKey: 'tax',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'active' },
+          { key: 'evidence', label: '证据整合', status: 'pending' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
+          { key: 'deliverables', label: '产物确认', status: 'pending' },
+        ])),
+      },
     }
-    // 完整替换 leftPanelData 确保响应式更新
-    Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
-    Object.assign(leftPanelData, JSON.parse(JSON.stringify(stage.artifactData)))
-    Object.keys(artifactData).forEach(k => delete artifactData[k])
-    Object.assign(artifactData, JSON.parse(JSON.stringify(stage.artifactData)))
-    updateStageStatus('tax', 'done')
 
-    await pushStreamingMessage('税票数据采集完成，开始资料收集。')
-    await delay(500)
-    await runMaterialCollectionStep()
+    upsertStage({ id: 'tax', label: STAGE_LABEL_MAP.tax, icon: '🧾', status: 'done', artifactData: { ...taxArtifactData } })
+    setActiveStage('tax')
+
+    await pushStreamingMessage('企业已完成授权，正在采集进项发票、销项发票和纳税申报数据。')
+    await delay(800)
+    await pushStreamingMessage('税票数据采集完成。左侧已展示采集进度、发票数量和采集日志。')
+    await delay(400)
+    await pushStreamingMessage('下一步将进入资料补充，当前资料包完整度预计为 67%。')
+    await delay(400)
+
+    currentFlowStatus.value = 'waiting_material_action'
+    waitingForInput.value = true
+    fillSuggestions('waiting_material_upload')
   }
 
-  // ===================== 资料收集 =====================
-  async function runMaterialCollectionStep() {
-    const materials = [
-      { name: '财务报表', status: '已收集', type: '财务' },
-      { name: '银行流水', status: '已收集', type: '财务' },
-      { name: '纳税证明', status: '已收集', type: '税务' },
-      { name: '营业执照', status: '已收集', type: '工商' },
-      { name: '征信报告', status: '缺失', type: '信用' },
-      { name: '审计报告', status: '待上传', type: '财务' },
-    ]
-    const completeness = Math.round(materials.filter(m => m.status === '已收集').length / materials.length * 100)
+  // ===================== 资料补充 =====================
+  async function runMaterialsStep() {
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
 
-    const steps = [
-      { title: '生成资料包清单', status: 'done', details: [
-        { label: '模板', value: selectedDueTemplate.value?.name || '标准授信尽调' },
-        { label: '资料完整度', value: completeness + '%' },
-      ]},
-    ]
+    const materials = isTsWq
+      ? [
+          { name: '营业执照', type: '证照', status: '已收集' },
+          { name: '近一年纳税申报', type: '税务', status: '已收集' },
+          { name: '开票明细', type: '税务', status: '已收集' },
+          { name: '基础工商资料', type: '工商', status: '已收集' },
+          { name: '主要合同', type: '合同', status: '缺失' },
+          { name: '银行流水', type: '财务', status: '缺失' },
+          { name: '购销说明', type: '经营', status: '缺失' },
+          { name: '税负异常说明', type: '税务', status: '缺失' },
+        ]
+      : [
+          { name: '营业执照', type: '证照', status: '已收集' },
+          { name: '近6月银行流水', type: '财务', status: '已收集' },
+          { name: '财务报表', type: '财务', status: '已收集' },
+          { name: '纳税申报表', type: '税务', status: '已收集' },
+          { name: '主要购销合同', type: '合同', status: '缺失' },
+        ]
+
+    const missing = materials.filter(m => m.status === '缺失')
 
     const materialsArtifactData = {
-      template: selectedDueTemplate.value?.name || '标准授信尽调',
-      completeness,
+      enterprise: ent,
+      status: '待补充',
       materials,
-      missing: materials.filter(m => m.status !== '已收集'),
-      steps,
+      missing,
+      completeness: isTsWq ? 50 : 60,
+      steps: [
+        { title: '列出资料清单', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '等待资料补充',
+        progress: 57,
+        activeKey: 'materials',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'active' },
+          { key: 'evidence', label: '证据整合', status: 'pending' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
+          { key: 'deliverables', label: '产物确认', status: 'pending' },
+        ])),
+      },
     }
 
-    upsertStage({ id: 'materials', label: '资料收集', icon: '📁', status: 'done', artifactData: { ...materialsArtifactData } })
+    upsertStage({ id: 'materials', label: STAGE_LABEL_MAP.materials, icon: '📁', status: 'active', artifactData: { ...materialsArtifactData } })
     setActiveStage('materials')
 
-    await pushStreamingMessage(`已根据尽调模板生成资料包。当前资料完整度 ${completeness}%，可进入风险诊断。`)
-    await delay(500)
-    await runRiskDiagnosisStep()
+    currentFlowStatus.value = 'waiting_material_upload'
+    waitingForInput.value = true
+    fillSuggestions('waiting_material_upload')
+
+    await pushStreamingMessage('已根据「标准授信尽调」模板生成资料包。当前识别到 8 项资料，缺失 4 项。')
+    await delay(600)
+    await pushStreamingMessage('我可以生成资料收集清单，发送给企业补充，也可以在 demo 中模拟企业已上传资料。')
+  }
+
+  /** 模拟企业上传资料 → 资料补充完成 → 停在等待证据整合 */
+  async function mockMaterialUpload() {
+    waitingForInput.value = false
+    await pushMessage('user', '模拟企业上传资料')
+    await delay(300)
+
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
+
+    const materials = isTsWq
+      ? [
+          { name: '营业执照', type: '证照', status: '已收集' },
+          { name: '近一年纳税申报', type: '税务', status: '已收集' },
+          { name: '开票明细', type: '税务', status: '已收集' },
+          { name: '基础工商资料', type: '工商', status: '已收集' },
+          { name: '主要合同', type: '合同', status: '已收集' },
+          { name: '银行流水', type: '财务', status: '已收集' },
+          { name: '购销说明', type: '经营', status: '待确认' },
+          { name: '税负异常说明', type: '税务', status: '待确认' },
+        ]
+      : [
+          { name: '营业执照', type: '证照', status: '已收集' },
+          { name: '近6月银行流水', type: '财务', status: '已收集' },
+          { name: '财务报表', type: '财务', status: '已收集' },
+          { name: '纳税申报表', type: '税务', status: '已收集' },
+          { name: '主要购销合同', type: '合同', status: '已收集' },
+        ]
+
+    const missing = materials.filter(m => m.status === '待确认')
+
+    const materialsArtifactData = {
+      enterprise: ent,
+      status: '已补充',
+      materials,
+      missing,
+      completeness: 86,
+      steps: [
+        { title: '列出资料清单', status: 'done' },
+        { title: '上传资料包', status: 'done' },
+        { title: 'OCR 识别资料', status: 'done' },
+        { title: '资料分类归档', status: 'done' },
+        { title: '资料完整度评估', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '资料补充已完成',
+        progress: 57,
+        activeKey: 'materials',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'active' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
+          { key: 'deliverables', label: '产物确认', status: 'pending' },
+        ])),
+      },
+    }
+
+    upsertStage({ id: 'materials', label: STAGE_LABEL_MAP.materials, icon: '📁', status: 'done', artifactData: { ...materialsArtifactData } })
+    setActiveStage('materials')
+
+    await pushStreamingMessage('已收到企业补充资料，正在识别营业执照、合同、银行流水和税务说明。')
+    await delay(800)
+    await pushStreamingMessage('资料识别完成。当前资料包完整度提升至 86%，仍有 2 项需要后续确认。')
+    await delay(400)
+    await pushStreamingMessage('下一步将进入证据整合。')
+    await delay(400)
+
+    currentFlowStatus.value = 'waiting_evidence_action'
+    waitingForInput.value = true
+    fillSuggestions('waiting_evidence_action')
+  }
+
+  // ===================== 证据整合 =====================
+  async function runEvidenceMergeStep() {
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
+
+    const evidenceArtifactData = {
+      enterprise: ent,
+      integrity: isTsWq ? 86 : 86,
+      sources: [
+        { name: '工商证据', count: 6, status: '已归档' },
+        { name: '司法证据', count: 2, status: '已归档' },
+        { name: '税票证据', count: 12, status: '已归档' },
+        { name: '资料证据', count: isTsWq ? 8 : 5, status: '已归档' },
+        { name: '风险关联证据', count: isTsWq ? 4 : 0, status: isTsWq ? '已建立' : '无需' },
+      ],
+      riskEvidence: isTsWq ? [
+        { name: '税负率显著低于行业', count: 4, confidence: '高' },
+        { name: '开票收入与申报不一致', count: 3, confidence: '高' },
+        { name: '购销两头在外', count: 3, confidence: '中' },
+        { name: '电费与收入相关性低', count: 1, confidence: '待补充' },
+      ] : [],
+      gaps: isTsWq ? [
+        '! 电费缴费记录缺失，影响"电费与收入相关性"判断',
+        '! 主要合同仍需补充原件，影响"购销两头在外"判断',
+      ] : [],
+      steps: [
+        { title: '整合工商数据证据', status: 'done' },
+        { title: '整合司法数据证据', status: 'done' },
+        { title: '整合税票数据证据', status: 'done' },
+        { title: '整合资料证据', status: 'done' },
+        { title: '建立风险事项证据链', status: 'done' },
+        { title: '证据完整度评估', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '证据整合已完成',
+        progress: 71,
+        activeKey: 'riskDiagnosis',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'done' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'active' },
+          { key: 'deliverables', label: '产物确认', status: 'pending' },
+        ])),
+      },
+    }
+
+    upsertStage({ id: 'evidence', label: STAGE_LABEL_MAP.evidence, icon: '🔗', status: 'done', artifactData: { ...evidenceArtifactData } })
+    setActiveStage('evidence')
+
+    await pushStreamingMessage('正在将工商、司法、税票、资料等来源的证据进行串联和整合。')
+    await delay(1000)
+    if (isTsWq) {
+      await pushStreamingMessage('证据整合已完成。已为 4 个风险事项建立证据链，整体证据完整度 86%。')
+    } else {
+      await pushStreamingMessage('证据整合已完成。各来源证据已归档，整体证据完整度 86%。')
+    }
+    await delay(400)
+    await pushStreamingMessage('下一步将进入风险诊断，AI 将综合所有证据进行风险评级和建议。')
+    await delay(400)
+
+    currentFlowStatus.value = 'waiting_risk_action'
+    waitingForInput.value = true
+    fillSuggestions('waiting_risk_action')
   }
 
   // ===================== 风险诊断 =====================
   async function runRiskDiagnosisStep() {
-    const isTsWq = selectedEnterprise.value?.id === 'ts-wq-sm'
-    const steps = [
-      { title: '工商风险分析', status: 'done', details: [{ label: '风险等级', value: isTsWq ? '高' : '低' }] },
-      { title: '税务风险分析', status: 'done', details: [{ label: '风险等级', value: '中' }] },
-      { title: '经营风险分析', status: 'done', details: [{ label: '风险等级', value: isTsWq ? '高' : '低' }] },
-      { title: '资料一致性检查', status: 'done', details: [{ label: '一致性', value: isTsWq ? '偏差' : '良好' }] },
-    ]
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
 
     const riskArtifactData = {
-      ...mockRiskDiagnosis,
-      score: isTsWq ? 58 : mockRiskDiagnosis.score,
-      grade: isTsWq ? 'C' : mockRiskDiagnosis.grade,
-      riskLevel: isTsWq ? '高' : mockRiskDiagnosis.riskLevel,
-      conclusion: isTsWq ? '综合评分58，企业存在多项风险事项，建议审慎评估后再行授信' : mockRiskDiagnosis.conclusion,
-      riskIssues: isTsWq ? tangshanRiskIssues : [],
-      suggestedActions: isTsWq ? ['进一步核实收入真实性', '补充银行流水核验', '约谈实际控制人'] : [],
-      steps,
+      enterprise: ent,
+      score: isTsWq ? '72' : '85',
+      grade: isTsWq ? 'C+' : 'B',
+      riskLevel: isTsWq ? '中' : '低',
+      riskIssues: isTsWq ? tangshanRiskIssues : [
+        { name: '经营规模偏小', level: '低', category: '经营稳定性', description: '营收规模相对较小，抗风险能力有限', evidenceSources: ['财务报表'] },
+      ],
+      highlights: isTsWq ? tangshanHighlights : [
+        { name: '纳税信用 A 级', description: '税务评级良好' },
+      ],
+      indicators: isTsWq ? tangshanIndicators : [],
+      conclusion: isTsWq
+        ? '建议有条件授信，补充交易真实性和税负异常说明'
+        : '企业经营稳定，风险可控，建议正常推进授信流程。',
+      suggestedActions: isTsWq
+        ? ['要求补充电费记录', '追加股东连带担保', '限制授信额度', '提高贷后检查频率']
+        : ['正常推进'],
+      steps: [
+        { title: '综合评分计算', status: 'done' },
+        { title: '风险等级判定', status: 'done' },
+        { title: '生成诊断结论', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '风险诊断已完成',
+        progress: 86,
+        activeKey: 'deliverables',
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'done' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'done' },
+          { key: 'deliverables', label: '产物确认', status: 'active' },
+        ])),
+      },
     }
 
-    upsertStage({ id: 'riskDiagnosis', label: '风险诊断', icon: '🧠', status: 'done', artifactData: { ...riskArtifactData } })
+    upsertStage({ id: 'riskDiagnosis', label: STAGE_LABEL_MAP.riskDiagnosis, icon: '🩺', status: 'done', artifactData: { ...riskArtifactData } })
     setActiveStage('riskDiagnosis')
 
-    await pushStreamingMessage('风险诊断已完成。已生成诊断报告草稿，下一步可以生成最终报告。')
-    await delay(500)
-    await generateDeliverables()
+    await pushStreamingMessage('正在综合所有证据进行风险评分和诊断。')
+    await delay(1200)
+    if (isTsWq) {
+      await pushStreamingMessage('风险诊断已完成。该企业整体为中风险，主要风险集中在税负率偏低、收入一致性和业务真实性。')
+    } else {
+      await pushStreamingMessage('风险诊断已完成。综合评分85分（等级B），低风险。企业经营稳定，风险可控。')
+    }
+    await delay(400)
+    await pushStreamingMessage('下一步将确认尽调产物，准备生成授信调查报告。')
+    await delay(400)
+
+    currentFlowStatus.value = 'waiting_deliverable_action'
+    waitingForInput.value = true
+    fillSuggestions('waiting_deliverable_action')
   }
 
-  // ===================== 产物生成 =====================
-  async function generateDeliverables() {
-    const steps = [
-      { title: '生成产物清单', status: 'done', details: [
-        { label: '尽调资料包', value: '18份' },
-        { label: '风险诊断报告', value: '1份' },
-        { label: '智能报告草稿', value: '1份' },
-        { label: '附件与证据链', value: '24份' },
-      ]},
-    ]
+  // ===================== 产物确认 =====================
+  async function runDeliverablesStep() {
+    const ent = selectedEnterprise.value
 
     const deliverablesArtifactData = {
-      items: [...mockDeliverables],
-      reportTemplate: '标准授信尽调',
-      materialPackage: { count: 18 },
-      actions: ['查看', '编辑报告'],
-      steps,
+      enterprise: ent,
+      items: [
+        { name: '尽调底稿', status: '已生成', count: '1 份' },
+        { name: '工商核验报告', status: '已生成', count: '1 份' },
+        { name: '司法查询报告', status: '已生成', count: '1 份' },
+        { name: '税票分析报告', status: '已生成', count: '1 份' },
+        { name: '风险诊断报告', status: '已生成', count: '1 份' },
+        { name: '证据链文件', status: '已归档', count: '24 项' },
+      ],
+      steps: [
+        { title: '生成尽调产物', status: 'done' },
+        { title: '产物质量校验', status: 'done' },
+      ],
+      dueFlow: {
+        statusText: '尽调已完成',
+        progress: 100,
+        activeKey: null,
+        steps: JSON.parse(JSON.stringify([
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'done' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'done' },
+          { key: 'deliverables', label: '产物确认', status: 'done' },
+        ])),
+      },
     }
 
-    upsertStage({ id: 'deliverables', label: '产物生成', icon: '📦', status: 'done', artifactData: { ...deliverablesArtifactData } })
+    upsertStage({ id: 'deliverables', label: STAGE_LABEL_MAP.deliverables, icon: '📦', status: 'done', artifactData: { ...deliverablesArtifactData } })
     setActiveStage('deliverables')
 
-    await pushStreamingMessage('产物已生成。你可以开始资料包确认和报告修改。')
-    currentFlowStatus.value = 'waiting_report_action'
+    currentFlowStatus.value = 'completed'
     waitingForInput.value = true
+    flowCompletedAt.value = new Date().toISOString()
+    fillSuggestions('completed')
+
+    await pushStreamingMessage('产物已生成，包括尽调报告草稿、资料包、证据链和附件清单。')
+    await delay(600)
+    await pushStreamingMessage('可以进入报告编辑环节，也可以在此结束尽调流程。')
   }
 
-  // ===================== 报告编辑器（工作区态） =====================
-  async function openReportEditor() {
+  /** 用户点击"进入证据整合" */
+  async function enterEvidenceMerge() {
     waitingForInput.value = false
-    await pushMessage('user', '修改报告')
+    await pushMessage('user', '进入证据整合')
     await delay(300)
+    await runEvidenceMergeStep()
+  }
 
-    const sections = [
-      { id: 's1', no: '一', title: '企业概况', status: '已完成' },
-      { id: 's2', no: '二', title: '工商核验', status: '已完成' },
-      { id: 's3', no: '三', title: '税票分析', status: '已完成' },
-      { id: 's4', no: '四', title: '财务分析', status: '待确认' },
-      { id: 's5', no: '五', title: '风险诊断', status: '待确认' },
-      { id: 's6', no: '六', title: '授信建议', status: '待编辑' },
-    ]
+  /** 用户点击"进入风险诊断" */
+  async function enterRiskDiagnosis() {
+    waitingForInput.value = false
+    await pushMessage('user', '进入风险诊断')
+    await delay(300)
+    await runRiskDiagnosisStep()
+  }
+
+  /** 用户点击"进入产物确认" */
+  async function enterDeliverables() {
+    waitingForInput.value = false
+    await pushMessage('user', '进入产物确认')
+    await delay(300)
+    await runDeliverablesStep()
+  }
+
+  // ===================== 报告编辑（可选） =====================
+  async function startReportEditor() {
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
 
     const reportArtifactData = {
-      title: selectedEnterprise.value?.name ? `${selectedEnterprise.value.name} 尽职调查报告` : '尽职调查报告',
-      template: selectedDueTemplate.value?.name || '标准授信尽调',
-      sections,
-      currentSection: 's1',
-      body: '',
-      pendingItems: ['财务分析确认', '授信建议撰写'],
-      steps: [],
+      title: '授信调查报告',
+      template: '标准授信模板',
+      sections: [
+        { no: 1, title: '企业基本信息', status: '已完成' },
+        { no: 2, title: '工商与司法核验', status: '已完成' },
+        { no: 3, title: '经营分析', status: '已完成' },
+        { no: 4, title: '税务分析', status: '已完成' },
+        { no: 5, title: '风险诊断', status: '已完成' },
+        { no: 6, title: '授信建议', status: '待确认' },
+      ],
+      content: isTsWq
+        ? '本报告基于对唐山物桥商贸有限公司的综合尽调，涵盖工商、司法、税票、资料等维度...'
+        : '本报告基于对企业基本信息、工商司法核验、经营税务等多维度分析...',
+      steps: [
+        { title: '生成报告框架', status: 'done' },
+        { title: '填充尽调数据', status: 'done' },
+      ],
     }
 
-    upsertStage({ id: 'reportEditor', label: '报告编辑', icon: '📝', status: 'active', artifactData: { ...reportArtifactData } })
+    upsertStage({ id: 'reportEditor', label: STAGE_LABEL_MAP.reportEditor, icon: '📝', status: 'active', artifactData: { ...reportArtifactData } })
     setActiveStage('reportEditor')
 
-    await pushStreamingMessage('已进入报告编辑模式。我可以帮你改写风险结论、补充税票异常说明或生成授信建议。')
-    currentFlowStatus.value = 'editing_report'
-    waitingForInput.value = true
+    await pushStreamingMessage('报告编辑器已打开。你可以人工编辑和调整报告内容，AI 可辅助改写和校对。')
+    currentFlowStatus.value = 'editing'
   }
 
-  // ===================== Context Suggestions =====================
-  const contextSuggestions = computed(() => {
-    const suggestions = []
-    const status = currentFlowStatus.value
-
-    if (status === 'waiting_selection' && candidateCustomers.length > 0) {
-      candidateCustomers.slice(0, 3).forEach(c => {
-        suggestions.push({ label: `探查 ${c.name}`, type: 'explore', enterprise: c })
-      })
+  /** 根据流程状态填充右侧建议按钮 */
+  function fillSuggestions(flowStatus) {
+    contextSuggestions.length = 0
+    const map = {
+      waiting_selection: [{ label: '探查 唐山物桥商贸有限公司', value: '唐山物桥' }],
+      waiting_action: [
+        { label: '新建尽调', value: '新建尽调' },
+        { label: '加入监控', value: '加入监控' },
+      ],
+      waiting_template: [{ label: '选择模板「标准授信尽调」', value: '标准授信尽调' }],
+      waiting_tax_confirmation: [{ label: '确认发送采集链接', value: 'confirm_tax_send' }],
+      waiting_tax_authorization: [{ label: '模拟企业已授权', value: 'tax_authorized' }],
+      waiting_material_upload: [{ label: '模拟企业上传资料', value: 'mock_material_upload' }],
+      waiting_evidence_action: [{ label: '进入证据整合', value: 'enter_evidence' }],
+      waiting_risk_action: [{ label: '进入风险诊断', value: 'enter_risk' }],
+      waiting_deliverable_action: [{ label: '进入产物确认', value: 'enter_deliverables' }],
+      completed: [
+        { label: '编辑报告', value: 'edit_report' },
+        { label: '导出报告', value: 'export_report' },
+        { label: '加入监控', value: 'start_monitor' },
+      ],
+      editing: [
+        { label: '改写风险结论', value: '改写风险结论' },
+        { label: '补充税票说明', value: '补充税票说明' },
+        { label: '生成授信建议', value: '生成授信建议' },
+      ],
     }
-
-    if (status === 'waiting_action') {
-      suggestions.push({ label: '加入监控', type: 'start_monitor' })
-      suggestions.push({ label: '新建尽调', type: 'start_due_diligence' })
-    }
-
-    if (status === 'waiting_next_action') {
-      suggestions.push({ label: '查看监控任务', type: 'send_text', text: '查看监控任务' })
-      suggestions.push({ label: '新建尽调', type: 'start_due_diligence' })
-      suggestions.push({ label: '继续探查其他企业', type: 'send_text', text: '继续探查其他企业' })
-    }
-
-    if (status === 'waiting_template') {
-      dueDiligenceTemplates.filter(t => t.id !== 'tpl-custom').forEach(t => {
-        suggestions.push({ label: t.name, type: 'confirm_due_template', template: t })
-      })
-    }
-
-    if (status === 'waiting_tax_confirmation') {
-      suggestions.push({ label: '确认发送采集链接', type: 'confirm_tax_send' })
-    }
-
-    if (status === 'waiting_tax_auth') {
-      suggestions.push({ label: '模拟企业已授权', type: 'tax_authorized' })
-    }
-
-    if (status === 'waiting_report_action') {
-      suggestions.push({ label: '修改报告', type: 'open_report_editor' })
-      suggestions.push({ label: '导出报告', type: 'send_text', text: '导出报告' })
-      suggestions.push({ label: '加入监控', type: 'start_monitor' })
-    }
-
-    if (status === 'editing_report') {
-      suggestions.push({ label: '改写风险结论', type: 'send_text', text: '帮我改写风险结论' })
-      suggestions.push({ label: '补充税票异常说明', type: 'send_text', text: '补充税票异常说明' })
-      suggestions.push({ label: '生成授信建议', type: 'send_text', text: '生成授信建议' })
-      suggestions.push({ label: '导出最终报告', type: 'send_text', text: '导出最终报告' })
-    }
-
-    return suggestions
-  })
-
-  // ===================== 主入口 =====================
-  async function sendMessage(text) {
-    if (!text || !text.trim()) return
-    const input = text.trim()
-    const lower = input.toLowerCase()
-
-    // 1. 等待选择企业
-    if (currentFlowStatus.value === 'waiting_selection') {
-      const num = parseInt(input)
-      if (!isNaN(num) && num > 0 && num <= candidateCustomers.length) {
-        await pushMessage('user', input)
-        await selectEnterpriseAndExplore(candidateCustomers[num - 1])
-        return
-      }
-      const matched = candidateCustomers.find(c => c.name.includes(input) || input.includes(c.name.replace(/股份|有限|公司/g, '').slice(0, 4)))
-      if (matched) {
-        await pushMessage('user', input)
-        await selectEnterpriseAndExplore(matched)
-        return
-      }
-      await pushMessage('user', input)
-      await pushMessage('ai', '没有在当前候选名单中找到该企业，请从左侧列表选择或回复序号。')
-      return
-    }
-
-    // 2. 等待动作选择（探查后）
-    if (currentFlowStatus.value === 'waiting_action') {
-      await pushMessage('user', input)
-      if (lower.includes('监控') || lower.includes('加入')) {
-        await startMonitor(selectedEnterprise.value)
-        return
-      }
-      if (lower.includes('尽调') || lower.includes('新建')) {
-        await startDueDiligence(selectedEnterprise.value)
-        return
-      }
-      await pushMessage('ai', '请选择「加入监控」或「新建尽调」。')
-      return
-    }
-
-    // 3. 等待尽调模板
-    if (currentFlowStatus.value === 'waiting_template') {
-      await pushMessage('user', input)
-      const tpl = dueDiligenceTemplates.find(t => t.name.includes(input) || input.includes(t.name))
-      if (tpl) { await confirmDueTemplate(tpl); return }
-      await pushMessage('ai', '请从左侧选择一个尽调模板。')
-      return
-    }
-
-    // 4. 税票确认
-    if (currentFlowStatus.value === 'waiting_tax_confirmation') {
-      await pushMessage('user', input)
-      if (lower.includes('确认') || lower.includes('发送') || lower.includes('可以')) { await confirmTaxSend(); return }
-      await pushMessage('ai', '请确认是否发送采集链接。')
-      return
-    }
-
-    // 5. 税票授权
-    if (currentFlowStatus.value === 'waiting_tax_auth') {
-      await pushMessage('user', input)
-      if (lower.includes('授权') || lower.includes('继续')) { await mockTaxAuthorized(); return }
-      await pushMessage('ai', '企业完成授权后告诉我即可继续。')
-      return
-    }
-
-    // 6. 产物后动作
-    if (currentFlowStatus.value === 'waiting_report_action') {
-      await pushMessage('user', input)
-      if (lower.includes('修改') || lower.includes('报告') || lower.includes('编辑')) { await openReportEditor(); return }
-      if (lower.includes('导出')) { await pushMessage('ai', '报告已导出为 PDF 文件。'); return }
-      if (lower.includes('监控')) { await startMonitor(selectedEnterprise.value); return }
-      await pushMessage('ai', '你可以选择修改报告、导出报告或加入监控。')
-      return
-    }
-
-    // 7. 编辑报告态
-    if (currentFlowStatus.value === 'editing_report') {
-      await pushMessage('user', input)
-      if (lower.includes('导出')) { await pushMessage('ai', '报告已导出。'); return }
-      await pushStreamingMessage('已根据你的要求更新报告内容。如需进一步调整，请继续输入。')
-      return
-    }
-
-    // 8. 默认：启动新流程
-    await startFromWorkbenchInput(input)
+    const items = map[flowStatus] || []
+    items.forEach(item => contextSuggestions.push(item))
   }
 
-  async function startFromWorkbenchInput(text) {
-    dialogOpen.value = true
-    reset()
-    dialogOpen.value = true
-    const lower = text.toLowerCase()
-    const intent = detectIntent(lower)
+  // ===================== 消息路由 =====================
+  async function sendMessage() {
+    const inputText = dialogInput.value.trim()
+    if (!inputText) return
+    dialogInput.value = ''
+    await pushMessage('user', inputText)
+
+    if (waitingForInput.value) {
+      await handleWaitingForInput(inputText)
+      return
+    }
+
+    const intent = detectIntent(inputText)
+    currentIntent.value = intent
+
     if (intent === 'screening') {
-      await runScreening(text)
+      currentFlowStatus.value = 'running'
+      await runScreening(inputText)
     }
   }
 
-  async function runIntentRecognition(text) {
-    await sendMessage(text)
-    if (layoutMode.value === 'chat-center' && currentFlowStatus.value === 'waiting_selection') {
-      layoutMode.value = 'workspace'
-      activeTool.value = 'screening'
-      if (!leftPanelData.enterprises?.length) {
-        Object.assign(leftPanelData, {
-          enterprises: [...candidateCustomers],
-          summary: {
-            matched: '128 家',
-            filtered: '98 家',
-            recommended: `${candidateCustomers.length} 家`,
-            avgMatch: '90%',
-          },
-        })
+  async function handleWaitingForInput(text) {
+    waitingForInput.value = false
+    const lower = text.toLowerCase()
+
+    if (currentFlowStatus.value === 'waiting_selection') {
+      const ent = mockEnterprises.find(e => text.includes(e.name)) || mockEnterprises[0]
+      await selectEnterpriseAndExplore(ent)
+    } else if (currentFlowStatus.value === 'waiting_action') {
+      if (lower.includes('监控')) { await startMonitor() }
+      else { await startDueDiligence() }
+    } else if (currentFlowStatus.value === 'waiting_template') {
+      const tpl = dueDiligenceTemplates.find(t => text.includes(t.name)) || dueDiligenceTemplates[0]
+      await confirmDueTemplate(tpl)
+    } else if (currentFlowStatus.value === 'waiting_tax_confirmation') {
+      await confirmTaxSend()
+    } else if (currentFlowStatus.value === 'waiting_tax_authorization') {
+      await mockTaxAuthorized()
+    } else if (currentFlowStatus.value === 'waiting_material_upload' || currentFlowStatus.value === 'waiting_material_action') {
+      await mockMaterialUpload()
+    } else if (currentFlowStatus.value === 'waiting_evidence_action') {
+      await enterEvidenceMerge()
+    } else if (currentFlowStatus.value === 'waiting_risk_action') {
+      await enterRiskDiagnosis()
+    } else if (currentFlowStatus.value === 'waiting_deliverable_action') {
+      await enterDeliverables()
+    } else if (currentFlowStatus.value === 'completed') {
+      if (lower.includes('编辑') || lower.includes('report')) {
+        await startReportEditor()
+      } else if (lower.includes('监控')) {
+        await startMonitor()
       }
+    } else if (currentFlowStatus.value === 'editing') {
+      await pushStreamingMessage('好的，我来帮你处理。')
     }
   }
 
-  function handleSuggestionClick(suggestion) {
-    switch (suggestion.type) {
+  // ===================== 快捷操作 =====================
+  async function onQuickAction(action) {
+    switch (action) {
       case 'explore':
-        selectEnterpriseAndExplore(suggestion.enterprise)
+        if (selectedEnterprise.value) {
+          await pushMessage('user', `探查「${selectedEnterprise.value.name}」`)
+          await runEnterpriseExploration(selectedEnterprise.value)
+        }
         break
       case 'start_monitor':
-        startMonitor(selectedEnterprise.value)
+        await startMonitor()
         break
       case 'start_due_diligence':
-        startDueDiligence(selectedEnterprise.value)
+        await startDueDiligence()
         break
-      case 'confirm_due_template':
-        confirmDueTemplate(suggestion.template)
-        break
-      case 'confirm_tax_send':
-        confirmTaxSend()
-        break
-      case 'tax_authorized':
-        mockTaxAuthorized()
-        break
-      case 'open_report_editor':
-        openReportEditor()
-        break
-      case 'send_text':
-        sendMessage(suggestion.text)
-        break
-      default:
-        sendMessage(suggestion.label)
     }
   }
 
-  // 兼容旧版导出
+  // ===================== 导出 =====================
+  /** 直接传文本触发意图识别（供页面 handleNormalSend 调用） */
+  async function runIntentRecognition(text) {
+    dialogInput.value = text
+    await sendMessage()
+  }
+
   return {
-    dialogOpen, dialogInput, messages, flowStages, activeStageId,
-    artifactData, currentArtifactType, waitingForInput,
-    selectedCustomer, candidateCustomers, lastScreeningResults, lastDueTask,
-    pendingConfirmation, pausedReason, currentIntent, conversationContext,
-    currentFlowStatus, currentStageId, flowStartedAt, flowCompletedAt,
-    isThinking, thinkingText,
-    processSteps, sidebarMode, contextSuggestions,
-    sendMessage, reset, setActiveStage, setLeftPanel,
-    // 三态布局
-    layoutMode, activeTool, selectedEnterprise, selectedDueTemplate, leftPanelData,
-    startFromWorkbenchInput, runIntentRecognition,
-    showScreeningResults: () => { layoutMode.value = 'workspace'; activeTool.value = 'screening' },
-    selectEnterprise: (e) => { selectedEnterprise.value = e },
-    runEnterpriseExploration,
-    startMonitor, startDueDiligence, confirmDueTemplate,
-    confirmTaxAndContinue: confirmTaxSend,
-    confirmReportAndContinue: () => {},
-    markTaxAuthorizedAndContinue: mockTaxAuthorized,
-    selectCustomerAndStartDueDiligence: (cid) => {
-      const c = candidateCustomers.find(x => x.id === cid) || candidateCustomers[0]
-      if (c) selectEnterpriseAndExplore(c)
-    },
-    execAutoDueDiligence: () => runBusinessVerification(),
-    runTaxCollectionStep, runMaterialCollectionStep, runRiskDiagnosisStep,
-    generateDeliverables, openReportEditor,
-    handleSuggestionClick,
-    // Mock data
-    mockEnterprises: shenzhenSoftwareEnterprises,
-    dueDiligenceTemplates,
-    mockRiskDiagnosis,
-    mockDeliverables,
-    // 新增：统一 artifact 更新入口
-    updateWorkbenchArtifact,
+    dialogOpen, dialogInput, messages, waitingForInput,
+    currentFlowStatus, currentStageId, activeStageId, flowStages,
+    artifactData, currentArtifactType,
+    selectedCustomer, candidateCustomers, lastScreeningResults,
+    lastDueTask, pendingConfirmation, pausedReason,
+    conversationContext, flowStartedAt, flowCompletedAt,
+    currentIntent, isThinking, thinkingText,
+    layoutMode, activeTool, selectedEnterprise, selectedDueTemplate,
+    leftPanelData, contextSuggestions,
+    setLeftPanel, setActiveStage, updateWorkbenchArtifact,
+    reset, sendMessage, runIntentRecognition, handleSuggestionClick,
+    handleWaitingForInput, onQuickAction,
+    selectEnterpriseAndExplore, startMonitor, startDueDiligence,
+    confirmDueTemplate, confirmTaxSend, mockTaxAuthorized,
+    mockMaterialUpload, enterEvidenceMerge, enterRiskDiagnosis,
+    enterDeliverables, startReportEditor,
   }
 })
+

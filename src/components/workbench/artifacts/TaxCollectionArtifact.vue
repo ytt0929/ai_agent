@@ -32,14 +32,8 @@
       <code class="artifact-tax__auth-link-url">{{ authUrl }}</code>
       <div class="artifact-tax__auth-link-actions">
         <el-button size="small" type="primary" text @click="copyAuthLink">复制链接</el-button>
-        <el-button size="small" text>下载二维码</el-button>
+        <el-button size="small" text @click="$emit('download-qr')">下载二维码</el-button>
       </div>
-    </div>
-    <div class="artifact-tax__qr-placeholder">
-      <div class="artifact-tax__qr-placeholder__icon">
-        <el-icon :size="20"><Document /></el-icon>
-      </div>
-      <span class="artifact-tax__qr-placeholder__text">企业扫码授权</span>
     </div>
 
     <!-- 采集进度 -->
@@ -67,9 +61,33 @@
       </el-col>
     </el-row>
 
-    <!-- 底部提示 -->
-    <div class="artifact-tax__footer-hint">
-      <span>税票采集完成后将进入资料补充节点</span>
+    <!-- 采集日志 -->
+    <div v-if="logs?.length" class="artifact-tax__logs">
+      <div class="artifact-tax__section-title">采集日志</div>
+      <div class="artifact-log-list">
+        <div v-for="(log, i) in logs" :key="i" class="artifact-log-item">
+          <time>{{ log.time }}</time>
+          <span class="artifact-log-desc">{{ log.desc }}</span>
+          <span class="artifact-log-status" :class="`artifact-log-status--${log.status}`">{{ statusLabel(log.status) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 动作区：等待确认发送 -->
+    <div v-if="linkStatus === '待发送'" class="artifact-tax__actions">
+      <el-button type="primary" @click="$emit('confirm-tax-send')">确认发送采集链接</el-button>
+    </div>
+
+    <!-- 动作区：已发送等待授权 -->
+    <div v-if="linkStatus === '已发送' && authStatus !== '已授权'" class="artifact-tax__actions">
+      <el-button type="primary" @click="$emit('tax-authorized')">模拟企业已授权</el-button>
+      <el-button plain @click="$emit('send-reminder')">发送提醒</el-button>
+      <el-button text @click="$emit('switch-to-upload')">改为上传材料</el-button>
+    </div>
+
+    <!-- 动作区：已完成 -->
+    <div v-if="currentStatus === '已完成'" class="artifact-tax__actions">
+      <el-button type="primary" @click="$emit('enter-materials')">进入资料补充</el-button>
     </div>
   </div>
 </template>
@@ -79,6 +97,7 @@ import { computed } from 'vue'
 import DueFlowProgress from './DueFlowProgress.vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
+defineEmits(['confirm-tax-send', 'tax-authorized', 'enter-materials', 'send-reminder', 'switch-to-upload', 'download-qr'])
 
 // 流程条数据
 const flowSteps = computed(() => props.data.dueFlow?.steps || [])
@@ -95,15 +114,27 @@ const authUrl = computed(() => props.data.authUrl || '')
 // 节点标题
 const nodeTitle = computed(() => currentStatus.value === '已完成' ? '税票采集结果' : '税票RPA等待授权')
 
-const inputCount = computed(() => props.data.input?.count || 0)
-const inputTotal = computed(() => props.data.input?.total || 0)
+// 税票数据 — 用 data.input / data.output / data.filing 对齐 TaxCollectionArtifact 读取
+const inputCount = computed(() => props.data.input?.count ?? 0)
+const inputTotal = computed(() => props.data.input?.total ?? 0)
 const inputPercent = computed(() => inputTotal.value ? Math.round(inputCount.value / inputTotal.value * 100) : 0)
-const outputCount = computed(() => props.data.output?.count || 0)
-const outputTotal = computed(() => props.data.output?.total || 0)
+const outputCount = computed(() => props.data.output?.count ?? 0)
+const outputTotal = computed(() => props.data.output?.total ?? 0)
 const outputPercent = computed(() => outputTotal.value ? Math.round(outputCount.value / outputTotal.value * 100) : 0)
 const filingStatus = computed(() => props.data.filing?.status || '—')
 
-function copyAuthLink() {}
+// 采集日志
+const logs = computed(() => props.data.logs || [])
+
+function copyAuthLink() {
+  if (authUrl.value) {
+    navigator.clipboard?.writeText(authUrl.value)
+  }
+}
+
+function statusLabel(s) {
+  return { done: '✓ 完成', waiting: '等待中', running: '进行中' }[s] || s
+}
 </script>
 
 <style scoped>
@@ -124,11 +155,6 @@ function copyAuthLink() {}
 .artifact-tax__auth-link-url { font-size: 12px; font-family: monospace; color: var(--color-primary); background: var(--surface-card); padding: 4px 8px; border-radius: 4px; word-break: break-all; }
 .artifact-tax__auth-link-actions { display: flex; gap: 4px; }
 
-/* 二维码占位 */
-.artifact-tax__qr-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 24px; border: 1px dashed var(--border-light); border-radius: var(--radius-md); background: var(--bg-page); }
-.artifact-tax__qr-placeholder__icon { color: var(--text-tertiary); }
-.artifact-tax__qr-placeholder__text { font-size: 12px; color: var(--text-tertiary); }
-
 /* 区块标题 */
 .artifact-tax__section-title { font-size: 13px; font-weight: 600; color: var(--text-primary); padding: 4px 0; border-bottom: 1px solid var(--border-color-divider); }
 
@@ -140,6 +166,8 @@ function copyAuthLink() {}
 .artifact-metric-label { font-size: 12px; color: var(--text-secondary); }
 .artifact-metric-value { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px; }
 
+/* 采集日志 */
+.artifact-tax__logs { margin-top: 4px; }
 .artifact-log-list { display: grid; gap: 4px; max-height: 180px; overflow-y: auto; }
 .artifact-log-item { display: grid; grid-template-columns: 48px 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; font-size: 12px; }
 .artifact-log-item time { color: var(--text-tertiary); font-weight: 600; }
@@ -149,6 +177,9 @@ function copyAuthLink() {}
 .artifact-log-status--waiting { color: var(--color-warning); }
 .artifact-log-status--running { color: var(--color-primary); }
 
-/* 底部提示 */
-.artifact-tax__footer-hint { text-align: center; padding: 8px 0; font-size: 12px; color: var(--text-tertiary); border-top: 1px dashed var(--border-color-divider); }
+/* 动作区 */
+.artifact-tax__actions {
+  display: flex; gap: 8px; padding: 10px 0;
+  border-top: 1px solid var(--border-color-divider);
+}
 </style>

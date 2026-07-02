@@ -25,12 +25,20 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 动作区 -->
+    <div class="artifact-deliverables__actions">
+      <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
+      <el-button plain @click="$emit('export-report')">导出报告</el-button>
+      <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
+defineEmits(['edit-report', 'export-report', 'start-monitor'])
 const items = computed(() => props.data.items || [])
 </script>
 
@@ -40,4 +48,8 @@ const items = computed(() => props.data.items || [])
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
 .artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .artifact-dl-name { font-weight: 600; }
+.artifact-deliverables__actions {
+  display: flex; gap: 8px; padding: 10px 0;
+  border-top: 1px solid var(--border-color-divider);
+}
 </style>

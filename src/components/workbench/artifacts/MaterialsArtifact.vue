@@ -52,6 +52,17 @@
         <template #default>{{ m.note || '待补充' }}</template>
       </el-alert>
     </el-card>
+
+    <!-- 动作区：待补充 -->
+    <div v-if="data?.status === '待补充'" class="artifact-materials__actions">
+      <el-button plain @click="$emit('send-material-list')">发送资料清单</el-button>
+      <el-button type="primary" @click="$emit('mock-material-upload')">模拟企业上传资料</el-button>
+    </div>
+
+    <!-- 动作区：已补充 -->
+    <div v-if="data?.status === '已补充'" class="artifact-materials__actions">
+      <el-button type="primary" @click="$emit('enter-evidence')">进入证据整合</el-button>
+    </div>
   </div>
 </template>
 
@@ -59,6 +70,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
+defineEmits(['send-material-list', 'mock-material-upload', 'enter-evidence'])
 const completeness = computed(() => props.data.completeness || 0)
 const collected = computed(() => (props.data.materials || []).filter(m => m.status === '已收集').length)
 const pending = computed(() => (props.data.materials || []).filter(m => m.status === '待补充').length)
@@ -78,4 +90,8 @@ function matTag(status) { return { '已收集': 'success', '缺失': 'danger', '
 .artifact-metric-card { text-align: center; border: none; }
 .artifact-metric-label { font-size: 12px; color: var(--text-secondary); }
 .artifact-metric-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+.artifact-materials__actions {
+  display: flex; gap: 8px; padding: 10px 0;
+  border-top: 1px solid var(--border-color-divider);
+}
 </style>

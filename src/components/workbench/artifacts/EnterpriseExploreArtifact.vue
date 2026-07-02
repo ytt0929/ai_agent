@@ -37,6 +37,12 @@
       <span class="artifact-evidence-summary__label">数据来源：</span>
       <span>{{ evidenceSummary }}</span>
     </div>
+
+    <!-- 并列动作区 -->
+    <div class="artifact-explore__actions">
+      <el-button @click="$emit('start-monitor')">加入监控</el-button>
+      <el-button type="primary" @click="$emit('start-due')">新建尽调</el-button>
+    </div>
   </div>
 </template>
 
@@ -46,6 +52,7 @@ import { OfficeBuilding } from '@element-plus/icons-vue'
 import RiskIssueList from './RiskIssueList.vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
+defineEmits(['start-monitor', 'start-due'])
 
 const enterprise = computed(() => props.data.enterprise || {})
 const basicInfo = computed(() => props.data.basicInfo || {})
@@ -72,5 +79,8 @@ const evidenceSummary = computed(() => props.data.evidenceSummary || '')
 .artifact-evidence-summary__label {
   font-weight: 500;
   color: var(--text-secondary);
+}
+.artifact-explore__actions {
+  display: flex; gap: 8px; padding: 8px 0; border-top: 1px solid var(--border-color-divider);
 }
 </style>

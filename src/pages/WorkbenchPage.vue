@@ -153,6 +153,22 @@
               :data="assistant.leftPanelData"
               @explore="onExplore"
               @select-template="onTpl"
+              @start-monitor="assistant.startMonitor()"
+              @start-due="assistant.startDueDiligence()"
+              @confirm-tax-send="assistant.confirmTaxSend()"
+              @tax-authorized="assistant.mockTaxAuthorized()"
+              @enter-materials="assistant.runMaterialsStep()"
+              @mock-material-upload="assistant.mockMaterialUpload()"
+              @enter-evidence="assistant.enterEvidenceMerge()"
+              @enter-risk="assistant.enterRiskDiagnosis()"
+              @enter-deliverables="assistant.enterDeliverables()"
+              @edit-report="assistant.startReportEditor()"
+              @export-report="assistant.startReportEditor()"
+              @view-diagnosis-report="assistant.enterRiskDiagnosis()"
+              @sync-report="assistant.enterDeliverables()"
+              @send-material-list="assistant.mockMaterialUpload()"
+              @send-reminder="assistant.mockTaxAuthorized()"
+              @switch-to-upload="assistant.runMaterialsStep()"
             />
           </main>
           <!-- 右侧：AI 对话面板 -->
@@ -194,7 +210,7 @@
               />
               <el-button type="primary" size="default" class="ai-assistant-panel__send" @click="sendMsg">发送</el-button>
             </div>
-            <div class="ai-assistant-panel__quick-actions">
+            <div class="ai-assistant-panel__quick-actions" v-if="false">
               <button class="wb-quick-sm" v-for="qa in quickActions" :key="qa.label" @click="go(qa.route)">
                 <el-icon><component :is="iconMap[qa.icon]" /></el-icon><span>{{ qa.label }}</span>
               </button>
@@ -261,10 +277,12 @@ const workspaceTitle = computed(() => {
     monitor: '企业监控',
     dueDiligence: '智能尽调',
     business: '工商核验',
+    judicial: '司法查询',
     tax: '税票采集',
-    materials: '资料收集',
+    materials: '资料补充',
+    evidence: '证据整合',
     riskDiagnosis: '风险诊断',
-    deliverables: '产物生成',
+    deliverables: '产物确认',
     reportEditor: '报告编辑',
   }
   return m[assistant.activeTool] || '工作台'
