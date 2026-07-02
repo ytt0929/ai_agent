@@ -163,11 +163,11 @@
               @enter-risk="assistant.enterRiskDiagnosis()"
               @enter-deliverables="assistant.enterDeliverables()"
               @edit-report="assistant.startReportEditor()"
-              @export-report="assistant.startReportEditor()"
-              @view-diagnosis-report="assistant.enterRiskDiagnosis()"
+              @export-report="assistant.exportFinalReport()"
+              @view-diagnosis-report="assistant.viewDiagnosisReport()"
               @sync-report="assistant.enterDeliverables()"
-              @send-material-list="assistant.mockMaterialUpload()"
-              @send-reminder="assistant.mockTaxAuthorized()"
+              @send-material-list="assistant.sendMaterialList()"
+              @send-reminder="assistant.sendTaxAuthReminder()"
               @switch-to-upload="assistant.runMaterialsStep()"
             />
           </main>
@@ -301,9 +301,9 @@ const dialogPlaceholder = computed(() => {
   if (s === 'waiting_action') return '选择加入监控或新建尽调...'
   if (s === 'waiting_template') return '选择尽调模板...'
   if (s === 'waiting_tax_confirmation') return '确认发送采集链接...'
-  if (s === 'waiting_tax_auth') return '企业完成授权后回复"继续"...'
+  if (s === 'waiting_tax_authorization') return '企业完成授权后回复"继续"...'
   if (s === 'waiting_report_action') return '修改报告 / 导出 / 加入监控...'
-  if (s === 'editing_report') return '例如：帮我改写风险结论 / 补充税票异常说明...'
+  if (s === 'editing') return '例如：帮我改写风险结论 / 补充税票异常说明...'
   return '例如：筛选深圳的软件企业 / 发起尽调 / 进度如何'
 })
 

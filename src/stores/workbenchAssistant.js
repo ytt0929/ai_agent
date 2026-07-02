@@ -352,6 +352,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     currentFlowStatus.value = 'waiting_selection'
     currentStageId.value = 'screen'
     waitingForInput.value = true
+    fillSuggestions('waiting_selection')
 
     await pushStreamingMessage(`已完成筛客，识别到 ${enterprises.length} 家候选企业。请在左侧选择一家企业继续探查，或继续调整筛选条件。`)
   }
@@ -810,7 +811,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       status: '待补充',
       materials,
       missing,
-      completeness: isTsWq ? 50 : 60,
+      completeness: isTsWq ? 67 : 60,
       steps: [
         { title: '列出资料清单', status: 'done' },
       ],
@@ -1148,13 +1149,15 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     await pushStreamingMessage('报告编辑器已打开。你可以人工编辑和调整报告内容，AI 可辅助改写和校对。')
     currentFlowStatus.value = 'editing'
+    waitingForInput.value = true
+    fillSuggestions('editing')
   }
 
   /** 根据流程状态填充右侧建议按钮 */
   function fillSuggestions(flowStatus) {
     contextSuggestions.length = 0
     const map = {
-      waiting_selection: [{ label: '探查 唐山物桥商贸有限公司', value: '唐山物桥' }],
+      waiting_selection: [{ label: '探查 唐山物桥商贸有限公司', value: '唐山物桥商贸有限公司' }],
       waiting_action: [
         { label: '新建尽调', value: '新建尽调' },
         { label: '加入监控', value: '加入监控' },
@@ -1182,7 +1185,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   }
 
   // ===================== 消息路由 =====================
-  async function sendMessage() {
+  async function sendMessage(text = '') {
+    if (text) dialogInput.value = text
     const inputText = dialogInput.value.trim()
     if (!inputText) return
     dialogInput.value = ''
@@ -1259,8 +1263,39 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   // ===================== 导出 =====================
   /** 直接传文本触发意图识别（供页面 handleNormalSend 调用） */
   async function runIntentRecognition(text) {
+    dialogOpen.value = true
     dialogInput.value = text
     await sendMessage()
+  }
+
+  /** 导出最终报告 */
+  async function exportFinalReport() {
+    await pushMessage('user', '导出最终报告')
+    await pushStreamingMessage('已生成最终报告导出任务，demo 阶段可在左侧产物确认区查看报告和资料包。')
+  }
+
+  /** 查看诊断报告 */
+  async function viewDiagnosisReport() {
+    await pushMessage('user', '查看诊断报告')
+    await pushStreamingMessage('左侧已展示当前企业诊断报告摘要，可继续进入产物确认或要求我补充风险说明。')
+  }
+
+  /** 发送资料清单 */
+  async function sendMaterialList() {
+    await pushMessage('user', '发送资料清单')
+    await pushStreamingMessage('资料清单已发送给企业。demo 阶段可以点击「模拟企业上传资料」继续。')
+    currentFlowStatus.value = 'waiting_material_upload'
+    waitingForInput.value = true
+    fillSuggestions('waiting_material_upload')
+  }
+
+  /** 发送税票授权提醒 */
+  async function sendTaxAuthReminder() {
+    await pushMessage('user', '发送授权提醒')
+    await pushStreamingMessage('已向企业发送税票授权提醒。demo 阶段可以点击「模拟企业已授权」继续。')
+    currentFlowStatus.value = 'waiting_tax_authorization'
+    waitingForInput.value = true
+    fillSuggestions('waiting_tax_authorization')
   }
 
   return {
@@ -1280,6 +1315,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     confirmDueTemplate, confirmTaxSend, mockTaxAuthorized,
     mockMaterialUpload, enterEvidenceMerge, enterRiskDiagnosis,
     enterDeliverables, startReportEditor,
+    runMaterialsStep, exportFinalReport, viewDiagnosisReport,
+    sendMaterialList, sendTaxAuthReminder,
   }
 })
 

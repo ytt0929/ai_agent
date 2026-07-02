@@ -73,7 +73,9 @@ const props = defineProps({ data: { type: Object, default: () => ({}) } })
 defineEmits(['send-material-list', 'mock-material-upload', 'enter-evidence'])
 const completeness = computed(() => props.data.completeness || 0)
 const collected = computed(() => (props.data.materials || []).filter(m => m.status === '已收集').length)
-const pending = computed(() => (props.data.materials || []).filter(m => m.status === '待补充').length)
+const pending = computed(() =>
+  (props.data.materials || []).filter(m => ['待补充', '缺失', '待上传'].includes(m.status)).length
+)
 const pendingOcr = computed(() => (props.data.materials || []).filter(m => m.status === '待识别').length)
 const materials = computed(() => props.data.materials || [])
 const missing = computed(() => props.data.missing || [])
