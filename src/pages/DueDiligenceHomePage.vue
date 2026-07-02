@@ -102,6 +102,13 @@
           @click="quickFilterSource('本页创建')"
           style="cursor: pointer"
         >本页创建</el-tag>
+        <el-tag
+          :type="activeQuickTag === 'delivery-generated' ? 'success' : 'info'"
+          effect="plain"
+          size="small"
+          @click="quickFilterDelivery('generated')"
+          style="cursor: pointer"
+        >交付包已生成</el-tag>
       </div>
     </div>
 
@@ -154,9 +161,28 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="80" align="center" fixed="right">
+        <el-table-column label="交付包" width="100" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="primary" link @click="continueTask(row)">{{ getTaskActionLabel(row) }}</el-button>
+            <el-tag size="small" :type="getDeliveryStatus(row).type" effect="plain">{{ getDeliveryStatus(row).label }}</el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="160" align="center" fixed="right">
+          <template #default="{ row }">
+            <template v-if="row.deliveryPackageDownloaded">
+              <el-button size="small" type="primary" link @click="handleDownloadPackage(row)">再次下载</el-button>
+              <el-button size="small" link @click="continueTask(row)">查看详情</el-button>
+            </template>
+            <template v-else-if="row.deliveryPackageStatus === '已生成' || row.currentStep === 'delivery-package'">
+              <el-button size="small" type="primary" link @click="handleDownloadPackage(row)">下载交付包</el-button>
+              <el-button size="small" link @click="continueTask(row)">查看详情</el-button>
+            </template>
+            <template v-else-if="row.currentStep === 'artifacts'">
+              <el-button size="small" type="primary" link @click="continueTask(row)">确认报告</el-button>
+            </template>
+            <template v-else>
+              <el-button size="small" type="primary" link @click="continueTask(row)">继续处理</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -233,6 +259,7 @@ const statusFilter = ref('')
 const sourceFilter = ref('')
 const templateFilter = ref('')
 const activeQuickTag = ref('')
+const deliveryQuickFilter = ref('')
 
 function quickFilter(status) {
   activeQuickTag.value = status
@@ -245,6 +272,15 @@ function quickFilterSource(source) {
   activeQuickTag.value = 'source:' + source
   sourceFilter.value = source
   statusFilter.value = ''
+  templateFilter.value = ''
+  deliveryQuickFilter.value = ''
+}
+
+function quickFilterDelivery(mode) {
+  activeQuickTag.value = 'delivery-' + mode
+  deliveryQuickFilter.value = mode
+  statusFilter.value = ''
+  sourceFilter.value = ''
   templateFilter.value = ''
 }
 
@@ -264,6 +300,10 @@ const filteredTasks = computed(() => {
   }
   if (templateFilter.value) {
     list = list.filter(t => t.templateName === templateFilter.value)
+  }
+  // 交付包快捷筛选
+  if (deliveryQuickFilter.value === 'generated') {
+    list = list.filter(t => t.deliveryPackageStatus === '已生成' || t.currentStep === 'delivery-package')
   }
   return list
 })
@@ -317,6 +357,22 @@ function createNewTask() {
 function continueTask(row) {
   store.selectTask(row.id)
   router.push(`/due-diligence/${row.id}`)
+}
+
+function handleDownloadPackage(row) {
+  const result = store.downloadDeliveryPackageFromHome(row.id)
+  if (result.ok) {
+    ElMessage.success(`已模拟下载 ${result.packageName}`)
+  } else {
+    ElMessage.warning('交付包尚未生成，请进入任务详情处理')
+  }
+}
+
+function getDeliveryStatus(row) {
+  if (row.deliveryPackageDownloaded) return { label: '已下载', type: 'success' }
+  if (row.deliveryPackageStatus === '已生成' || row.currentStep === 'delivery-package') return { label: '已生成', type: 'success' }
+  if (row.currentStep === 'artifacts') return { label: '待生成', type: 'warning' }
+  return { label: '未生成', type: 'info' }
 }
 
 function getStatusTagType(status) {

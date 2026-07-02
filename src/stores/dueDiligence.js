@@ -342,6 +342,23 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     task.deliveryPackageDownloadedAt = new Date().toLocaleString('zh-CN')
   }
 
+  // 首页下载交付包（不跳转详情页）
+  function downloadDeliveryPackageFromHome(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return { ok: false, reason: 'not_found' }
+    if (task.currentStep !== 'delivery-package' && task.deliveryPackageStatus !== '已生成') {
+      return { ok: false, reason: 'not_ready' }
+    }
+    task.deliveryPackageDownloaded = true
+    task.deliveryPackageDownloadedAt = new Date().toLocaleString('zh-CN')
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+    return {
+      ok: true,
+      task,
+      packageName: task.deliveryPackageName || `${task.name}_尽调交付包_20260702.zip`,
+    }
+  }
+
   // 标记报告已导出
   function markReportExported(taskId) {
     const task = tasks.value.find(t => t.id === taskId)
@@ -438,6 +455,7 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     enterArtifacts,
     enterDeliveryPackage,
     markDeliveryPackageDownloaded,
+    downloadDeliveryPackageFromHome,
     markReportExported,
     taskChatMessages,
     getTaskChatMessages,
