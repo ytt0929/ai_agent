@@ -115,17 +115,17 @@ function copyAuthLink() {}
 
 /* 状态行 */
 .artifact-tax__status-row { display: flex; gap: 12px; }
-.artifact-tax__status-cell { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-card, #f8fafc); border-radius: 6px; font-size: 13px; }
+.artifact-tax__status-cell { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius-6, 6px); font-size: 13px; }
 .artifact-tax__status-label { color: var(--text-secondary); }
 
 /* 授权链接行 */
-.artifact-tax__auth-link-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--bg-page); border-radius: 6px; }
+.artifact-tax__auth-link-row { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--bg-page); border-radius: var(--radius-6, 6px); }
 .artifact-tax__auth-link-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
 .artifact-tax__auth-link-url { font-size: 12px; font-family: monospace; color: var(--color-primary); background: var(--surface-card); padding: 4px 8px; border-radius: 4px; word-break: break-all; }
 .artifact-tax__auth-link-actions { display: flex; gap: 4px; }
 
 /* 二维码占位 */
-.artifact-tax__qr-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 24px; border: 1px dashed var(--border-light); border-radius: 8px; background: var(--bg-page); }
+.artifact-tax__qr-placeholder { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 24px; border: 1px dashed var(--border-light); border-radius: var(--radius-md); background: var(--bg-page); }
 .artifact-tax__qr-placeholder__icon { color: var(--text-tertiary); }
 .artifact-tax__qr-placeholder__text { font-size: 12px; color: var(--text-tertiary); }
 

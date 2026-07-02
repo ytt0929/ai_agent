@@ -132,7 +132,7 @@ function showEvidence(issue) {
 .risk-issue-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 .risk-issue-list__header {
   padding: 2px 0;
@@ -179,7 +179,7 @@ function showEvidence(issue) {
   align-items: center;
   padding: 8px 10px;
   background: var(--bg-page);
-  border-radius: 6px;
+  border-radius: var(--radius-6, 6px);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -220,8 +220,8 @@ function showEvidence(issue) {
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  background: #f0fdf4;
-  border-radius: 6px;
+  background: var(--color-success-bg);
+  border-radius: var(--radius-6, 6px);
   font-size: 12px;
 }
 .risk-issue-list__highlight-name {
@@ -245,7 +245,7 @@ function showEvidence(issue) {
   align-items: center;
   padding: 6px 10px;
   background: var(--bg-page);
-  border-radius: 6px;
+  border-radius: var(--radius-6, 6px);
   font-size: 12px;
 }
 .risk-issue-list__indicator-label {

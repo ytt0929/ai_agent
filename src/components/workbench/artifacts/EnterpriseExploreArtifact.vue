@@ -60,12 +60,12 @@ const evidenceSummary = computed(() => props.data.evidenceSummary || '')
 .artifact-explore { display: flex; flex-direction: column; gap: 12px; }
 .artifact-card :deep(.el-card__header) { padding: 12px 16px; }
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
-.artifact-card__title { font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+.artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
 .artifact-alert { margin: 0; }
 .artifact-evidence-summary {
   padding: 8px 12px;
   background: var(--bg-page);
-  border-radius: 6px;
+  border-radius: var(--radius-6, 6px);
   font-size: 12px;
   color: var(--text-tertiary);
 }
