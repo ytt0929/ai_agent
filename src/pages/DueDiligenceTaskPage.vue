@@ -100,12 +100,16 @@
             @export-report="handleExportReport"
             @start-monitor="handleStartMonitor"
             @sync-to-report="handleSyncToReport"
+            @generate-delivery-package="handleGenerateDeliveryPackage"
           />
         </el-card>
 
         <!-- 报告编辑 Lite（产物确认阶段触发） -->
         <el-card v-else-if="reportEditorMode" shadow="never" class="workspace-card">
-          <ReportEditorArtifact :data="reportEditorData" />
+          <ReportEditorArtifact
+            :data="reportEditorData"
+            @confirm-and-generate="handleGenerateDeliveryPackage"
+          />
           <div class="report-lite-nav-bar">
             <el-button size="small" text type="primary" @click="exitReportEditor">← 返回产物确认</el-button>
             <el-button size="small" plain @click="handleEnterSmartReport">进入智能报告</el-button>
@@ -331,8 +335,13 @@ const deliveryPackageArtifactData = computed(() => ({
 }))
 
 function handleGenerateDeliveryPackage() {
-  pushUser('确认产物，生成交付包')
-  pushAi('报告和待确认项已确认。我已整理完整尽调交付包，包含尽调报告、阶段报告、证据链文件和原始资料包。')
+  // 防御判断：store.enterDeliveryPackage 必须存在
+  if (typeof store.enterDeliveryPackage !== 'function') {
+    ElMessage.error('交付包流程方法未加载，请刷新页面后重试')
+    return
+  }
+  pushUser('确认产物并生成交付包')
+  pushAi('报告草稿、阶段报告和证据链已确认。我已整理完整尽调交付包，包含尽调报告、阶段报告、证据链文件和原始资料包。')
   store.enterDeliveryPackage(taskId)
   selectedStageKey.value = 'delivery-package'
 }

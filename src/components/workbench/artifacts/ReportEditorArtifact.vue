@@ -125,7 +125,7 @@
     <div class="report-lite__actions">
       <el-button size="default" plain>保存草稿</el-button>
       <el-button size="default" type="info" plain>导出报告</el-button>
-      <el-button size="default" type="primary">提交确认</el-button>
+      <el-button size="default" type="primary" @click="$emit('confirm-and-generate')">确认产物并生成交付包</el-button>
     </div>
   </div>
 </template>
@@ -135,6 +135,7 @@ import { ref, computed } from 'vue'
 import { WarningFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
+const emit = defineEmits(['confirm-and-generate'])
 
 const sections = computed(() => props.data.sections || [])
 

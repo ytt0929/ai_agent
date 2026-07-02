@@ -67,7 +67,7 @@
 
       <!-- 动作区 -->
       <div class="artifact-deliverables__actions">
-        <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
+        <el-button type="primary" @click="$emit('generate-delivery-package')">确认产物并生成交付包</el-button>
         <el-button plain type="success" @click="$emit('sync-to-report')">同步到智能报告</el-button>
         <el-button plain @click="$emit('export-report')">导出报告</el-button>
         <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
@@ -218,7 +218,7 @@ import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
-const emit = defineEmits(['edit-report', 'export-report', 'start-monitor'])
+const emit = defineEmits(['edit-report', 'export-report', 'start-monitor', 'sync-to-report', 'generate-delivery-package'])
 
 const items = computed(() => props.data.items || [])
 const exportStatus = computed(() => props.data.exportStatus || '')
