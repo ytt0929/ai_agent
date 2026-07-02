@@ -49,7 +49,6 @@
       <div class="due-task__process-actions">
         <span class="due-task__process-text">当前进度：{{ task.progress }}%</span>
         <el-button size="small" plain @click="goBack">稍后继续</el-button>
-        <el-button size="small" text @click="go('/workbench')">回到工作台</el-button>
       </div>
     </div>
 
@@ -611,7 +610,6 @@ const assistantChips = computed(() => {
   ]
   return [
     { label: '稍后继续', handler: handleLaterContinue },
-    { label: '回到工作台', handler: () => go('/workbench') },
   ]
 })
 
