@@ -1,13 +1,5 @@
 <template>
   <div class="artifact-tax">
-    <!-- 尽调流程进度条 -->
-    <DueFlowProgress
-      :enterprise="enterprise"
-      :status-text="flowStatusText"
-      :progress="flowProgress"
-      :steps="flowSteps"
-    />
-
     <!-- 当前节点标题 -->
     <div class="artifact-tax__node-title">
       <span class="artifact-tax__node-label">{{ nodeTitle }}</span>
@@ -94,15 +86,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import DueFlowProgress from './DueFlowProgress.vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 defineEmits(['confirm-tax-send', 'tax-authorized', 'enter-materials', 'send-reminder', 'switch-to-upload', 'download-qr'])
-
-// 流程条数据
-const flowSteps = computed(() => props.data.dueFlow?.steps || [])
-const flowStatusText = computed(() => props.data.dueFlow?.statusText || '')
-const flowProgress = computed(() => props.data.dueFlow?.progress || 0)
 
 // 当前状态
 const currentStatus = computed(() => props.data.status || '—')

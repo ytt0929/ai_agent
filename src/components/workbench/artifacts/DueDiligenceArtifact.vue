@@ -20,18 +20,8 @@
       </el-card>
     </template>
 
-    <!-- 任务已创建阶段：展示流程条 -->
+    <!-- 任务已创建阶段 -->
     <template v-else-if="data.step === 'task-created'">
-      <!-- 尽调流程条 -->
-      <DueFlowProgress
-        v-if="flowSteps?.length"
-        :enterprise="enterprise"
-        :status-text="flowStatusText"
-        :progress="flowProgress"
-        :steps="flowSteps"
-      />
-
-      <!-- 任务创建提示 -->
       <el-alert :title="`尽调任务已创建 — 模板: ${selectedTemplate?.name || ''}`" type="success" :closable="false" show-icon />
     </template>
 
@@ -51,7 +41,6 @@
 
 <script setup>
 import { computed } from 'vue'
-import DueFlowProgress from './DueFlowProgress.vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 defineEmits(['select-template'])
@@ -60,13 +49,6 @@ const templates = computed(() => props.data.templates || [])
 const selectedId = computed(() => props.data.selectedTemplateId)
 const selectedTemplate = computed(() => props.data.selectedTemplate || {})
 const stages = computed(() => props.data.stages || [])
-
-// 流程条数据（从 data.dueFlow 读取）
-const flowSteps = computed(() => props.data.dueFlow?.steps || [])
-const flowStatusText = computed(() => props.data.dueFlow?.statusText || '等待开始')
-const flowProgress = computed(() => props.data.dueFlow?.progress || 0)
-
-function stageIcon(s) { return { done: '✓', active: '⟳', pending: '○' }[s] || '○' }
 </script>
 
 <style scoped>

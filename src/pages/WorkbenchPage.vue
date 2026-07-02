@@ -95,8 +95,8 @@
           <div class="wb-composer wb-composer--center">
             <div v-if="assistant.contextSuggestions.length" class="wb-sug">
               <el-button
-                v-for="(s, i) in assistant.contextSuggestions"
-                :key="i"
+                v-for="s in assistant.contextSuggestions"
+                :key="s.value"
                 size="small"
                 round
                 plain
@@ -140,13 +140,22 @@
                 <span v-if="statusText">· {{ statusText }}</span>
               </div>
             </div>
-            <!-- 轻量阶段条 -->
+            <!-- 轻量阶段条（非尽调阶段显示） -->
             <WorkbenchStageStrip
-              v-if="assistant.flowStages.length"
+              v-if="!assistant.isDueWorkspace && assistant.flowStages.length"
               class="wb-workspace-stages"
               :stages="assistant.flowStages"
               :active-stage-id="assistant.activeStageId"
-              @select="assistant.setActiveStage"
+              :readonly="true"
+            />
+            <!-- 尽调阶段：统一头部 + 流程进度 -->
+            <DueTaskHeader v-if="assistant.isDueWorkspace" :data="assistant.dueTaskHeader" />
+            <DueFlowProgress
+              v-if="assistant.isDueWorkspace && currentDueFlow"
+              :enterprise="assistant.selectedEnterprise"
+              :status-text="currentDueFlow.statusText"
+              :progress="currentDueFlow.progress"
+              :steps="currentDueFlow.steps"
             />
             <WorkbenchBusinessPanel
               :tool="assistant.activeTool"
@@ -168,7 +177,7 @@
               @sync-report="assistant.enterDeliverables()"
               @send-material-list="assistant.sendMaterialList()"
               @send-reminder="assistant.sendTaxAuthReminder()"
-              @switch-to-upload="assistant.runMaterialsStep()"
+              @switch-to-upload="assistant.switchTaxToMaterialUpload()"
             />
           </main>
           <!-- 右侧：AI 对话面板 -->
@@ -189,8 +198,8 @@
             </div>
             <div class="ai-assistant-panel__quick" v-if="assistant.contextSuggestions.length">
               <el-button
-                v-for="(s, i) in assistant.contextSuggestions"
-                :key="i"
+                v-for="s in assistant.contextSuggestions"
+                :key="s.value"
                 size="small"
                 round
                 plain
@@ -230,6 +239,8 @@ import { useWorkbenchAssistantStore } from '../stores/workbenchAssistant.js'
 import WorkbenchStageStrip from '../components/workbench/WorkbenchStageStrip.vue'
 import WorkbenchConversation from '../components/workbench/WorkbenchConversation.vue'
 import WorkbenchBusinessPanel from '../components/workbench/WorkbenchBusinessPanel.vue'
+import DueTaskHeader from '../components/workbench/DueTaskHeader.vue'
+import DueFlowProgress from '../components/workbench/artifacts/DueFlowProgress.vue'
 
 const router = useRouter()
 const assistant = useWorkbenchAssistantStore()
@@ -293,6 +304,11 @@ const statusText = computed(() => {
   if (assistant.waitingForInput) return '等待输入'
   if (assistant.isThinking || assistant.flowStages.length) return '自动推进中'
   return ''
+})
+
+const currentDueFlow = computed(() => {
+  const stage = assistant.flowStages.find(s => s.id === assistant.currentArtifactType)
+  return stage?.artifactData?.dueFlow || null
 })
 
 const dialogPlaceholder = computed(() => {
@@ -544,7 +560,7 @@ function clearChat() { assistant.reset() }
 
 /* Lightweight stage strip inside left panel */
 .wb-workspace-stages {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 /* 右侧面板：复用 .ai-assistant-panel（已在 tokens.css 定义） */

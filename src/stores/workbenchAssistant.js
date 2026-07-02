@@ -74,6 +74,29 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   const leftPanelData = reactive({})
   const contextSuggestions = reactive([])
 
+  /** 当前是否在尽调工作区 */
+  const DUE_STAGE_KEYS = ['dueDiligence', 'business', 'judicial', 'tax', 'materials', 'evidence', 'riskDiagnosis', 'deliverables', 'reportEditor']
+  const isDueWorkspace = computed(() => DUE_STAGE_KEYS.includes(activeStageId.value))
+
+  /** 统一尽调头部数据 */
+  const dueTaskHeader = computed(() => {
+    const ent = selectedEnterprise.value
+    const tpl = selectedDueTemplate.value
+    const completeness = leftPanelData.completeness ?? (currentArtifactType.value === 'materials' ? 67 : 86)
+    const dueStage = flowStages.find(s => s.id === currentArtifactType.value)
+    const dueFlow = dueStage?.artifactData?.dueFlow
+    const statusText = dueFlow?.statusText || ''
+    return {
+      enterprise: ent,
+      template: tpl,
+      score: ent?.score || 72,
+      grade: ent?.grade || 'C+',
+      riskLevel: ent?.riskLevel || '中风险',
+      completeness,
+      statusText,
+    }
+  })
+
   /** 统一设置左侧面板数据源 */
   function setLeftPanel(tool, payload = {}) {
     activeTool.value = tool
@@ -93,7 +116,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     if (value === 'enter_risk') { await enterRiskDiagnosis(); return }
     if (value === 'enter_deliverables') { await enterDeliverables(); return }
     if (value === 'edit_report') { await startReportEditor(); return }
-    if (value === 'export_report') { await pushStreamingMessage('报告已导出为 PDF。'); return }
+    if (value === 'export_report') { await exportFinalReport(); return }
     if (value === 'start_monitor') { await startMonitor(); return }
 
     // 文本建议：塞入输入框走自然语言
@@ -559,18 +582,30 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       judicialRisk: '无重大诉讼',
       relatedCompanies: '3 家',
       conclusion: '主体状态正常，未发现重大工商异常',
+      conclusionNote: isTsWq ? '纳税人资质 A 级，主体存续正常' : '',
       legalPerson: isTsWq ? '马丽' : '—',
       registeredCapital: isTsWq ? '500万' : '—',
       establishedDate: isTsWq ? '2021-12-24' : '—',
       industry: isTsWq ? '建材批发' : '—',
       region: isTsWq ? '河北唐山' : '—',
       staffSize: '—',
+      taxLevel: 'A 级',
       judicialDetails: [],
       relatedCompaniesList: [
         { name: '唐山某建材公司', relation: '关联法人', status: '正常' },
         { name: '唐山某物流公司', relation: '关联股东', status: '正常' },
         { name: '唐山某贸易公司', relation: '同地址', status: '正常' },
       ],
+      checks: [
+        { ok: true, text: '工商登记信息核验通过' },
+        { ok: true, text: '主体状态正常，无经营异常记录' },
+        { ok: true, text: '未发现重大司法风险' },
+        { ok: true, text: '税务评级 A 级' },
+      ],
+      riskTips: isTsWq ? [
+        '成立时间较短（2021 年），经营历史需关注',
+        '购销两头在外模式，业务真实性需进一步核验',
+      ] : [],
       steps: [
         { title: '查询工商登记信息', status: 'done' },
         { title: '核验主体状态', status: 'done' },
@@ -610,7 +645,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       execution: 0,
       dishonest: 0,
       judgment: 2,
-      judgmentText: '普通记录',
+      judgmentText: '（普通记录）',
       penalty: 0,
       hearing: 1,
       conclusions: [
@@ -622,6 +657,13 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       records: [
         { type: '裁判文书', level: '低风险', summary: '买卖合同纠纷已结案' },
         { type: '开庭公告', level: '低风险', summary: '历史供应商争议' },
+      ],
+      queryItems: [
+        { name: '司法诉讼', result: '0 条重大诉讼', level: '无风险', desc: '未发现影响持续经营的重大诉讼' },
+        { name: '被执行信息', result: '0 条', level: '无风险', desc: '无被执行记录' },
+        { name: '失信记录', result: '0 条', level: '无风险', desc: '无失信被执行人记录' },
+        { name: '裁判文书', result: '2 条', level: '低风险', desc: '普通买卖合同纠纷' },
+        { name: '行政处罚', result: '0 条', level: '无风险', desc: '无行政处罚记录' },
       ],
       steps: [
         { title: '查询司法诉讼', status: 'done' },
@@ -1125,15 +1167,81 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     const isTsWq = ent?.id === 'ts-wq-sm'
 
     const reportArtifactData = {
-      title: '授信调查报告',
-      template: '标准授信模板',
+      title: ent?.name ? ent.name + ' 尽职调查报告' : '尽职调查报告',
+      template: '标准授信尽调',
+      completeness: 86,
+      pendingCount: 2,
       sections: [
-        { no: 1, title: '企业基本信息', status: '已完成' },
-        { no: 2, title: '工商与司法核验', status: '已完成' },
-        { no: 3, title: '经营分析', status: '已完成' },
-        { no: 4, title: '税务分析', status: '已完成' },
-        { no: 5, title: '风险诊断', status: '已完成' },
-        { no: 6, title: '授信建议', status: '待确认' },
+        {
+          id: 'overview',
+          no: 1,
+          title: '企业概况',
+          status: '已完成',
+          content: isTsWq
+            ? '唐山物桥商贸有限公司成立于2021年12月，注册资本500万元，法定代表人为马丽。企业主营建材批发，属于商贸流通行业，位于河北省唐山市。近12月开票收入2275.98万元，纳税信用A级，主体状态正常存续。'
+            : '企业基本情况概述。',
+          evidence: ['工商登记信息', '企业探查结果'],
+          materials: ['营业执照', '工商基础资料'],
+          pending: []
+        },
+        {
+          id: 'business',
+          no: 2,
+          title: '工商核验',
+          status: '已完成',
+          content: isTsWq
+            ? '经核验，企业主体状态为正常存续，税务评级A级，法定代表人马丽，注册资本500万元。关联企业3家，未发现重大工商异常。'
+            : '工商核验结果。',
+          evidence: ['主体状态核验', '关联企业查询'],
+          materials: ['工商登记信息'],
+          pending: []
+        },
+        {
+          id: 'tax',
+          no: 3,
+          title: '税票分析',
+          status: '待确认',
+          content: isTsWq
+            ? '进项发票采集128/150份，销项发票采集96/120份。增值税税负率0.8%，显著低于行业均值2.8%。开票收入2275.98万元，申报收入2175.46万元，差异4.4%。'
+            : '税票分析结果。',
+          evidence: ['进项发票 128/150', '销项发票 96/120', '纳税申报数据'],
+          materials: ['开票明细', '纳税申报表'],
+          pending: ['税负异常说明待补充']
+        },
+        {
+          id: 'risk',
+          no: 4,
+          title: '风险诊断',
+          status: '待确认',
+          content: isTsWq
+            ? '综合评分72分，等级C+，中风险。主要风险事项：税负率显著低于行业、营收增长异常、购销两头在外、短期偿债压力过大。建议有条件授信。'
+            : '风险诊断结果。',
+          evidence: ['风险事项证据链', '企业探查诊断报告'],
+          materials: ['证据链清单'],
+          pending: ['购销两头在外业务解释待确认']
+        },
+        {
+          id: 'credit',
+          no: 5,
+          title: '授信建议',
+          status: '待确认',
+          content: isTsWq
+            ? '建议有条件授信：要求补充电费记录、追加股东连带担保、限制授信额度、提高贷后检查频率。综合评分72分，资料完整度86%。'
+            : '授信建议。',
+          evidence: ['综合评分 72', '资料完整度 86%'],
+          materials: ['尽调结论'],
+          pending: ['授信额度和条件待确认']
+        },
+        {
+          id: 'appendix',
+          no: 6,
+          title: '附件清单',
+          status: '已完成',
+          content: '本报告附件包括工商资料、司法查询记录、税票采集数据及补充资料包。',
+          evidence: [],
+          materials: ['工商资料', '司法查询', '税票数据', '资料包'],
+          pending: []
+        },
       ],
       content: isTsWq
         ? '本报告基于对唐山物桥商贸有限公司的综合尽调，涵盖工商、司法、税票、资料等维度...'
@@ -1268,16 +1376,75 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     await sendMessage()
   }
 
-  /** 导出最终报告 */
+  /** 导出最终报告（Item 5） */
   async function exportFinalReport() {
+    waitingForInput.value = false
     await pushMessage('user', '导出最终报告')
-    await pushStreamingMessage('已生成最终报告导出任务，demo 阶段可在左侧产物确认区查看报告和资料包。')
+
+    // 确保处于 deliverables stage
+    const existingDeliverables = flowStages.find(s => s.id === 'deliverables')
+    if (!existingDeliverables) {
+      await pushStreamingMessage('当前尚未进入产物确认阶段，无法导出报告。')
+      waitingForInput.value = true
+      return
+    }
+
+    // 保持/切换到 deliverables stage
+    currentFlowStatus.value = 'completed'
+    setActiveStage('deliverables')
+    if (existingDeliverables.artifactData) {
+      existingDeliverables.artifactData.exportStatus = '已生成导出任务'
+      existingDeliverables.artifactData.actions = ['编辑报告', '导出报告', '加入监控']
+      Object.assign(leftPanelData, existingDeliverables.artifactData)
+      Object.assign(artifactData, existingDeliverables.artifactData)
+    }
+
+    await pushStreamingMessage('最终报告导出任务已生成，demo 阶段可在左侧产物确认区查看报告模板和资料包清单。')
+    waitingForInput.value = true
+    fillSuggestions('completed')
   }
 
-  /** 查看诊断报告 */
+  /** 查看诊断报告（Item 4） */
   async function viewDiagnosisReport() {
+    waitingForInput.value = false
     await pushMessage('user', '查看诊断报告')
-    await pushStreamingMessage('左侧已展示当前企业诊断报告摘要，可继续进入产物确认或要求我补充风险说明。')
+
+    // 如果已有 riskDiagnosis stage，切换过去展示已有数据
+    const existingRisk = flowStages.find(s => s.id === 'riskDiagnosis')
+    if (existingRisk) {
+      setActiveStage('riskDiagnosis')
+      currentFlowStatus.value = 'waiting_deliverable_action'
+      await pushStreamingMessage('已为你定位到左侧风险诊断报告，可查看核心风险、证据链和授信建议。')
+      waitingForInput.value = true
+      fillSuggestions('waiting_deliverable_action')
+      return
+    }
+
+    // 尚未进行风险诊断：提示
+    await pushStreamingMessage('当前尚未进行风险诊断，请先完成证据整合后进入风险诊断。')
+    waitingForInput.value = true
+    fillSuggestions(currentFlowStatus.value)
+  }
+
+  /** 改为上传材料（Item 3.2）：从税票 RPA 授权模式切换到企业上传资料模式 */
+  async function switchTaxToMaterialUpload() {
+    waitingForInput.value = false
+    await pushMessage('user', '改为上传材料')
+    await delay(300)
+
+    // 标记税票为跳过
+    const taxStage = flowStages.find(s => s.id === 'tax')
+    if (taxStage) {
+      taxStage.status = 'skipped'
+      if (taxStage.artifactData) {
+        taxStage.artifactData.authStatus = '已切换'
+        taxStage.artifactData.linkStatus = '已切换'
+      }
+    }
+
+    await pushStreamingMessage('已切换为资料上传模式。我会根据尽调模板生成资料清单，企业可上传税票和经营资料继续推进。')
+    await delay(400)
+    await runMaterialsStep()
   }
 
   /** 发送资料清单 */
@@ -1308,6 +1475,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     currentIntent, isThinking, thinkingText,
     layoutMode, activeTool, selectedEnterprise, selectedDueTemplate,
     leftPanelData, contextSuggestions,
+    isDueWorkspace, dueTaskHeader,
     setLeftPanel, setActiveStage, updateWorkbenchArtifact,
     reset, sendMessage, runIntentRecognition, handleSuggestionClick,
     handleWaitingForInput, onQuickAction,
@@ -1315,7 +1483,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     confirmDueTemplate, confirmTaxSend, mockTaxAuthorized,
     mockMaterialUpload, enterEvidenceMerge, enterRiskDiagnosis,
     enterDeliverables, startReportEditor,
-    runMaterialsStep, exportFinalReport, viewDiagnosisReport,
+    runMaterialsStep, switchTaxToMaterialUpload,
+    exportFinalReport, viewDiagnosisReport,
     sendMaterialList, sendTaxAuthReminder,
   }
 })

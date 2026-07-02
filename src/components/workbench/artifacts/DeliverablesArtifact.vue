@@ -26,6 +26,29 @@
       </el-table>
     </el-card>
 
+    <!-- 报告模板与资料包清单 -->
+    <el-card shadow="never" class="artifact-card">
+      <template #header><span class="artifact-card__title">报告模板与资料包</span></template>
+      <el-descriptions :column="2" size="small" border>
+        <el-descriptions-item label="报告模板">{{ reportTemplate }}</el-descriptions-item>
+        <el-descriptions-item label="资料包">工商资料 / 司法查询 / 税票数据 / 上传资料</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 待确认项 -->
+    <el-card v-if="pendingItems?.length" shadow="never" class="artifact-card artifact-card--warn">
+      <template #header><span class="artifact-card__title">待确认项</span></template>
+      <div v-for="(item, i) in pendingItems" :key="i" class="artifact-deliverables__pending">
+        <span class="pending-icon">⚠</span>
+        <span class="pending-text">{{ item }}</span>
+      </div>
+    </el-card>
+
+    <!-- 导出状态 -->
+    <div v-if="exportStatus" class="artifact-deliverables__export-status">
+      <span>✓ {{ exportStatus }}</span>
+    </div>
+
     <!-- 动作区 -->
     <div class="artifact-deliverables__actions">
       <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
@@ -40,6 +63,18 @@ import { computed } from 'vue'
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 defineEmits(['edit-report', 'export-report', 'start-monitor'])
 const items = computed(() => props.data.items || [])
+const exportStatus = computed(() => props.data.exportStatus || '')
+const reportTemplate = computed(() => {
+  const dl = items.value.find(i => i.name === '尽调底稿')
+  return '标准授信尽调报告'
+})
+const pendingItems = computed(() => {
+  const items = []
+  if (props.data.riskConclusion !== false) items.push('风险结论需确认')
+  if (props.data.taxNote !== false) items.push('税票异常说明待补充')
+  if (props.data.creditAdvice !== false) items.push('授信建议待确认')
+  return items.length ? items : ['风险结论需确认', '授信建议待确认']
+})
 </script>
 
 <style scoped>
@@ -51,5 +86,14 @@ const items = computed(() => props.data.items || [])
 .artifact-deliverables__actions {
   display: flex; gap: 8px; padding: 10px 0;
   border-top: 1px solid var(--border-color-divider);
+}
+.artifact-card--warn { border-left: 3px solid var(--color-warning); }
+.artifact-deliverables__pending { font-size: 13px; color: var(--text-secondary); display: flex; gap: 6px; align-items: flex-start; margin-bottom: 6px; }
+.artifact-deliverables__pending:last-child { margin-bottom: 0; }
+.pending-icon { color: var(--color-warning); flex-shrink: 0; }
+.pending-text { flex: 1; }
+.artifact-deliverables__export-status {
+  padding: 8px 12px; background: var(--color-success-bg); border-radius: var(--radius-6, 6px);
+  font-size: 13px; font-weight: 500; color: var(--color-success);
 }
 </style>

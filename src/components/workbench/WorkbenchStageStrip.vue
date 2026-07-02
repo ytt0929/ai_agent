@@ -4,11 +4,11 @@
       v-for="(stage, index) in stages"
       :key="`${stage.id}-${index}`"
       :class="['stage-tab', stage.status, { active: stage.id === activeStageId }]"
-      :disabled="stage.status === 'pending'"
+      :disabled="readonly || stage.status === 'pending'"
       size="small"
       plain
       round
-      @click="$emit('select', stage.id)"
+      @click="onSelect(stage)"
     >
       {{ stage.icon }} {{ stage.label }}
     </el-button>
@@ -16,11 +16,17 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   stages: { type: Array, default: () => [] },
   activeStageId: { type: String, default: null },
+  readonly: { type: Boolean, default: false },
 })
-defineEmits(['select'])
+const emit = defineEmits(['select'])
+
+function onSelect(stage) {
+  if (props.readonly) return
+  emit('select', stage.id)
+}
 </script>
 
 <style scoped>

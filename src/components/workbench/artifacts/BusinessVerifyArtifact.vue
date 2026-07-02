@@ -1,10 +1,17 @@
 <template>
   <div class="artifact-business">
+    <!-- 核验结论摘要条 -->
+    <div class="artifact-business__summary">
+      <span class="artifact-business__summary-label">工商核验</span>
+      <el-tag :type="conclusion === '正常' ? 'success' : 'warning'" size="small">{{ conclusion }}</el-tag>
+      <span v-if="conclusionNote" class="artifact-business__summary-note">{{ conclusionNote }}</span>
+    </div>
+
+    <!-- 基础信息 -->
     <el-card shadow="never" class="artifact-card">
       <template #header>
         <div class="artifact-card__header">
-          <span class="artifact-card__title">工商校验</span>
-          <el-tag :type="entityStatus === '正常存续' ? 'success' : 'danger'" size="small">{{ entityStatus }}</el-tag>
+          <span class="artifact-card__title">基础信息</span>
         </div>
       </template>
 
@@ -15,27 +22,30 @@
         <el-descriptions-item label="法定代表人">{{ legalPerson || '—' }}</el-descriptions-item>
         <el-descriptions-item label="注册资本">{{ registeredCapital || '—' }}</el-descriptions-item>
         <el-descriptions-item label="成立日期">{{ establishedDate || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="行业">{{ industry || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="区域">{{ region || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="关联企业">{{ relatedCompanies || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="税务评级">
+          <el-tag type="success" size="small">{{ taxLevel || '—' }}</el-tag>
+        </el-descriptions-item>
       </el-descriptions>
     </el-card>
 
+    <!-- 核验结果 -->
     <el-card shadow="never" class="artifact-card">
       <template #header>
-        <div class="artifact-card__header">
-          <span class="artifact-card__title">司法风险</span>
-          <el-tag :type="judicialRisk === '无' ? 'success' : 'warning'" size="small">{{ judicialRisk }}</el-tag>
-        </div>
+        <span class="artifact-card__title">核验结果</span>
       </template>
-      <el-table :data="judicialDetails" size="small" stripe border>
-        <el-table-column label="案件类型" width="100">
-          <template #default="{ row }"><el-tag size="small" :type="row.type === '无' ? 'success' : 'info'">{{ row.type }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="详情" min-width="160">
-          <template #default="{ row }">{{ row.detail }}</template>
-        </el-table-column>
-      </el-table>
+      <div class="artifact-business__checks">
+        <div v-for="(c, i) in checks" :key="i" class="artifact-business__check-item">
+          <span :class="c.ok ? 'check-ok' : 'check-warn'">{{ c.ok ? '✓' : '!' }}</span>
+          <span class="artifact-business__check-text">{{ c.text }}</span>
+        </div>
+      </div>
     </el-card>
 
-    <el-card shadow="never" class="artifact-card">
+    <!-- 关联企业 -->
+    <el-card v-if="relatedCompaniesList.length" shadow="never" class="artifact-card">
       <template #header>
         <span class="artifact-card__title">关联企业</span>
       </template>
@@ -51,6 +61,17 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 风险提示小卡 -->
+    <el-card v-if="riskTips?.length" shadow="never" class="artifact-card artifact-card--warn">
+      <template #header>
+        <span class="artifact-card__title">风险提示</span>
+      </template>
+      <div v-for="(tip, i) in riskTips" :key="i" class="artifact-business__tip">
+        <span class="tip-icon">⚠</span>
+        <span class="tip-text">{{ tip }}</span>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -59,25 +80,49 @@ import { computed } from 'vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 const entityStatus = computed(() => props.data.entityStatus || '—')
+const conclusion = computed(() => props.data.conclusion || '正常')
+const conclusionNote = computed(() => props.data.conclusionNote || '')
 const legalPerson = computed(() => props.data.legalPerson || '—')
 const registeredCapital = computed(() => props.data.registeredCapital || '—')
 const establishedDate = computed(() => props.data.establishedDate || '—')
-const judicialRisk = computed(() => props.data.judicialRisk || '—')
+const industry = computed(() => props.data.industry || '—')
+const region = computed(() => props.data.region || '—')
+const relatedCompanies = computed(() => props.data.relatedCompanies || '—')
+const taxLevel = computed(() => props.data.taxLevel || '—')
 const judicialDetails = computed(() => props.data.judicialDetails || [])
-const relatedCompaniesList = computed(() => {
-  const rc = props.data.relatedCompanies
-  if (Array.isArray(rc)) return rc
-  if (typeof rc === 'string' && rc !== '—') {
-    // If it's a count string like "3 家", return empty since no detail data
-    return []
-  }
-  return []
-})
+const relatedCompaniesList = computed(() => props.data.relatedCompaniesList || [])
+const riskTips = computed(() => props.data.riskTips || [])
+
+const checks = computed(() => props.data.checks || [
+  { ok: true, text: '工商登记信息核验通过' },
+  { ok: true, text: '主体状态正常，无经营异常记录' },
+  { ok: true, text: '未发现重大司法风险' },
+  { ok: true, text: '税务评级A级' },
+])
 </script>
 
 <style scoped>
 .artifact-business { display: flex; flex-direction: column; gap: 12px; }
+.artifact-business__summary {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: var(--bg-page); border-radius: var(--radius-6, 6px);
+}
+.artifact-business__summary-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.artifact-business__summary-note { font-size: 12px; color: var(--text-secondary); }
+
 .artifact-card :deep(.el-card__header) { padding: 12px 16px; }
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
 .artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+.artifact-business__checks { display: flex; flex-direction: column; gap: 6px; }
+.artifact-business__check-item { font-size: 13px; color: var(--text-secondary); display: flex; gap: 6px; align-items: flex-start; }
+.artifact-business__check-text { flex: 1; }
+.check-ok { color: var(--color-success); font-weight: 700; flex-shrink: 0; }
+.check-warn { color: var(--color-warning); font-weight: 700; flex-shrink: 0; }
+
+.artifact-card--warn { border-left: 3px solid var(--color-warning); }
+.artifact-business__tip { font-size: 12px; color: var(--text-secondary); display: flex; gap: 6px; align-items: flex-start; margin-bottom: 4px; }
+.artifact-business__tip:last-child { margin-bottom: 0; }
+.tip-icon { color: var(--color-warning); flex-shrink: 0; }
+.tip-text { flex: 1; }
 </style>
