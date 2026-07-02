@@ -10,108 +10,126 @@ export const steps = [
   { key: 'artifacts', label: '产物确认', icon: 'Finished' },
 ]
 
-export const enterprises = [
+/**
+ * 尽调任务对象
+ * 字段：id, name, creditCode, industry, region, amount,
+ *      templateName, source, manager, priority,
+ *      status, statusText, currentStage, currentStep,
+ *      progress, riskLevel, score, grade, materialCompleteness,
+ *      nextAction, updatedAt, reportDraftId,
+ *      autoCapabilities（兼容旧字段）
+ */
+export const dueDiligenceTasks = [
   {
-    id: 'dd001',
+    id: 'dd-ts-wq-001',
+    name: '唐山物桥商贸有限公司',
+    creditCode: '91130203MA7EEQ2N0T',
+    industry: '建材批发 / 商贸流通',
+    region: '河北省唐山市',
+    amount: '500万',
+    templateName: '尽职调查报告',
+    source: '工作台AI',
+    manager: '张经理',
+    priority: '普通',
+    status: '等待客户',
+    statusText: '税票采集 / 待授权',
+    currentStage: 'taxCollection',
+    currentStep: 'tax-rpa',
+    progress: 43,
+    riskLevel: '中风险',
+    score: 72,
+    grade: 'C+',
+    materialCompleteness: 67,
+    nextAction: '继续处理',
+    updatedAt: '2026-07-02 15:40',
+    reportDraftId: '',
+    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
+  },
+  {
+    id: 'dd-hz-zz-001',
     name: '杭州智造装备有限公司',
     creditCode: '91330100MA27XXXX3X',
     industry: '专用设备制造',
     region: '浙江杭州',
     amount: '500万',
+    templateName: '尽职调查报告',
+    source: '本页创建',
     manager: '张经理',
-    type: '贷前尽调',
-    status: '等待税票RPA',
-    progress: 42,
-    nextAction: '等待客户授权',
-    currentStep: 'tax-rpa',
+    priority: '普通',
+    status: '进行中',
+    statusText: '资料补充',
+    currentStage: 'materials',
+    currentStep: 'materials',
+    progress: 57,
+    riskLevel: '低风险',
+    score: 78,
+    grade: 'B',
+    materialCompleteness: 72,
+    nextAction: '继续处理',
+    updatedAt: '2026-07-02 14:20',
+    reportDraftId: '',
     autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
   },
   {
-    id: 'dd002',
+    id: 'dd-nb-th-001',
     name: '宁波天合新材料有限公司',
     creditCode: '91330200MA2HXXXX8Y',
     industry: '新材料研发',
     region: '浙江宁波',
     amount: '800万',
+    templateName: '尽职调查报告',
+    source: '筛客转入',
     manager: '张经理',
-    type: '贷前尽调',
-    status: 'AI处理中',
-    progress: 68,
-    nextAction: '生成风险摘要',
-    currentStep: 'risk',
+    priority: '较高',
+    status: '待确认',
+    statusText: '报告待确认',
+    currentStage: 'deliverables',
+    currentStep: 'artifacts',
+    progress: 100,
+    riskLevel: '中风险',
+    score: 70,
+    grade: 'C+',
+    materialCompleteness: 82,
+    nextAction: '编辑报告',
+    updatedAt: '2026-07-01 16:50',
+    reportDraftId: '',
     autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
   },
   {
-    id: 'dd003',
-    name: '明达精工有限公司',
-    creditCode: '91330300MA29XXXX1Z',
-    industry: '精密机械制造',
+    id: 'dd-wz-rd-001',
+    name: '温州瑞达机械制造有限公司',
+    creditCode: '91330300MA28XXXX5R',
+    industry: '机械制造',
     region: '浙江温州',
     amount: '300万',
-    manager: '张经理',
-    type: '贷前尽调',
-    status: '报告待确认',
-    progress: 92,
-    nextAction: '确认报告草稿',
-    currentStep: 'artifacts',
-    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
-  },
-  {
-    id: 'dd004',
-    name: '温州精益模具有限公司',
-    creditCode: '',  // 无税票任务
-    industry: '模具制造',
-    region: '浙江温州',
-    amount: '200万',
-    manager: '张经理',
-    type: '贷前尽调',
-    status: '等待资料上传',
-    progress: 35,
-    nextAction: '资料补充中',
-    currentStep: 'materials',
-    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
-  },
-  {
-    id: 'dd005',
-    name: '唐山物桥商贸有限公司',
-    creditCode: '91130203MA7EEQ2N0T',
-    industry: '建材批发 / 商贸流通',
-    region: '河北唐山',
-    amount: '500万',
-    manager: '张经理',
-    type: '贷前尽调',
-    status: '等待税票RPA',
-    progress: 42,
-    nextAction: '等待企业授权',
-    currentStep: 'tax-rpa',
-    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
+    templateName: '尽职调查报告',
     source: '企业探查',
-    template: '标准授信尽调',
-    dueFlow: {
-      statusText: '等待税票RPA',
-      progress: 42,
-      activeKey: 'tax',
-      steps: [
-        { key: 'business', label: '工商核验', status: 'done' },
-        { key: 'judicial', label: '司法查询', status: 'done' },
-        { key: 'tax', label: '税票采集', status: 'active' },
-        { key: 'materials', label: '资料补充', status: 'pending' },
-        { key: 'evidence', label: '证据整合', status: 'pending' },
-        { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
-        { key: 'deliverables', label: '产物确认', status: 'pending' },
-      ],
-    },
+    manager: '张经理',
+    priority: '普通',
+    status: '已完成',
+    statusText: '已完成',
+    currentStage: 'completed',
+    currentStep: 'artifacts',
+    progress: 100,
+    riskLevel: '低风险',
+    score: 82,
+    grade: 'B+',
+    materialCompleteness: 95,
+    nextAction: '查看报告',
+    updatedAt: '2026-06-30 09:15',
+    reportDraftId: 'RPT-WZ-RD-001',
+    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
   },
 ]
 
-// 资料补充清单
+// 资料补充清单（兼容）
 export const materialsList = [
   { id: 'm001', name: '财务报表附注', status: '待上传' },
   { id: 'm002', name: '主要采购合同', status: '待上传' },
   { id: 'm003', name: '征信授权书', status: '待客户签署' },
 ]
 
-// 已上传文件
+// 已上传文件（兼容）
 export const uploadedFiles = [
   { id: 'f001', name: '2025年度审计报告.pdf', status: '已识别', size: '2.3MB' },
   { id: 'f002', name: '营业执照.pdf', status: '已识别', size: '1.1MB' },
@@ -120,7 +138,7 @@ export const uploadedFiles = [
   { id: 'f005', name: '主要销售合同.pdf', status: '已识别', size: '3.2MB' },
 ]
 
-// 尽调产物
+// 尽调产物（兼容）
 export const artifactsList = [
   { name: '证据包', status: '已生成', count: '31条证据', icon: 'Files' },
   { name: '风险诊断摘要', status: '已生成', count: '8项风险', icon: 'Warning' },
@@ -128,7 +146,7 @@ export const artifactsList = [
   { name: '客户补充清单', status: '可发送', count: '3项资料', icon: 'List' },
 ]
 
-// 风险事项
+// 风险事项（兼容）
 export const riskItems = [
   { level: 'high', title: '税票数据授权存在缺口', desc: '客户仅授权2025年数据，2024年税票缺失' },
   { level: 'high', title: '法人关联企业异常', desc: '法人张某某名下3家关联企业，其中1家已注销未披露' },
@@ -138,7 +156,7 @@ export const riskItems = [
   { level: 'low', title: '社保缴纳人数波动', desc: '近6个月缴纳人数波动较大，需核实用工情况' },
 ]
 
-// 各步骤的对话消息
+// 各步骤的对话消息（兼容）
 export const stepChats = {
   launch: [
     { role: 'ai', content: '已为您自动拆解尽调流程，涵盖7个步骤。系统会自动推进，您只需要在关键节点确认即可。', type: 'insight' },
@@ -182,7 +200,7 @@ export const stepChats = {
   ],
 }
 
-// 各步骤的快捷 chips
+// 各步骤的快捷 chips（兼容）
 export const stepChips = {
   launch: ['生成客户材料清单', '说明流程', '保存草稿'],
   'verify-business': ['查看工商详情', '下载报告'],

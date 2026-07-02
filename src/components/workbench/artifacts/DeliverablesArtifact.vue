@@ -1,196 +1,214 @@
 <template>
   <div class="artifact-deliverables">
-    <el-card shadow="never" class="artifact-card">
-      <template #header>
-        <div class="artifact-card__header">
-          <span class="artifact-card__title">尽调产物</span>
-          <el-tag type="success" size="small">已生成</el-tag>
-        </div>
-      </template>
-      <el-table :data="items" size="small" stripe border>
-        <el-table-column label="产物名称" min-width="140">
-          <template #default="{ row }"><span class="artifact-dl-name">{{ row.name }}</span></template>
-        </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="row.status.includes('已') || row.status.includes('归档') ? 'success' : 'warning'">{{ row.status }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="数量" width="70" align="center">
-          <template #default="{ row }">{{ row.count }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" align="center">
-          <template #default="{ row }">
-            <template v-if="row.type === 'report'">
-              <el-button size="small" text type="primary" @click="openPreview(row)">查看</el-button>
-              <el-button size="small" text type="success" @click="emit('edit-report')">编辑</el-button>
-            </template>
-            <template v-else-if="row.type === 'evidence' && row.status === '已归档'">
-              <el-button size="small" text type="primary" @click="openPreview(row)">查看</el-button>
-              <el-button size="small" text type="success" @click="generateEvidence(row)">生成</el-button>
-            </template>
-            <template v-else-if="row.status === '已生成' || row.status === '已归档'">
-              <el-button size="small" text type="primary" @click="openPreview(row)">查看</el-button>
-            </template>
-            <template v-else>
-              <el-button size="small" text type="primary">生成</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- 报告模板与资料包清单 -->
-    <el-card shadow="never" class="artifact-card">
-      <template #header><span class="artifact-card__title">报告模板与资料包</span></template>
-      <el-descriptions :column="2" size="small" border>
-        <el-descriptions-item label="报告模板">{{ reportTemplate }}</el-descriptions-item>
-        <el-descriptions-item label="报告底稿">尽职调查报告</el-descriptions-item>
-        <el-descriptions-item label="资料包">工商资料 / 司法查询 / 税票数据 / 上传资料 / 证据链</el-descriptions-item>
-        <el-descriptions-item label="当前状态">底稿已生成，等待确认和编辑</el-descriptions-item>
-      </el-descriptions>
-    </el-card>
-
-    <!-- 待确认项 -->
-    <el-card v-if="pendingItems?.length" shadow="never" class="artifact-card artifact-card--warn">
-      <template #header><span class="artifact-card__title">待确认项</span></template>
-      <div v-for="(item, i) in pendingItems" :key="i" class="artifact-deliverables__pending">
-        <span class="pending-icon">⚠</span>
-        <span class="pending-text">{{ item }}</span>
-      </div>
-    </el-card>
-
-    <!-- 导出状态 -->
-    <div v-if="exportStatus" class="artifact-deliverables__export-status">
-      <span>✓ {{ exportStatus }}</span>
-    </div>
-
-    <!-- 动作区 -->
-    <div class="artifact-deliverables__actions">
-      <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
-      <el-button plain @click="$emit('export-report')">导出报告</el-button>
-      <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
-    </div>
-
-    <!-- 内嵌预览面板（不覆盖右侧 AI） -->
-    <el-card v-if="previewVisible" shadow="never" class="artifact-card artifact-card--preview">
-      <template #header>
-        <div class="artifact-card__header">
-          <span class="artifact-card__title">{{ previewTitle }}</span>
-          <el-button text size="small" type="primary" @click="closePreview">关闭预览</el-button>
-        </div>
-      </template>
-
-      <!-- 文档化报告预览 -->
-      <div v-if="previewItem && previewItem.type === 'report'" class="report-document-preview">
-        <!-- 左侧目录 -->
-        <aside class="report-document-toc">
-          <div class="report-document-toc__title">报告目录</div>
-          <div
-            v-for="ch in previewSections"
-            :key="ch.id"
-            class="report-document-toc__item"
-            :class="{ 'report-document-toc__item--active': activePreviewChapter === ch.id }"
-            @click="scrollToReportSection(ch.id)"
-          >
-            <span class="report-document-toc__no">{{ ch.no }}</span>
-            <span class="report-document-toc__text">{{ ch.title }}</span>
+    <!-- ====== 状态 1：产物确认列表态 ====== -->
+    <template v-if="viewMode === 'list'">
+      <el-card shadow="never" class="artifact-card">
+        <template #header>
+          <div class="artifact-card__header">
+            <span class="artifact-card__title">尽调产物</span>
+            <el-tag type="success" size="small">已生成</el-tag>
           </div>
-        </aside>
+        </template>
+        <el-table :data="items" size="small" stripe border>
+          <el-table-column label="产物名称" min-width="140">
+            <template #default="{ row }"><span class="artifact-dl-name">{{ row.name }}</span></template>
+          </el-table-column>
+          <el-table-column label="状态" width="90" align="center">
+            <template #default="{ row }"><el-tag size="small" :type="row.status.includes('已') || row.status.includes('归档') ? 'success' : 'warning'">{{ row.status }}</el-tag></template>
+          </el-table-column>
+          <el-table-column label="数量" width="70" align="center">
+            <template #default="{ row }">{{ row.count }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" align="center">
+            <template #default="{ row }">
+              <template v-if="row.type === 'report'">
+                <el-button size="small" text type="primary" @click="viewReport(row)">查看</el-button>
+                <el-button size="small" text type="success" @click="emit('edit-report')">编辑</el-button>
+              </template>
+              <template v-else-if="row.type === 'evidence' && row.status === '已归档'">
+                <el-button size="small" text type="primary" @click="openSimplePreview(row)">查看</el-button>
+                <el-button size="small" text type="success" @click="generateEvidence(row)">生成</el-button>
+              </template>
+              <template v-else-if="row.status === '已生成' || row.status === '已归档'">
+                <el-button size="small" text type="primary" @click="openSimplePreview(row)">查看</el-button>
+              </template>
+              <template v-else>
+                <el-button size="small" text type="primary">生成</el-button>
+              </template>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
 
-        <!-- 右侧文档页 -->
-        <section class="report-document-page" ref="documentPageRef">
-          <!-- 封面 -->
-          <div class="report-cover">
-            <h2 class="report-cover__title">尽职调查报告</h2>
-            <div class="report-cover__info">
-              <div class="report-cover__row">
-                <span class="report-cover__label">企业名称：</span><span>唐山物桥商贸有限公司</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">所属行业：</span><span>建材批发 / 商贸流通</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">所在区域：</span><span>河北省唐山市</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">报告模板：</span><span>尽职调查报告</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">综合评分：</span><span>72</span>
-                <span class="report-cover__sep">等级：C+&emsp;风险等级：中风险</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">资料完整度：</span><span>86%</span>
-                <span class="report-cover__sep">生成日期：{{ todayStr }}</span>
-              </div>
-              <div class="report-cover__row">
-                <span class="report-cover__label">报告状态：</span><span>底稿已生成，待确认和编辑</span>
-              </div>
-            </div>
-          </div>
-
-          <el-divider />
-
-          <!-- 摘要 -->
-          <div class="report-abstract">
-            <p>
-              本报告基于工商登记信息、司法公开数据、税票采集数据、企业补充资料及 AI 风险诊断结果生成。
-              经初步核验，唐山物桥商贸有限公司主体状态正常存续，纳税信用评级 A 级，
-              但存在税负率显著低于行业、开票收入与申报收入不一致、购销两头在外、短期偿债压力较大等风险事项。
-              建议作为有条件授信对象，后续需补充税负异常说明、确认购销业务真实性，并强化贷后监测。
-            </p>
-          </div>
-
-          <el-divider />
-
-          <!-- 15 章正文 -->
-          <section
-            v-for="section in previewSections"
-            :key="section.id"
-            :id="`rdp-${section.id}`"
-            class="report-document-section"
-          >
-            <h3 class="report-document-section__title">{{ section.no }}、{{ section.title }}</h3>
-            <div class="report-document-section__content">
-              <p>{{ section.content }}</p>
-            </div>
-            <!-- 资料依据 -->
-            <div v-if="section.materials?.length" class="report-document-section__meta">
-              <span class="report-document-section__meta-label">资料依据：</span>
-              <el-tag v-for="m in section.materials" :key="m" size="small" type="info" effect="plain" class="report-meta-tag">{{ m }}</el-tag>
-            </div>
-            <!-- 证据链 -->
-            <div v-if="section.evidence?.length" class="report-document-section__meta">
-              <span class="report-document-section__meta-label">证据链：</span>
-              <el-tag v-for="e in section.evidence" :key="e" size="small" type="success" effect="plain" class="report-meta-tag">{{ e }}</el-tag>
-            </div>
-            <!-- 待确认项 -->
-            <div v-if="section.pending?.length" class="report-document-section__pending">
-              <span class="report-document-section__meta-label">⚠ 待确认：</span>
-              <span v-for="p in section.pending" :key="p" class="report-pending-text">{{ p }}；</span>
-            </div>
-          </section>
-
-          <!-- 底部操作 -->
-          <div class="report-document-actions">
-            <el-button type="primary" @click="enterEditor">进入编辑</el-button>
-            <el-button plain @click="$emit('export-report')">导出报告</el-button>
-            <el-button plain @click="closePreview">关闭预览</el-button>
-          </div>
-        </section>
-      </div>
-
-      <!-- 非报告产物轻量预览 -->
-      <div v-else class="preview-simple">
-        <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="产物名称">{{ selectedPreviewItem?.name }}</el-descriptions-item>
-          <el-descriptions-item label="状态">{{ selectedPreviewItem?.status }}</el-descriptions-item>
-          <el-descriptions-item label="摘要">{{ getSimplePreviewSummary(selectedPreviewItem) }}</el-descriptions-item>
+      <!-- 报告模板与资料包清单 -->
+      <el-card shadow="never" class="artifact-card">
+        <template #header><span class="artifact-card__title">报告模板与资料包</span></template>
+        <el-descriptions :column="2" size="small" border>
+          <el-descriptions-item label="报告模板">{{ reportTemplate }}</el-descriptions-item>
+          <el-descriptions-item label="报告底稿">尽职调查报告</el-descriptions-item>
+          <el-descriptions-item label="资料包">工商资料 / 司法查询 / 税票数据 / 上传资料 / 证据链</el-descriptions-item>
+          <el-descriptions-item label="当前状态">底稿已生成，等待确认和编辑</el-descriptions-item>
         </el-descriptions>
-        <div style="margin-top:12px;text-align:right">
-          <el-button @click="closePreview">关闭</el-button>
+      </el-card>
+
+      <!-- 待确认项 -->
+      <el-card v-if="pendingItems?.length" shadow="never" class="artifact-card artifact-card--warn">
+        <template #header><span class="artifact-card__title">待确认项</span></template>
+        <div v-for="(item, i) in pendingItems" :key="i" class="artifact-deliverables__pending">
+          <span class="pending-icon">⚠</span>
+          <span class="pending-text">{{ item }}</span>
+        </div>
+      </el-card>
+
+      <!-- 导出状态 -->
+      <div v-if="exportStatus" class="artifact-deliverables__export-status">
+        <span>✓ {{ exportStatus }}</span>
+      </div>
+
+      <!-- 动作区 -->
+      <div class="artifact-deliverables__actions">
+        <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
+        <el-button plain @click="$emit('export-report')">导出报告</el-button>
+        <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
+      </div>
+
+      <!-- 非报告产物轻量预览（列表下方小面板） -->
+      <el-card v-if="simplePreviewVisible" shadow="never" class="artifact-card artifact-card--preview-simple">
+        <template #header>
+          <div class="artifact-card__header">
+            <span class="artifact-card__title">产物预览：{{ simplePreviewItem?.name }}</span>
+            <el-button text size="small" type="primary" @click="closeSimplePreview">关闭</el-button>
+          </div>
+        </template>
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="产物名称">{{ simplePreviewItem?.name }}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{ simplePreviewItem?.status }}</el-descriptions-item>
+          <el-descriptions-item label="摘要">{{ getSimplePreviewSummary(simplePreviewItem) }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+    </template>
+
+    <!-- ====== 状态 2：报告预览态（整区切换） ====== -->
+    <template v-else-if="viewMode === 'reportPreview'">
+      <div class="report-preview-full">
+        <!-- 顶部栏：返回 + 标题 -->
+        <div class="report-preview-bar">
+          <el-button text type="primary" size="default" @click="backToList">
+            ← 返回产物确认
+          </el-button>
+          <span class="report-preview-bar__title">报告预览：尽职调查报告</span>
+          <div class="report-preview-bar__actions">
+            <el-button size="small" type="primary" @click="editReport">进入编辑</el-button>
+            <el-button size="small" plain @click="$emit('export-report')">导出报告</el-button>
+          </div>
+        </div>
+
+        <!-- 企业摘要 -->
+        <div class="report-preview-summary">
+          <span class="report-preview-summary__name">{{ enterpriseName }}</span>
+          <span class="report-preview-summary__meta">商贸流通</span>
+          <el-tag size="small" effect="plain">综合评分 72</el-tag>
+          <el-tag size="small" type="warning" effect="plain">C+</el-tag>
+          <el-tag size="small" type="warning" effect="plain">中风险</el-tag>
+          <span class="report-preview-summary__meta">资料完整度 86%</span>
+        </div>
+
+        <!-- 左侧目录 + 右侧文档页 -->
+        <div class="report-preview-body">
+          <el-scrollbar class="report-preview-toc">
+            <div class="report-preview-toc__title">报告目录</div>
+            <div
+              v-for="ch in reportSections"
+              :key="ch.id"
+              class="report-preview-toc__item"
+              :class="{ 'report-preview-toc__item--active': activeChapter === ch.id }"
+              @click="goToChapter(ch.id)"
+            >
+              <span class="report-preview-toc__no">{{ ch.no }}</span>
+              <span class="report-preview-toc__text">{{ ch.title }}</span>
+            </div>
+          </el-scrollbar>
+
+          <el-scrollbar class="report-preview-page" ref="pageRef">
+            <!-- 封面 -->
+            <div class="report-cover">
+              <h2 class="report-cover__title">尽职调查报告</h2>
+              <div class="report-cover__info">
+                <div class="report-cover__row">
+                  <span class="report-cover__label">企业名称：</span><span>{{ enterpriseName }}</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">所属行业：</span><span>建材批发 / 商贸流通</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">所在区域：</span><span>河北省唐山市</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">报告模板：</span><span>尽职调查报告</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">综合评分：</span><span>72</span>
+                  <span class="report-cover__sep">等级：C+&emsp;风险等级：中风险</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">资料完整度：</span><span>86%</span>
+                  <span class="report-cover__sep">生成日期：{{ todayStr }}</span>
+                </div>
+                <div class="report-cover__row">
+                  <span class="report-cover__label">报告状态：</span><span>底稿已生成，待确认和编辑</span>
+                </div>
+              </div>
+            </div>
+
+            <el-divider />
+
+            <!-- 摘要 -->
+            <div class="report-abstract">
+              <p>
+                本报告基于工商登记信息、司法公开数据、税票采集数据、企业补充资料及 AI 风险诊断结果生成。
+                经初步核验，唐山物桥商贸有限公司主体状态正常存续，纳税信用评级 A 级，
+                但存在税负率显著低于行业、开票收入与申报收入不一致、购销两头在外、短期偿债压力较大等风险事项。
+                建议作为有条件授信对象，后续需补充税负异常说明、确认购销业务真实性，并强化贷后监测。
+              </p>
+            </div>
+
+            <el-divider />
+
+            <!-- 15 章正文 -->
+            <section
+              v-for="section in reportSections"
+              :key="section.id"
+              :id="`rdp-${section.id}`"
+              class="report-section"
+            >
+              <h3 class="report-section__title">{{ section.no }}、{{ section.title }}</h3>
+              <div class="report-section__content">
+                <p>{{ section.content }}</p>
+              </div>
+              <div v-if="section.materials?.length" class="report-section__meta">
+                <span class="report-section__meta-label">资料依据：</span>
+                <el-tag v-for="m in section.materials" :key="m" size="small" type="info" effect="plain" class="report-meta-tag">{{ m }}</el-tag>
+              </div>
+              <div v-if="section.evidence?.length" class="report-section__meta">
+                <span class="report-section__meta-label">证据链：</span>
+                <el-tag v-for="e in section.evidence" :key="e" size="small" type="success" effect="plain" class="report-meta-tag">{{ e }}</el-tag>
+              </div>
+              <div v-if="section.pending?.length" class="report-section__pending">
+                <span class="report-section__meta-label">⚠ 待确认：</span>
+                <span v-for="p in section.pending" :key="p" class="report-pending-text">{{ p }}；</span>
+              </div>
+            </section>
+
+            <!-- 底部操作 -->
+            <div class="report-section-actions">
+              <el-button type="primary" @click="editReport">进入编辑</el-button>
+              <el-button plain @click="$emit('export-report')">导出报告</el-button>
+              <el-button plain @click="backToList">返回产物确认</el-button>
+            </div>
+          </el-scrollbar>
         </div>
       </div>
-    </el-card>
+    </template>
   </div>
 </template>
 
@@ -200,9 +218,11 @@ import { ElMessage } from 'element-plus'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 const emit = defineEmits(['edit-report', 'export-report', 'start-monitor'])
+
 const items = computed(() => props.data.items || [])
 const exportStatus = computed(() => props.data.exportStatus || '')
 const reportTemplate = computed(() => '尽职调查报告')
+const enterpriseName = computed(() => props.data.enterprise?.name || '唐山物桥商贸有限公司')
 const pendingItems = computed(() => {
   const list = []
   if (props.data.riskConclusion !== false) list.push('风险结论需确认')
@@ -211,61 +231,61 @@ const pendingItems = computed(() => {
   return list.length ? list : ['风险结论需确认', '授信建议待确认']
 })
 
-// 预览相关
-const previewVisible = ref(false)
-const previewItem = ref(null)
-const selectedPreviewItem = ref(null)
-const activePreviewChapter = ref('c1')
-const documentPageRef = ref(null)
-const previewSections = computed(() => props.data.reportSections || [])
+// ====== 三态 ======
+const viewMode = ref('list') // 'list' | 'reportPreview'
+const activeChapter = ref('c1')
+const pageRef = ref(null)
+const reportSections = computed(() => props.data.reportSections || [])
 
 const todayStr = computed(() => {
   const d = new Date()
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
 })
 
-const previewTitle = computed(() => {
-  const item = previewItem.value || selectedPreviewItem.value
-  if (!item) return '产物预览'
-  return item.type === 'report' ? `报告预览：${item.name}` : `产物预览：${item.name}`
-})
-
-function openPreview(row) {
-  if (row.type === 'report') {
-    previewItem.value = row
-    selectedPreviewItem.value = null
-    activePreviewChapter.value = 'c1'
-  } else {
-    previewItem.value = null
-    selectedPreviewItem.value = row
-  }
-  previewVisible.value = true
+// 查看报告 → 整区切换为 reportPreview
+function viewReport(row) {
+  activeChapter.value = 'c1'
+  viewMode.value = 'reportPreview'
 }
 
-function closePreview() {
-  previewVisible.value = false
-  previewItem.value = null
-  selectedPreviewItem.value = null
+// 返回产物确认列表
+function backToList() {
+  viewMode.value = 'list'
 }
 
-function enterEditor() {
-  closePreview()
+// 进入编辑
+function editReport() {
   emit('edit-report')
+}
+
+// 定位到章节
+function goToChapter(id) {
+  activeChapter.value = id
+  requestAnimationFrame(() => {
+    const el = document.getElementById('rdp-' + id)
+    if (el && pageRef.value) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  })
+}
+
+// 非报告产物轻量预览
+const simplePreviewVisible = ref(false)
+const simplePreviewItem = ref(null)
+
+function openSimplePreview(row) {
+  simplePreviewItem.value = row
+  simplePreviewVisible.value = true
+}
+
+function closeSimplePreview() {
+  simplePreviewVisible.value = false
+  simplePreviewItem.value = null
 }
 
 function generateEvidence(row) {
   ElMessage.info('已模拟生成证据链文件。')
-  openPreview(row)
-}
-
-function scrollToReportSection(id) {
-  activePreviewChapter.value = id
-  requestAnimationFrame(() => {
-    const el = document.getElementById('rdp-' + id)
-    if (el && documentPageRef.value) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  })
+  openSimplePreview(row)
 }
 
 const simpleSummaries = {
@@ -300,26 +320,81 @@ function getSimplePreviewSummary(row) {
   padding: 8px 12px; background: var(--color-success-bg); border-radius: var(--radius-6, 6px);
   font-size: 13px; font-weight: 500; color: var(--color-success);
 }
-.artifact-card--preview { border-left: 3px solid var(--color-primary); }
+.artifact-card--preview-simple { border-left: 3px solid var(--color-primary); }
 
-/* 文档化报告预览 */
-.report-document-preview {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+/* ====== 报告预览整区 ====== */
+.report-preview-full {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-page, #f7faff);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+}
+
+/* 顶部栏 */
+.report-preview-bar {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border-divider, #e5eaf2);
+  flex-shrink: 0;
+}
+
+.report-preview-bar__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.report-preview-bar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 企业摘要 */
+.report-preview-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border-light, #e5eaf2);
+  flex-wrap: wrap;
+}
+
+.report-preview-summary__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.report-preview-summary__meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* 主体：目录 + 文档页 */
+.report-preview-body {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* 目录 */
-.report-document-toc {
+.report-preview-toc {
   background: var(--bg-page, #f7faff);
-  border: 1px solid var(--border-light, #e5eaf2);
-  border-radius: var(--radius-md, 8px);
-  padding: 8px;
-  max-height: 520px;
-  overflow-y: auto;
+  border-right: 1px solid var(--border-light, #e5eaf2);
+  padding: 8px 6px;
 }
 
-.report-document-toc__title {
+.report-preview-toc__title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
@@ -328,28 +403,34 @@ function getSimplePreviewSummary(row) {
   margin-bottom: 4px;
 }
 
-.report-document-toc__item {
+.report-preview-toc__item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 6px 8px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-primary);
   transition: background 0.12s;
   border-radius: 4px;
 }
 
-.report-document-toc__item:hover { background: var(--bg-page, #f7faff); }
-.report-document-toc__item--active { background: var(--color-primary-bg, #eef2ff); font-weight: 600; color: var(--color-primary, #2563eb); }
+.report-preview-toc__item:hover { background: var(--bg-page, #f7faff); }
+.report-preview-toc__item--active {
+  background: var(--color-primary-bg, #eef2ff);
+  font-weight: 600;
+  color: var(--color-primary, #2563eb);
+}
 
-.report-document-toc__no {
-  width: 18px; text-align: center;
-  font-weight: 600; color: var(--text-tertiary, #94a3b8);
+.report-preview-toc__no {
+  width: 18px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-tertiary, #94a3b8);
   flex-shrink: 0;
 }
 
-.report-document-toc__text {
+.report-preview-toc__text {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -357,13 +438,9 @@ function getSimplePreviewSummary(row) {
 }
 
 /* 文档页 */
-.report-document-page {
+.report-preview-page {
   background: var(--bg-card, #fff);
-  border: 1px solid var(--border-light, #e5eaf2);
-  border-radius: var(--radius-md, 8px);
   padding: 24px 32px;
-  max-height: 520px;
-  overflow-y: auto;
   line-height: 1.8;
   color: var(--text-primary, #1a1a2e);
 }
@@ -408,9 +485,9 @@ function getSimplePreviewSummary(row) {
 }
 
 /* 章节 */
-.report-document-section { margin-bottom: 16px; }
+.report-section { margin-bottom: 16px; }
 
-.report-document-section__title {
+.report-section__title {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-primary, #1a1a2e);
@@ -419,16 +496,16 @@ function getSimplePreviewSummary(row) {
   border-bottom: 1px solid var(--border-divider, #e5eaf2);
 }
 
-.report-document-section__content { margin-bottom: 8px; }
+.report-section__content { margin-bottom: 8px; }
 
-.report-document-section__content p {
+.report-section__content p {
   font-size: 13px;
   color: var(--text-primary);
   margin: 0 0 6px;
   line-height: 1.8;
 }
 
-.report-document-section__meta {
+.report-section__meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -437,7 +514,7 @@ function getSimplePreviewSummary(row) {
   font-size: 12px;
 }
 
-.report-document-section__meta-label {
+.report-section__meta-label {
   font-weight: 600;
   color: var(--text-secondary, #64748b);
   margin-right: 4px;
@@ -445,7 +522,7 @@ function getSimplePreviewSummary(row) {
 
 .report-meta-tag { margin: 2px; }
 
-.report-document-section__pending {
+.report-section__pending {
   padding: 6px 10px;
   background: var(--color-warning-bg, #fffbeb);
   border: 1px solid var(--color-warning-border, #fde68a);
@@ -463,7 +540,7 @@ function getSimplePreviewSummary(row) {
 }
 
 /* 底部操作 */
-.report-document-actions {
+.report-section-actions {
   padding-top: 16px;
   border-top: 1px solid var(--border-divider, #e5eaf2);
   display: flex;
@@ -471,14 +548,11 @@ function getSimplePreviewSummary(row) {
   justify-content: flex-end;
 }
 
-/* 非报告预览 */
-.preview-simple { padding: 0 8px; }
-
 @media (max-width: 768px) {
-  .report-document-preview {
+  .report-preview-body {
     grid-template-columns: 1fr;
   }
-  .report-document-toc { max-height: 140px; }
-  .report-document-page { padding: 16px; }
+  .report-preview-toc { max-height: 140px; }
+  .report-preview-page { padding: 16px; }
 }
 </style>

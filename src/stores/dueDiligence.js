@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { enterprises, steps as stepsDef } from '../data/mockDueDiligence.js'
+import { dueDiligenceTasks as initialTasks, steps as stepsDef } from '../data/mockDueDiligence.js'
 
 export const useDueDiligenceStore = defineStore('dueDiligence', () => {
   // 任务列表
-  const tasks = ref(JSON.parse(JSON.stringify(enterprises)))
+  const tasks = ref(JSON.parse(JSON.stringify(initialTasks)))
 
   // 当前选中的任务
   const currentTask = ref(null)
@@ -27,10 +27,15 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
   // 计算统计
   const stats = computed(() => {
     return {
-      inProgress: tasks.value.filter(t => t.status === 'AI处理中').length,
-      waiting: tasks.value.filter(t => t.status.includes('等待')).length,
-      processing: tasks.value.filter(t => t.status.includes('处理')).length,
-      pending: tasks.value.filter(t => t.status.includes('待确认')).length,
+      inProgress: tasks.value.filter(t => t.status === '进行中').length,
+      waiting: tasks.value.filter(t => t.status === '等待客户').length,
+      pending: tasks.value.filter(t => t.status === '待确认').length,
+      completed: tasks.value.filter(t => t.status === '已完成').length,
+      todayNew: tasks.value.filter(t => {
+        if (!t.updatedAt) return false
+        const today = new Date().toISOString().slice(0, 10)
+        return t.updatedAt.startsWith(today)
+      }).length,
     }
   })
 
@@ -83,17 +88,14 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
   function advanceStep() {
     const idx = stepsDef.findIndex(s => s.key === currentStepKey.value)
     if (idx < stepsDef.length - 1) {
-      // 标记当前为 done
       if (stepStates.value[currentTask.value]) {
         stepStates.value[currentTask.value][currentStepKey.value] = 'done'
       }
-      // 下一步为 active
       const nextStep = stepsDef[idx + 1]
       currentStepKey.value = nextStep.key
       if (stepStates.value[currentTask.value]) {
         stepStates.value[currentTask.value][nextStep.key] = 'active'
       }
-      // 更新任务进度
       const task = tasks.value.find(t => t.id === currentTask.value)
       if (task) {
         task.currentStep = nextStep.key
@@ -119,6 +121,39 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     uploadedFiles.value[taskId].push(file)
   }
 
+  // 从筛客结果创建尽调任务
+  function createTaskFromScreening(customer) {
+    const id = 'dd-screen-' + Date.now()
+    const task = {
+      id,
+      name: customer.name,
+      creditCode: '',
+      industry: '待确认',
+      region: '待确认',
+      amount: '待评估',
+      manager: '张经理',
+      priority: '普通',
+      templateName: '尽职调查报告',
+      source: '筛客转入',
+      status: '进行中',
+      statusText: '主体核验',
+      currentStage: 'businessVerify',
+      currentStep: 'verify-business',
+      progress: 14,
+      statusText: '工商核验',
+      riskLevel: '待评估',
+      score: 0,
+      grade: '—',
+      materialCompleteness: 0,
+      nextAction: '继续处理',
+      updatedAt: new Date().toLocaleString('zh-CN'),
+      reportDraftId: '',
+    }
+    tasks.value.unshift(task)
+    initTaskSteps(id)
+    return task
+  }
+
   // 从企业探查结果创建尽调任务
   function createTaskFromEnterpriseExploration(payload) {
     const id = 'dd-exp-' + Date.now()
@@ -131,49 +166,62 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
       region: payload.region || '待确认',
       amount: payload.amount || '待评估',
       manager: '张经理',
-      type: '贷前尽调',
-      status: missing.length ? '等待资料上传' : 'AI处理中',
-      progress: missing.length ? 55 : 68,
-      nextAction: missing.length ? '补充流水/资料' : '查看风险诊断',
-      currentStep: missing.length ? 'materials' : 'risk',
+      priority: '普通',
+      templateName: '尽职调查报告',
       source: '企业探查',
-      autoCapabilities: ['企业探查导入', '风险指标复用', '证据链复用', '自动生成产物'],
-      explorationSnapshot: {
-        score: payload.score,
-        grade: payload.grade,
-        riskCount: payload.riskCount || 0,
-        highRiskCount: payload.highRiskCount || 0,
-        missingData: missing,
-      },
+      status: missing.length ? '等待客户' : '进行中',
+      statusText: missing.length ? '资料补充' : 'AI处理中',
+      currentStage: missing.length ? 'materials' : 'risk',
+      currentStep: missing.length ? 'materials' : 'risk',
+      progress: missing.length ? 55 : 68,
+      riskLevel: '待评估',
+      score: payload.score || 0,
+      grade: payload.grade || '—',
+      materialCompleteness: 0,
+      nextAction: missing.length ? '补充资料' : '查看风险诊断',
+      updatedAt: new Date().toLocaleString('zh-CN'),
+      reportDraftId: '',
     }
     tasks.value.unshift(task)
     initTaskSteps(id)
     return task
   }
 
-  // 从筛客结果创建尽调任务
-  function createTaskFromScreening(customer) {
-    const id = 'dd' + String(Date.now()).slice(-3)
+  // 手动创建尽调任务
+  function createManualTask(payload) {
+    // 检查是否已有同名企业
+    const existing = tasks.value.find(t => t.name === payload.name)
+    if (existing) {
+      return { existing: true, task: existing }
+    }
+    const id = 'dd-manual-' + Date.now()
     const task = {
       id,
-      name: customer.name,
-      creditCode: '',
-      industry: '待确认',
-      region: '待确认',
-      amount: '待评估',
-      manager: '张经理',
-      type: '贷前尽调',
-      status: '新建',
-      progress: 0,
-      nextAction: '发起尽调',
-      currentStep: 'launch',
-      autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
-      source: '筛客',
-      match: customer.match,
+      name: payload.name,
+      creditCode: payload.creditCode || '',
+      industry: payload.industry || '待确认',
+      region: payload.region || '待确认',
+      amount: payload.amount || '待评估',
+      manager: payload.manager || '张经理',
+      priority: payload.priority || '普通',
+      templateName: payload.templateName || '尽职调查报告',
+      source: '本页创建',
+      status: '进行中',
+      currentStage: 'businessVerify',
+      currentStep: 'verify-business',
+      progress: 14,
+      statusText: '工商核验',
+      riskLevel: '待评估',
+      score: 0,
+      grade: '—',
+      materialCompleteness: 0,
+      nextAction: '继续处理',
+      updatedAt: new Date().toLocaleString('zh-CN'),
+      reportDraftId: '',
     }
     tasks.value.unshift(task)
     initTaskSteps(id)
-    return task
+    return { created: true, task }
   }
 
   // chip 操作反馈
@@ -220,6 +268,7 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     addFile,
     createTaskFromScreening,
     createTaskFromEnterpriseExploration,
+    createManualTask,
     handleChipAction,
   }
 })
