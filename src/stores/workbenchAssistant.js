@@ -8,6 +8,7 @@
  */
 import { defineStore } from 'pinia'
 import { ref, reactive, computed } from 'vue'
+import { reportTemplates } from '../data/mockSmartReport.js'
 
 // ====== 阶段定义 ======
 const STAGE_LABEL_MAP = {
@@ -143,7 +144,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   ]
 
   const dueDiligenceTemplates = [
-    { id: 'tpl-std', name: '标准授信尽调', sections: 8, requiredDocs: 12, estimatedDays: '5-7' },
+    { id: 'tpl-due-report', name: '尽职调查报告', sections: 15, requiredDocs: 12, estimatedDays: '5-7', reportTemplateId: 'credit-v2021', desc: '使用智能报告模板中心的单户授信调查报告通用版 V2021，生成尽职调查报告底稿。' },
     { id: 'tpl-mini', name: '小微快审尽调', sections: 5, requiredDocs: 6, estimatedDays: '2-3' },
     { id: 'tpl-tax', name: '税票专项尽调', sections: 4, requiredDocs: 8, estimatedDays: '3-5' },
     { id: 'tpl-custom', name: '自定义资料包', sections: 0, requiredDocs: 0, estimatedDays: '自定义' },
@@ -519,7 +520,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     await pushStreamingMessage('请先选择尽调模板。')
     await delay(400)
-    await pushStreamingMessage('建议使用「标准授信尽调」，适用于制造业客户授信前审查。')
+    await pushStreamingMessage('建议使用「尽职调查报告」模板，适用于制造业客户授信前审查。')
     currentFlowStatus.value = 'waiting_template'
     waitingForInput.value = true
   }
@@ -880,7 +881,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     waitingForInput.value = true
     fillSuggestions('waiting_material_upload')
 
-    await pushStreamingMessage('已根据「标准授信尽调」模板生成资料包。当前识别到 8 项资料，缺失 4 项。')
+    await pushStreamingMessage('已根据「尽职调查报告」模板生成资料包。当前识别到 8 项资料，缺失 4 项。')
     await delay(600)
     await pushStreamingMessage('我可以生成资料收集清单，发送给企业补充，也可以在 demo 中模拟企业已上传资料。')
   }
@@ -1091,19 +1092,93 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   }
 
   // ===================== 产物确认 =====================
+  /** 生成报告章节数据（15 章）—— 供 deliverables 预览和 reportEditor 共享 */
+  function generateReportSections() {
+    const ent = selectedEnterprise.value
+    const isTsWq = ent?.id === 'ts-wq-sm'
+    const dutyTemplate = reportTemplates.find(t => t.id === 'credit-v2021') || reportTemplates[0]
+    const chapterMockContent = {
+      c1: '本报告基于对' + (isTsWq ? '唐山物桥商贸有限公司' : '该企业') + '的尽职调查生成。调查方式包括工商登记查询、司法公开数据检索、税票RPA采集、资料识别及现场调查。报告版本：V1 草稿，生成日期：' + new Date().toLocaleDateString('zh-CN') + '。',
+      c2: '资料来源范围：工商登记信息、司法公开裁判文书、税票采集数据（进项128/150份、销项96/120份）、企业补充资料。数据口径以2025年度为主，部分数据截至2026年。以下事项待确认：税负异常说明、购销两头在外业务解释。',
+      c3: '行内评级：C+。综合评分72分，风险等级：中风险。历史授信：无。本次申请额度待确认。',
+      c4: isTsWq
+        ? '企业名称：唐山物桥商贸有限公司。统一信用代码：91130203MA7EEQ2N0T。注册资本：500万元。法定代表人：马丽。成立日期：2021-12-24。所属行业：建材批发/商贸流通。注册地址：河北省唐山市。纳税信用：A级。'
+        : '企业基本信息待补充。',
+      c5: isTsWq
+        ? '股东结构待进一步核实。当前工商登记显示法定代表人马丽为实际控制人。关联企业3家，需进一步核查关联关系及交易情况。'
+        : '股权结构待补充。',
+      c6: isTsWq
+        ? '企业主营建材批发，属于商贸流通行业。主要经营模式为从上游供应商采购建材产品，销售给下游建筑企业和经销商。近12月开票收入2275.98万元。'
+        : '经营情况待补充。',
+      c7: isTsWq
+        ? '近12月开票收入2275.98万元，申报收入2175.46万元，差异4.4%。增值税税负率0.8%，显著低于行业均值2.8%。短期借款50万元，占流动资产61%，偿债压力较大。'
+        : '财务状况待补充。',
+      c8: isTsWq
+        ? '税票收入与申报收入存在4.4%差异。增值税税负率0.8%仅为行业均值的29%。进项发票采集128/150份，销项发票采集96/120份。银行流水识别中，交叉验证不充分。'
+        : '收入真实性核实待补充。',
+      c9: '纳税信用A级。司法公开数据未发现重大诉讼记录。征信查询状态正常，未发现当前逾期及不良记录。',
+      c10: '企业处于建材批发行业，属于商贸流通细分领域。同业对比数据待补充。',
+      c11: '司法公开数据：未发现重大诉讼。裁判文书2条（普通买卖合同纠纷，均已结案）。无行政处罚记录。',
+      c12: '主要风险事项：1）税负率显著低于行业（高风险）；2）营收增长异常（高风险）；3）购销两头在外（中风险）；4）短期偿债压力过大（高风险）；5）应收账款周转率下降（中风险）；6）开票收入与申报收入不一致（中风险）；7）电费与收入相关性低（低风险）；8）企业成立时间较短（中风险）。',
+      c13: '综合评分72分，等级C+。资料完整度86%。同业授信参考待补充。建议控制额度不超过300万元。',
+      c14: '调查结论：建议有条件授信。授信方案：额度300万元，期限12个月，品种为流动资金贷款。担保方式：实际控制人连带责任保证。提款条件：补充税负异常说明、确认购销两头在外业务模式。贷后管理：重点跟踪税票波动、司法风险和应收账款集中度。',
+      c15: '本报告附件包括：营业执照、工商登记信息、司法查询记录、税票采集数据、纳税申报表、银行流水摘要、补充资料包、证据链文件。',
+    }
+    const chapterMockEvidence = {
+      c1: ['企业探查结果', '工商登记信息'],
+      c2: ['资料包清单', '税票采集报告'],
+      c3: ['综合评分计算结果', '风险诊断报告'],
+      c4: ['工商登记信息', '企业探查结果'],
+      c5: ['工商登记信息', '关联企业查询'],
+      c6: ['销售合同', '现场照片', '上下游清单'],
+      c7: ['审计报告', '纳税申报表', '银行流水'],
+      c8: ['进项发票', '销项发票', '纳税申报数据', '银行流水'],
+      c9: ['征信报告', '司法查询结果'],
+      c10: ['行业协会资料'],
+      c11: ['司法诉讼查询', '裁判文书'],
+      c12: ['风险事项证据链', '企业探查诊断报告'],
+      c13: ['综合评分72', '资料完整度86%'],
+      c14: ['尽调结论'],
+      c15: ['工商资料', '司法查询', '税票数据', '资料包', '证据链'],
+    }
+    const chapterMockPending = {
+      c3: ['授信额度和条件待确认'],
+      c5: ['实控人说明待确认'],
+      c8: ['税负异常说明待补充', '银行流水交叉验证不充分'],
+      c12: ['购销两头在外业务解释待确认'],
+      c14: ['授信额度和条件待确认'],
+    }
+    const statusMap = { '已完成': ['c1', 'c4', 'c6', 'c9', 'c10', 'c11', 'c15'], '待确认': ['c2', 'c3', 'c5', 'c7', 'c8', 'c12', 'c13', 'c14'] }
+
+    return dutyTemplate.chapters.map(ch => ({
+      id: ch.id,
+      no: parseInt(ch.no.replace(/[一二三四五六七八九十]+/, n => {
+        const map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15 }
+        return map[n] || n
+      })) || 0,
+      title: ch.title,
+      status: statusMap['已完成'].includes(ch.id) ? '已完成' : '待确认',
+      content: chapterMockContent[ch.id] || `${ch.title}内容待生成。`,
+      evidence: chapterMockEvidence[ch.id] || [],
+      materials: ch.requiredMaterials || [],
+      pending: chapterMockPending[ch.id] || [],
+    }))
+  }
+
   async function runDeliverablesStep() {
     const ent = selectedEnterprise.value
 
     const deliverablesArtifactData = {
       enterprise: ent,
       items: [
-        { name: '尽调底稿', status: '已生成', count: '1 份' },
-        { name: '工商核验报告', status: '已生成', count: '1 份' },
-        { name: '司法查询报告', status: '已生成', count: '1 份' },
-        { name: '税票分析报告', status: '已生成', count: '1 份' },
-        { name: '风险诊断报告', status: '已生成', count: '1 份' },
-        { name: '证据链文件', status: '已归档', count: '24 项' },
+        { name: '尽职调查报告', status: '已生成', count: '1 份', type: 'report' },
+        { name: '工商核验报告', status: '已生成', count: '1 份', type: 'business' },
+        { name: '司法查询报告', status: '已生成', count: '1 份', type: 'judicial' },
+        { name: '税票分析报告', status: '已生成', count: '1 份', type: 'tax' },
+        { name: '风险诊断报告', status: '已生成', count: '1 份', type: 'risk' },
+        { name: '证据链文件', status: '已归档', count: '24 项', type: 'evidence' },
       ],
+      reportSections: generateReportSections(),
       steps: [
         { title: '生成尽调产物', status: 'done' },
         { title: '产物质量校验', status: 'done' },
@@ -1164,92 +1239,13 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   // ===================== 报告编辑（可选） =====================
   async function startReportEditor() {
     const ent = selectedEnterprise.value
-    const isTsWq = ent?.id === 'ts-wq-sm'
 
     const reportArtifactData = {
       title: ent?.name ? ent.name + ' 尽职调查报告' : '尽职调查报告',
-      template: '标准授信尽调',
+      template: '尽职调查报告',
       completeness: 86,
       pendingCount: 2,
-      sections: [
-        {
-          id: 'overview',
-          no: 1,
-          title: '企业概况',
-          status: '已完成',
-          content: isTsWq
-            ? '唐山物桥商贸有限公司成立于2021年12月，注册资本500万元，法定代表人为马丽。企业主营建材批发，属于商贸流通行业，位于河北省唐山市。近12月开票收入2275.98万元，纳税信用A级，主体状态正常存续。'
-            : '企业基本情况概述。',
-          evidence: ['工商登记信息', '企业探查结果'],
-          materials: ['营业执照', '工商基础资料'],
-          pending: []
-        },
-        {
-          id: 'business',
-          no: 2,
-          title: '工商核验',
-          status: '已完成',
-          content: isTsWq
-            ? '经核验，企业主体状态为正常存续，税务评级A级，法定代表人马丽，注册资本500万元。关联企业3家，未发现重大工商异常。'
-            : '工商核验结果。',
-          evidence: ['主体状态核验', '关联企业查询'],
-          materials: ['工商登记信息'],
-          pending: []
-        },
-        {
-          id: 'tax',
-          no: 3,
-          title: '税票分析',
-          status: '待确认',
-          content: isTsWq
-            ? '进项发票采集128/150份，销项发票采集96/120份。增值税税负率0.8%，显著低于行业均值2.8%。开票收入2275.98万元，申报收入2175.46万元，差异4.4%。'
-            : '税票分析结果。',
-          evidence: ['进项发票 128/150', '销项发票 96/120', '纳税申报数据'],
-          materials: ['开票明细', '纳税申报表'],
-          pending: ['税负异常说明待补充']
-        },
-        {
-          id: 'risk',
-          no: 4,
-          title: '风险诊断',
-          status: '待确认',
-          content: isTsWq
-            ? '综合评分72分，等级C+，中风险。主要风险事项：税负率显著低于行业、营收增长异常、购销两头在外、短期偿债压力过大。建议有条件授信。'
-            : '风险诊断结果。',
-          evidence: ['风险事项证据链', '企业探查诊断报告'],
-          materials: ['证据链清单'],
-          pending: ['购销两头在外业务解释待确认']
-        },
-        {
-          id: 'credit',
-          no: 5,
-          title: '授信建议',
-          status: '待确认',
-          content: isTsWq
-            ? '建议有条件授信：要求补充电费记录、追加股东连带担保、限制授信额度、提高贷后检查频率。综合评分72分，资料完整度86%。'
-            : '授信建议。',
-          evidence: ['综合评分 72', '资料完整度 86%'],
-          materials: ['尽调结论'],
-          pending: ['授信额度和条件待确认']
-        },
-        {
-          id: 'appendix',
-          no: 6,
-          title: '附件清单',
-          status: '已完成',
-          content: '本报告附件包括工商资料、司法查询记录、税票采集数据及补充资料包。',
-          evidence: [],
-          materials: ['工商资料', '司法查询', '税票数据', '资料包'],
-          pending: []
-        },
-      ],
-      content: isTsWq
-        ? '本报告基于对唐山物桥商贸有限公司的综合尽调，涵盖工商、司法、税票、资料等维度...'
-        : '本报告基于对企业基本信息、工商司法核验、经营税务等多维度分析...',
-      steps: [
-        { title: '生成报告框架', status: 'done' },
-        { title: '填充尽调数据', status: 'done' },
-      ],
+      sections: generateReportSections(),
     }
 
     upsertStage({ id: 'reportEditor', label: STAGE_LABEL_MAP.reportEditor, icon: '📝', status: 'active', artifactData: { ...reportArtifactData } })
@@ -1270,7 +1266,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         { label: '新建尽调', value: '新建尽调' },
         { label: '加入监控', value: '加入监控' },
       ],
-      waiting_template: [{ label: '选择模板「标准授信尽调」', value: '标准授信尽调' }],
+      waiting_template: [{ label: '选择模板「尽职调查报告」', value: '尽职调查报告' }],
       waiting_tax_confirmation: [{ label: '确认发送采集链接', value: 'confirm_tax_send' }],
       waiting_tax_authorization: [{ label: '模拟企业已授权', value: 'tax_authorized' }],
       waiting_material_upload: [{ label: '模拟企业上传资料', value: 'mock_material_upload' }],

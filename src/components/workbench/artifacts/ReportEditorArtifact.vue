@@ -4,7 +4,7 @@
     <div class="report-lite__header">
       <span class="report-lite__title">{{ data.title || '尽职调查报告' }}</span>
       <div class="report-lite__meta">
-        <el-tag size="small" round>{{ data.template || '标准授信尽调' }}</el-tag>
+        <el-tag size="small" round>{{ data.template || '尽职调查报告' }}</el-tag>
         <span class="report-lite__meta-text">资料完整度 {{ data.completeness ?? 86 }}%</span>
         <span v-if="data.pendingCount" class="report-lite__meta-text">
           待确认 <el-tag type="warning" size="small" effect="plain">{{ data.pendingCount }} 项</el-tag>
@@ -109,6 +109,18 @@
       </main>
     </div>
 
+    <!-- 底部章节证据链入口（非第 16 章） -->
+    <div class="report-lite__evidence-chain-bar">
+      <div class="report-lite__evidence-chain-title">章节证据链</div>
+      <div class="report-lite__evidence-chain-desc">
+        已关联 <strong>{{ totalEvidenceCount }}</strong> 条证据，覆盖工商、司法、税票、资料包、风险诊断。
+      </div>
+      <div class="report-lite__evidence-chain-actions">
+        <el-button size="small" plain type="primary">查看章节证据链</el-button>
+        <el-button size="small" plain type="info">根据资料包重新生成本节</el-button>
+      </div>
+    </div>
+
     <!-- 底部操作按钮 -->
     <div class="report-lite__actions">
       <el-button size="default" plain>保存草稿</el-button>
@@ -126,6 +138,10 @@ const props = defineProps({ data: { type: Object, default: () => ({}) } })
 
 const sections = computed(() => props.data.sections || [])
 
+const totalEvidenceCount = computed(() => {
+  return sections.value.reduce((sum, s) => sum + (s.evidence ? s.evidence.length : 0), 0)
+})
+
 const currentSection = ref(null)
 
 // 默认选中第一个章节
@@ -142,8 +158,8 @@ function secTag(s) {
 }
 
 function numToChinese(n) {
-  const map = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
-  return map[n - 1] || n
+  const map = { 1:'一', 2:'二', 3:'三', 4:'四', 5:'五', 6:'六', 7:'七', 8:'八', 9:'九', 10:'十', 11:'十一', 12:'十二', 13:'十三', 14:'十四', 15:'十五' }
+  return map[n] || n
 }
 </script>
 
@@ -365,6 +381,38 @@ function numToChinese(n) {
   gap: 10px;
   justify-content: flex-end;
   padding-top: 4px;
+}
+
+/* 底部章节证据链 */
+.report-lite__evidence-chain-bar {
+  background: var(--bg-page, #f7faff);
+  border: 1px dashed var(--border-light, #e5eaf2);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.report-lite__evidence-chain-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a2e);
+  white-space: nowrap;
+}
+
+.report-lite__evidence-chain-desc {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  flex: 1;
+  min-width: 200px;
+}
+
+.report-lite__evidence-chain-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
