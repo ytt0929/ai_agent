@@ -6,17 +6,30 @@
         <p class="sr-home__subtitle">查询报告状态，继续修改报告，按新模板重排或生成可交付报告</p>
       </div>
 
-      <!-- AI 自然语言输入区 -->
-      <el-card shadow="never" class="sr-home__ai-input-card">
-        <p class="sr-home__ai-label">告诉我你要处理什么报告任务？</p>
-        <div class="sr-home__ai-input-row">
-          <el-input v-model="aiTaskInput" class="sr-home__ai-input" placeholder="例如：明达精工现在报告到哪一步了？或者把明达精工报告按浙江分行 V2024 模板重新生成" @keydown.enter.exact.prevent="handleAiTask" clearable size="large" />
-          <el-button type="primary" size="large" :disabled="!aiTaskInput.trim()" @click="handleAiTask">识别任务</el-button>
-        </div>
+      <!-- AI 输入任务区（参考企业探查首页视觉） -->
+      <div class="sr-home__ai-card">
+        <el-input
+          v-model="aiTaskInput"
+          class="sr-home__ai-input-el"
+          placeholder="例如：明达精工现在报告到哪一步了？或者把明达精工报告按浙江分行 V2024 模板重新生成"
+          @keydown.enter.exact.prevent="handleAiTask"
+          clearable
+          size="large"
+        />
+        <el-button
+          type="primary"
+          size="large"
+          :disabled="!aiTaskInput.trim()"
+          @click="handleAiTask"
+        >
+          识别任务
+        </el-button>
         <div class="sr-home__ai-chips">
-          <el-button v-for="(chip, ci) in aiSuggestions" :key="ci" size="small" text @click="handleAiTask(chip)">{{ chip }}</el-button>
+          <span v-for="(chip, ci) in aiSuggestions" :key="ci" class="sr-home__chip" @click="handleAiTask(chip)">
+            {{ chip }}
+          </span>
         </div>
-      </el-card>
+      </div>
 
       <!-- 四项核心能力 -->
       <div class="sr-home__capabilities">
@@ -63,8 +76,9 @@
         </template>
         <el-table :data="reportTasks.slice(0, 3)" size="small" style="width: 100%">
           <el-table-column prop="enterpriseName" label="企业名称" width="160" />
-          <el-table-column prop="reportName" label="报告名称" width="200" />
-          <el-table-column label="状态" width="100">
+          <el-table-column prop="reportName" label="报告名称" width="160" />
+          <el-table-column prop="source" label="来源" width="90" />
+          <el-table-column label="状态" width="110">
             <template #default="{ row }">
               <el-tag size="small" :type="row.status.includes('待确认') ? 'warning' : row.status.includes('缺失') ? 'danger' : 'success'">{{ row.status }}</el-tag>
             </template>
@@ -1853,10 +1867,55 @@ function viewEvidenceFromRewrite() {
 .sr-home__subtitle { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0; line-height: var(--line-height-relaxed); }
 
 /* AI 输入卡片 */
-.sr-home__ai-input-card { margin-bottom: var(--space-md); }
-.sr-home__ai-label { font-size: var(--font-size-body); font-weight: var(--font-weight-medium); color: var(--text-primary); margin: 0 0 var(--space-sm); }
-.sr-home__ai-input-row { margin-bottom: var(--space-2xs); }
-.sr-home__ai-chips { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.sr-home__ai-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto var(--space-lg) auto;
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.sr-home__ai-input-el { flex: 1; min-width: 280px; }
+.sr-home__ai-input-el :deep(.el-input__wrapper) {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+  padding: 8px 14px;
+}
+.sr-home__ai-input-el :deep(.el-input__wrapper.is-focus) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+.sr-home__ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  width: 100%;
+}
+.sr-home__chip {
+  display: inline-block;
+  padding: 4px 14px;
+  background: var(--bg-subtle, #f0f5ff);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sr-home__chip:hover {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
 
 /* 四项核心能力 */
 .sr-home__capabilities { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-md); }

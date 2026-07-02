@@ -93,13 +93,23 @@
         </el-card>
 
         <!-- 产物确认 -->
-        <el-card v-else-if="selectedStageKey === 'artifacts'" shadow="never" class="workspace-card">
+        <el-card v-else-if="selectedStageKey === 'artifacts' && !reportEditorMode" shadow="never" class="workspace-card">
           <DeliverablesArtifact
             :data="deliverablesArtifactData"
             @edit-report="handleEditReport"
             @export-report="handleExportReport"
             @start-monitor="handleStartMonitor"
+            @sync-to-report="handleSyncToReport"
           />
+        </el-card>
+
+        <!-- 报告编辑 Lite（产物确认阶段触发） -->
+        <el-card v-else-if="reportEditorMode" shadow="never" class="workspace-card">
+          <ReportEditorArtifact :data="reportEditorData" />
+          <div class="report-lite-nav-bar">
+            <el-button size="small" text type="primary" @click="exitReportEditor">← 返回产物确认</el-button>
+            <el-button size="small" plain @click="handleEnterSmartReport">进入智能报告</el-button>
+          </div>
         </el-card>
       </main>
 
@@ -177,6 +187,8 @@ import EvidenceMergeArtifact from '../components/workbench/artifacts/EvidenceMer
 import RiskDiagnosisArtifact from '../components/workbench/artifacts/RiskDiagnosisArtifact.vue'
 import BusinessVerifyArtifact from '../components/workbench/artifacts/BusinessVerifyArtifact.vue'
 import JudicialArtifact from '../components/workbench/artifacts/JudicialArtifact.vue'
+import ReportEditorArtifact from '../components/workbench/artifacts/ReportEditorArtifact.vue'
+import { createOrReuseReportTaskFromDueDiligence, reportTasks, reportTemplates, reportSections as reportSectionsData } from '../data/mockSmartReport.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -233,6 +245,35 @@ const stageInfo = {
 
 const chatInputText = ref('')
 const chatScrollbarRef = ref(null)
+const reportEditorMode = ref(false)
+
+const reportEditorData = computed(() => {
+  return {
+    title: '尽职调查报告',
+    template: '尽职调查报告',
+    completeness: task.value?.materialCompleteness || 86,
+    pendingCount: 3,
+    sections: reportSectionsData.map((s) => ({
+      id: s.id,
+      no: parseInt(s.no.replace(/[^0-9]/g, '')) || 1,
+      title: s.title.replace(/^[一二三四五六七八九十]+、/, ''),
+      status: s.status || '编辑中',
+      content: (s.body || []).join('\n\n'),
+      evidence: s.evidence ? s.evidence : [],
+      materials: s.materials ? s.materials : [],
+      pending: s.pending || [],
+    })),
+  }
+})
+
+function handleEnterSmartReport() {
+  ElMessage.info('本阶段仅支持轻量编辑。深度编辑、版本管理和导出请进入「智能报告」页面。')
+}
+
+function exitReportEditor() {
+  reportEditorMode.value = false
+}
+
 let msgIdCounter = 0
 function nextMsgId() { return 'msg-' + (++msgIdCounter) }
 
@@ -525,8 +566,69 @@ function handleEnterArtifacts(tid) {
   selectedStageKey.value = 'artifacts'
 }
 function handleEditReport() {
+  // 创建/复用智能报告编写任务
+  const result = createOrReuseReportTaskFromDueDiligence({
+    dueTaskId: taskId,
+    enterpriseName: task.value?.name || '唐山物桥商贸有限公司',
+    reportName: '尽职调查报告',
+    templateId: 'credit-v2021',
+    templateName: '尽职调查报告',
+    materialPackageId: 'MAT-004',
+    pendingCount: 3,
+    materialComplete: task.value?.materialCompleteness || 86,
+    chapters: 15,
+    evidenceCount: 24,
+    aiNote: '税负率偏低、购销两头在外、开票收入与申报收入不一致等风险事项需重点核实',
+    riskLevel: '中风险',
+  })
+
+  // 同步到尽调任务
+  if (task.value) {
+    task.value.reportDraftId = result.task.id
+    task.value.reportStatus = '草稿待编辑'
+  }
+
+  // 切换左侧为报告编辑 Lite
+  reportEditorMode.value = true
+
   pushUser('编辑报告')
-  pushAi('下一阶段将进入智能报告编辑，你可以继续修改风险结论、补充税票说明和生成授信建议。')
+  if (result.reused) {
+    pushAi('已找到该企业的智能报告编写任务，并同步当前尽调产物。你可以继续在当前页编辑。')
+  } else {
+    pushAi('已基于当前尽调产物创建智能报告编写任务。你可以先在当前页轻量编辑报告，也可以稍后进入智能报告进行深度编辑、版本管理和导出。')
+  }
+}
+
+function handleSyncToReport() {
+  // 与编辑报告相同：创建/复用报告任务 + 切换左侧为报告编辑 Lite
+  const result = createOrReuseReportTaskFromDueDiligence({
+    dueTaskId: taskId,
+    enterpriseName: task.value?.name || '唐山物桥商贸有限公司',
+    reportName: '尽职调查报告',
+    templateId: 'credit-v2021',
+    templateName: '尽职调查报告',
+    materialPackageId: 'MAT-004',
+    pendingCount: 3,
+    materialComplete: task.value?.materialCompleteness || 86,
+    chapters: 15,
+    evidenceCount: 24,
+    aiNote: '税负率偏低、购销两头在外、开票收入与申报收入不一致等风险事项需重点核实',
+    riskLevel: '中风险',
+  })
+
+  if (task.value) {
+    task.value.reportDraftId = result.task.id
+    task.value.reportStatus = '草稿待编辑'
+  }
+
+  reportEditorMode.value = true
+
+  pushUser('同步到智能报告')
+  if (result.reused) {
+    pushAi('已找到该企业的智能报告编写任务，并同步当前尽调产物。你可以继续在当前页编辑。')
+  } else {
+    pushAi('已基于当前尽调产物创建智能报告编写任务。你可以先在当前页轻量编辑报告，也可以稍后进入智能报告进行深度编辑、版本管理和导出。')
+  }
 }
 function handleExportReport(tid) {
   pushUser('导出报告')
@@ -669,6 +771,7 @@ function getProgressColor(p) {
 .due-task__workspace { min-width: 0; min-height: 0; overflow-y: auto; padding-right: var(--space-xs); }
 .workspace-card :deep(.el-card__header) { padding: var(--space-md) var(--space-lg); }
 .workspace-card :deep(.el-card__body) { padding: var(--space-lg); }
+.report-lite-nav-bar { display: flex; align-items: center; gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--border-divider); }
 .due-task__assistant { min-width: 0; min-height: 0; height: 100%; position: static; }
 .chat-panel { height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--surface-card); border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; }
 .chat-panel__header { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border-light); flex-shrink: 0; }

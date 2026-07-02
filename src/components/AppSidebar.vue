@@ -74,6 +74,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useWorkbenchAssistantStore } from '../stores/workbenchAssistant.js'
 import {
   House, DocumentChecked, Cpu, Monitor,
   Document, Filter, Tickets, Picture,
@@ -102,6 +103,9 @@ const toolItems = [
 ]
 
 function go(item) {
+  if (item.key === 'workbench') {
+    useWorkbenchAssistantStore().reset()
+  }
   activeKey.value = item.key
   router.push(item.route)
 }

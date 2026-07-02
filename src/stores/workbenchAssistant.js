@@ -129,7 +129,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     }
     if (value === 'pause_due_task') {
       contextSuggestions.length = 0
-      await pushStreamingMessage('已为你保留该尽调任务。你可以稍后在「智能尽调」任务台账中继续处理。')
+      await pushStreamingMessage('已为你保留该尽调任务。稍后请点击左侧菜单「智能尽调」，在任务台账中继续处理。')
       currentFlowStatus.value = 'idle'
       waitingForInput.value = false
       return
@@ -562,11 +562,11 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       linkedDueTaskId.value = result.task.id
 
       if (result.reused) {
-        await pushStreamingMessage(`已找到「${ent.name}」的尽调任务，当前任务已在智能尽调中保留。建议进入智能尽调继续处理。`)
+        await pushStreamingMessage(`已找到「${ent.name}」的尽调任务，当前任务已在智能尽调中保留。你可以继续在工作台操作，或稍后去智能尽调任务台账继续处理。`)
       } else {
         await pushStreamingMessage(`已为「${ent.name}」创建尽调任务，模板为「${template.name}」。`)
         await delay(300)
-        await pushStreamingMessage(`该任务已同步到智能尽调。由于后续可能需要企业税票授权和资料补充，建议进入智能尽调继续处理。`)
+        await pushStreamingMessage(`该任务已同步到智能尽调任务台账。你可以继续在工作台完成当前 demo 流程；如果稍后再处理，可点击「稍后处理」。`)
       }
     }
     const dueFlowSteps = freshDueFlowSteps('business')
@@ -1307,7 +1307,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       ],
       waiting_template: [{ label: '选择模板「尽职调查报告」', value: '尽职调查报告' }],
       waiting_due_diligence_action: [
-        { label: '进入智能尽调任务', value: 'open_due_task' },
         { label: '稍后处理', value: 'pause_due_task' },
       ],
       waiting_tax_confirmation: [{ label: '确认发送采集链接', value: 'confirm_tax_send' }],
@@ -1367,19 +1366,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       const tpl = dueDiligenceTemplates.find(t => text.includes(t.name)) || dueDiligenceTemplates[0]
       await confirmDueTemplate(tpl)
     } else if (currentFlowStatus.value === 'waiting_due_diligence_action') {
-      const lower = text.toLowerCase()
-      if (lower.includes('进入') || lower.includes('尽调') || lower.includes('智能')) {
-        // 不在此处理跳转，由 WorkbenchPage.vue 的 handleWorkbenchSuggestion 处理
-        await pushStreamingMessage('请点击上方「进入智能尽调任务」按钮继续。')
-        currentFlowStatus.value = 'waiting_due_diligence_action'
-        waitingForInput.value = true
-        fillSuggestions('waiting_due_diligence_action')
-      } else {
-        await pushStreamingMessage('已为你保留该尽调任务。你可以稍后在「智能尽调」任务台账中继续处理。')
-        currentFlowStatus.value = 'idle'
-        waitingForInput.value = false
-        contextSuggestions.length = 0
-      }
+      // 不跳转详情页，工作台流程继续推进
+      await runBusinessVerification()
     } else if (currentFlowStatus.value === 'waiting_tax_confirmation') {
       await confirmTaxSend()
     } else if (currentFlowStatus.value === 'waiting_tax_authorization') {

@@ -337,17 +337,8 @@ function sendMsg() { const t = dialogInputLocal.value.trim(); if (!t) return; di
 function returnToNormal() { assistant.reset() }
 function clearChat() { assistant.reset() }
 
-// Phase 3-C: 工作台建议按钮点击（拦截尽调跳转）
+// Phase 3-C: 工作台建议按钮点击（不再跳转尽调详情页）
 function handleWorkbenchSuggestion(s) {
-  if (s.value === 'open_due_task') {
-    const id = assistant.linkedDueTaskId
-    if (id) { router.push('/due-diligence/' + id) }
-    return
-  }
-  if (s.value === 'pause_due_task') {
-    assistant.handleSuggestionClick(s)
-    return
-  }
   assistant.handleSuggestionClick(s)
 }
 </script>

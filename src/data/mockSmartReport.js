@@ -53,14 +53,17 @@ export const reportTasks = [
     enterpriseName: '唐山物桥商贸有限公司',
     reportName: '尽职调查报告',
     source: '智能尽调',
+    dueTaskId: 'dd-ts-wq-001',
     templateId: 'credit-v2021',
-    templateName: '标准授信尽调报告',
+    templateName: '尽职调查报告',
     materialPackageId: 'MAT-004',
-    status: '草稿',
+    status: '草稿待编辑',
     pendingCount: 3,
-    materialComplete: 67,
+    materialComplete: 86,
+    chapters: 15,
+    evidenceCount: 24,
     aiNote: '税负率偏低、购销两头在外、开票收入与申报收入不一致等风险事项需重点核实',
-    updatedAt: '2026-07-02 08:40',
+    updatedAt: '2026-07-02 15:40',
     riskLevel: '中风险',
   },
   {
@@ -781,4 +784,53 @@ export function getReportContent(templateId, enterprise) {
     template: templateId || 'credit-v2021',
     sections,
   }
+}
+
+/**
+ * 从智能尽调产物确认阶段创建/复用智能报告编写任务。
+ * 按 dueTaskId 或 enterpriseName + reportName 查找已有任务。
+ */
+export function createOrReuseReportTaskFromDueDiligence(payload) {
+  const { dueTaskId, enterpriseName, reportName } = payload
+
+  // 按 dueTaskId 查找
+  const existingByDue = reportTasks.find(t => t.dueTaskId === dueTaskId)
+  if (existingByDue) {
+    return { task: existingByDue, reused: true }
+  }
+
+  // 按 enterpriseName + reportName 查找
+  const existingByName = reportTasks.find(t =>
+    t.enterpriseName === enterpriseName && t.reportName === reportName
+  )
+  if (existingByName) {
+    return { task: existingByName, reused: true }
+  }
+
+  // 创建新任务
+  const now = new Date()
+  const ts = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' +
+    String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' +
+    String(now.getMinutes()).padStart(2, '0')
+
+  const newTask = {
+    id: 'RPT-DD-' + Date.now(),
+    enterpriseName: enterpriseName || '新尽调任务',
+    reportName: reportName || '尽职调查报告',
+    source: '智能尽调',
+    dueTaskId: dueTaskId || '',
+    templateId: payload.templateId || 'credit-v2021',
+    templateName: payload.templateName || '尽职调查报告',
+    materialPackageId: payload.materialPackageId || '',
+    status: '草稿待编辑',
+    pendingCount: payload.pendingCount || 3,
+    materialComplete: payload.materialComplete || 86,
+    chapters: payload.chapters || 15,
+    evidenceCount: payload.evidenceCount || 24,
+    aiNote: payload.aiNote || '',
+    updatedAt: ts,
+    riskLevel: payload.riskLevel || '中风险',
+  }
+  reportTasks.unshift(newTask)
+  return { task: newTask, reused: false }
 }

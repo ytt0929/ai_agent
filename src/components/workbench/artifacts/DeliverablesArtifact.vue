@@ -68,6 +68,7 @@
       <!-- 动作区 -->
       <div class="artifact-deliverables__actions">
         <el-button type="primary" @click="$emit('edit-report')">编辑报告</el-button>
+        <el-button plain type="success" @click="$emit('sync-to-report')">同步到智能报告</el-button>
         <el-button plain @click="$emit('export-report')">导出报告</el-button>
         <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
       </div>
