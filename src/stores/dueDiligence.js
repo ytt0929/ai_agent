@@ -350,6 +350,46 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     return action
   }
 
+  // 从工作台创建/复用尽调任务（Phase 3-C）
+  function createOrReuseTaskFromWorkbench(payload) {
+    const { enterpriseName, creditCode, templateName } = payload
+
+    // 按企业名称或信用代码查找已有任务
+    const existing = tasks.value.find(t =>
+      (creditCode && t.creditCode === creditCode) ||
+      (enterpriseName && t.name === enterpriseName)
+    )
+
+    if (existing) {
+      return { task: existing, reused: true }
+    }
+
+    const taskId = 'dd-' + Date.now()
+    const task = {
+      id: taskId,
+      name: enterpriseName || '新尽调任务',
+      creditCode: creditCode || '',
+      industry: payload.industry || '—',
+      region: payload.region || '—',
+      amount: payload.registeredCapital || '—',
+      source: payload.source || '工作台AI',
+      templateName: templateName || '尽职调查报告',
+      currentStep: 'tax-rpa',
+      currentStage: '税票采集',
+      statusText: '税票采集 / 待授权',
+      status: '等待客户',
+      progress: 43,
+      score: 72,
+      grade: 'C+',
+      riskLevel: '中风险',
+      materialCompleteness: 67,
+      manager: '当前用户',
+      reportDraftId: '',
+      updatedAt: new Date().toLocaleString('zh-CN'),
+    }
+    tasks.value.push(task)
+    return { task, reused: false }
+  }
   return {
     tasks,
     currentTask,
@@ -382,6 +422,7 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     addFile,
     createTaskFromScreening,
     createTaskFromEnterpriseExploration,
+    createOrReuseTaskFromWorkbench,
     createManualTask,
     handleChipAction,
   }

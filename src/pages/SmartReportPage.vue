@@ -21,25 +21,33 @@
       <!-- 四项核心能力 -->
       <div class="sr-home__capabilities">
         <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
-          <div class="sr-cap-card__icon">📊</div>
+          <div class="sr-cap-card__icon">
+            <el-icon :size="24"><DataAnalysis /></el-icon>
+          </div>
           <div class="sr-cap-card__title">查询报告状态</div>
           <div class="sr-cap-card__desc">查看报告进度、待确认章节和缺失材料</div>
           <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="startTaskDialog('查询明达精工报告状态')">查询状态</el-button>
         </el-card>
         <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
-          <div class="sr-cap-card__icon">✏️</div>
+          <div class="sr-cap-card__icon">
+            <el-icon :size="24"><EditPen /></el-icon>
+          </div>
           <div class="sr-cap-card__title">继续修改报告</div>
           <div class="sr-cap-card__desc">编辑、确认章节，完善证据链</div>
           <el-button size="small" type="primary" class="sr-cap-card__btn" @click="startTaskDialog('继续修改明达精工授信调查报告')">继续修改</el-button>
         </el-card>
         <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
-          <div class="sr-cap-card__icon">📋</div>
+          <div class="sr-cap-card__icon">
+            <el-icon :size="24"><DocumentCopy /></el-icon>
+          </div>
           <div class="sr-cap-card__title">按新模板生成</div>
           <div class="sr-cap-card__desc">用已有资料按新模板重排报告</div>
           <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="startTaskDialog('按浙江分行 V2024 模板重新生成明达精工报告')">选择模板生成</el-button>
         </el-card>
         <el-card shadow="hover" class="sr-cap-card sr-cap-card--compact">
-          <div class="sr-cap-card__icon">⚙️</div>
+          <div class="sr-cap-card__icon">
+            <el-icon :size="24"><Setting /></el-icon>
+          </div>
           <div class="sr-cap-card__title">维护报告模板</div>
           <div class="sr-cap-card__desc">管理银行模板、章节规则和资料要求</div>
           <el-button size="small" text type="primary" class="sr-cap-card__btn" @click="view = 'templateCenter'">进入模板中心</el-button>
@@ -886,7 +894,7 @@
 </template>
 <script setup>
 import { ref, computed } from 'vue'
-import { ArrowLeft, Upload, CircleCheck, Close, Document, MagicStick } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload, CircleCheck, Close, Document, MagicStick, DataAnalysis, EditPen, DocumentCopy, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElDialog } from 'element-plus'
 import {
   reportTasks,
@@ -1839,27 +1847,27 @@ function viewEvidenceFromRewrite() {
 }
 
 /* ═══ 首页 ═══ */
-.sr-home { max-width: 960px; margin: 0 auto; }
-.sr-home__header { margin-bottom: 20px; }
-.sr-home__title { font-size: 22px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
-.sr-home__subtitle { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0; line-height: 1.5; }
+.sr-home { max-width: var(--layout-page-default); margin: 0 auto; }
+.sr-home__header { margin-bottom: var(--space-xl); }
+.sr-home__title { font-size: var(--font-size-workbench-title); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin: 0 0 var(--space-2xs); }
+.sr-home__subtitle { font-size: var(--font-size-sm); color: var(--text-tertiary); margin: 0; line-height: var(--line-height-relaxed); }
 
 /* AI 输入卡片 */
-.sr-home__ai-input-card { margin-bottom: 16px; }
-.sr-home__ai-label { font-size: 14px; font-weight: 500; color: var(--text-primary); margin: 0 0 10px; }
-.sr-home__ai-input-row { margin-bottom: 8px; }
-.sr-home__ai-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.sr-home__ai-input-card { margin-bottom: var(--space-md); }
+.sr-home__ai-label { font-size: var(--font-size-body); font-weight: var(--font-weight-medium); color: var(--text-primary); margin: 0 0 var(--space-sm); }
+.sr-home__ai-input-row { margin-bottom: var(--space-2xs); }
+.sr-home__ai-chips { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
 
 /* 四项核心能力 */
-.sr-home__capabilities { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-.sr-cap-card { cursor: pointer; transition: border-color .15s, box-shadow .15s; padding: 16px !important; }
-.sr-cap-card:hover { border-color: var(--color-primary); }
-.sr-cap-card__icon { font-size: 24px; margin-bottom: 8px; }
-.sr-cap-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.sr-cap-card__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); line-height: 1.4; }
+.sr-home__capabilities { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-md); }
+.sr-cap-card { cursor: pointer; transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out); padding: var(--space-md) !important; }
+.sr-cap-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-sm); }
+.sr-cap-card__icon { font-size: 24px; margin-bottom: var(--space-2xs); display: flex; align-items: center; justify-content: center; color: var(--color-primary); }
+.sr-cap-card__title { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-bottom: var(--space-2xs); }
+.sr-cap-card__desc { font-size: var(--font-size-xs); color: var(--text-tertiary); line-height: var(--line-height-relaxed); }
 
 /* 最近报告 */
-.sr-home__recent-header { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.sr-home__recent-header { font-size: var(--font-size-body); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
 
 /* 主体两栏（旧，保留兼容） */
 .sr-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }

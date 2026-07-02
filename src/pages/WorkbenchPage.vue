@@ -101,7 +101,7 @@
                 round
                 plain
                 type="primary"
-                @click="assistant.handleSuggestionClick(s)"
+                @click="handleWorkbenchSuggestion(s)"
               >
                 {{ s.label }}
               </el-button>
@@ -204,7 +204,7 @@
                 round
                 plain
                 type="primary"
-                @click="assistant.handleSuggestionClick(s)"
+                @click="handleWorkbenchSuggestion(s)"
               >
                 {{ s.label }}
               </el-button>
@@ -336,6 +336,20 @@ function handleNormalSend() { const t = dialogInputLocal.value.trim(); if (!t) r
 function sendMsg() { const t = dialogInputLocal.value.trim(); if (!t) return; dialogInputLocal.value = ''; assistant.sendMessage(t) }
 function returnToNormal() { assistant.reset() }
 function clearChat() { assistant.reset() }
+
+// Phase 3-C: 工作台建议按钮点击（拦截尽调跳转）
+function handleWorkbenchSuggestion(s) {
+  if (s.value === 'open_due_task') {
+    const id = assistant.linkedDueTaskId
+    if (id) { router.push('/due-diligence/' + id) }
+    return
+  }
+  if (s.value === 'pause_due_task') {
+    assistant.handleSuggestionClick(s)
+    return
+  }
+  assistant.handleSuggestionClick(s)
+}
 </script>
 
 <style scoped>
