@@ -267,7 +267,39 @@ const reportEditorData = computed(() => {
 })
 
 function handleEnterSmartReport() {
-  ElMessage.info('本阶段仅支持轻量编辑。深度编辑、版本管理和导出请进入「智能报告」页面。')
+  // 确保已有报告任务 ID
+  if (!task.value?.reportDraftId) {
+    // 没有则先创建/复用
+    const result = createOrReuseReportTaskFromDueDiligence({
+      dueTaskId: taskId,
+      enterpriseName: task.value?.name || '唐山物桥商贸有限公司',
+      reportName: '尽职调查报告',
+      templateId: 'credit-v2021',
+      templateName: '尽职调查报告',
+      materialPackageId: 'MAT-004',
+      pendingCount: 3,
+      materialComplete: task.value?.materialCompleteness || 86,
+      chapters: 15,
+      evidenceCount: 24,
+      aiNote: '税负率偏低、购销两头在外、开票收入与申报收入不一致等风险事项需重点核实',
+      riskLevel: '中风险',
+    })
+    if (task.value) {
+      task.value.reportDraftId = result.task.id
+      task.value.reportStatus = '草稿待编辑'
+    }
+  }
+  const reportTaskId = task.value?.reportDraftId
+  pushUser('进入智能报告')
+  pushAi('正在打开智能报告深度编辑页。你可以继续编辑正文、处理待确认项并导出正式报告。')
+  router.push({
+    path: '/smart-report',
+    query: {
+      reportId: reportTaskId,
+      from: 'due-diligence',
+      dueTaskId: taskId
+    }
+  })
 }
 
 function exitReportEditor() {

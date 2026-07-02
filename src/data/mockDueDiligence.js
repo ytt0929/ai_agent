@@ -1,6 +1,6 @@
 // Mock 数据 - 智能尽调
 
-// 统一 7 节点流程（详情页 / store / mock 共用）
+// 统一 8 节点流程（详情页 / store / mock 共用）
 export const steps = [
   { key: 'verify-business', label: '工商核验', icon: 'Verified' },
   { key: 'verify-legal',    label: '司法查询', icon: 'Search' },
@@ -9,26 +9,29 @@ export const steps = [
   { key: 'evidence',        label: '证据整合', icon: 'Collection' },
   { key: 'risk',            label: '风险诊断', icon: 'WarningFilled' },
   { key: 'artifacts',       label: '产物确认', icon: 'Finished' },
+  { key: 'delivery-package',label: '交付包下载', icon: 'Download' },
 ]
 
 // 进度映射
 export const STAGE_PROGRESS = {
-  'verify-business': 14,
-  'verify-legal':    28,
-  'tax-rpa':         43,
-  'materials':       57,
-  'evidence':        71,
-  'risk':            86,
+  'verify-business': 13,
+  'verify-legal':    25,
+  'tax-rpa':         38,
+  'materials':       50,
+  'evidence':        63,
+  'risk':            75,
   'artifacts':       100,
+  'delivery-package':100,
 }
 
 // 状态映射
 export const STAGE_STATUS_MAP = {
-  'tax-rpa':     { status: '等待客户', statusText: '税票采集 / 待授权' },
-  'materials':   { status: '等待客户', statusText: '资料补充 / 待上传' },
-  'risk':        { status: '进行中',   statusText: '风险诊断' },
-  'artifacts':   { status: '待确认',   statusText: '报告待确认' },
-  'completed':   { status: '已完成',   statusText: '尽调完成' },
+  'tax-rpa':          { status: '等待客户', statusText: '税票采集 / 待授权' },
+  'materials':        { status: '等待客户', statusText: '资料补充 / 待上传' },
+  'risk':             { status: '进行中',   statusText: '风险诊断' },
+  'artifacts':        { status: '待确认',   statusText: '报告待确认' },
+  'delivery-package': { status: '已完成',   statusText: '交付包已生成' },
+  'completed':        { status: '已完成',   statusText: '尽调完成' },
 }
 
 /**

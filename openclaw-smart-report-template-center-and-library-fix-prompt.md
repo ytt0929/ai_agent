@@ -85,6 +85,16 @@
 └───────────────────────┴──────────────────────────────────────┘
 ```
 
+### 3.2.1 当前截图中的重点问题
+
+请重点处理截图红框区域：
+
+- 顶部筛选区现在像普通输入控件堆放，缺少统一的 Element Plus 卡片容器感。
+- 左侧「模板列表」和右侧「章节规则」视觉密度不一致。
+- 右侧详情区内部出现明显滚动条，但底部仍有大片空白，说明容器高度和 overflow 关系不合理。
+- 返回首页按钮和页面标题之间的空间关系不够统一，顶部 header 应该更像项目页面头部。
+- 当前模板中心虽然用了部分 Element Plus 控件，但整体仍像自定义布局，必须收口成 Element Plus + token.css 的业务后台样式。
+
 ### 3.3 样式要求
 
 请使用 Element Plus + token.css：
@@ -93,8 +103,93 @@
 - 筛选区使用 `el-input`、`el-select`、`el-button`。
 - 标签使用 `el-tag`。
 - 表格继续使用 `el-table`。
-- 左侧模板列表可以保留自定义列表，但样式必须使用 token。
+- 左侧模板列表优先使用 `el-scrollbar` 包裹，列表项可以保留自定义结构，但样式必须使用 token。
+- 右侧详情区优先使用 `el-card` + `el-table` + `el-scrollbar`，不要用裸 div + 原生滚动条堆叠。
 - 页面背景、卡片、边框、圆角、间距全部优先使用 token。
+
+### 3.3.1 顶部 Header 要求
+
+模板中心顶部应改成统一页面头：
+
+- 左侧返回按钮使用 `el-button text` 或 `el-button link` 风格，配 Element Plus 返回图标。
+- 标题 `报告模板中心` 使用 `--font-size-page-title` 或同级 token。
+- 副标题使用 `--text-secondary` / `--text-tertiary`。
+- 返回按钮、标题、副标题在同一顶部区域内对齐，不要出现独立大块空白。
+- 顶部区域不要固定高度，不要撑出多余留白。
+
+### 3.3.2 筛选区要求
+
+筛选区必须是一个清晰的 Element Plus 工具条：
+
+- 外层使用 `el-card shadow="never"` 或同等 Element Plus 卡片语义。
+- 搜索框使用 `el-input clearable`。
+- 银行/机构、报告类型、状态使用 `el-select clearable`。
+- 右侧操作使用 `el-button type="primary"`、`el-button plain`。
+- 筛选区高度要克制，控件垂直居中。
+- 筛选区背景、边框、圆角使用 token。
+- 不要让筛选区和下面的左右布局粘在一起，使用 `--space-md` 或 `--space-lg` 间距。
+
+### 3.3.3 左侧模板列表要求
+
+左侧模板列表要像 Element Plus 管理后台列表：
+
+- 外层建议使用 `el-card shadow="never"`。
+- 标题区和列表区分开，标题区有底部分割线。
+- 列表区域用 `el-scrollbar`，不要直接依赖浏览器原生滚动条。
+- 列表项使用 token 背景、边框、圆角。
+- 选中态使用 `--color-primary-bg` + `--color-primary` 或边框强调。
+- 启用/草稿/默认状态必须使用 `el-tag`。
+- 列表项间距不要过大，保持业务列表密度。
+- 左侧列表高度应跟右侧详情区协调，不要比右侧长出很多导致页面底部空白。
+
+### 3.3.4 右侧模板详情与章节规则要求
+
+右侧详情区要改成 Element Plus 风格：
+
+- 外层建议使用 `el-card shadow="never"`。
+- 顶部展示模板名称、状态标签、默认标签、银行/机构、报告类型、章节数、必需资料、最近使用、禁用词规则。
+- 统计信息建议使用 `el-descriptions` 或结构化 grid，但样式必须使用 token。
+- 操作按钮使用 Element Plus：
+  - 已是默认 / 设为默认
+  - 查看章节规则
+  - 上传新版模板
+  - 用此模板生成报告
+  - 新建模板
+- 操作按钮不要挤出容器，必要时允许换行。
+- 章节规则表格必须使用 `el-table`。
+- 表格表头不要写硬编码 `#fafbfd`、`#64748b`，改用 token 或 CSS class。
+- 状态使用 `el-tag`。
+- 表格区域如果超过高度，使用 `el-scrollbar` 或 `el-table` 自身滚动能力。
+- 右侧详情底部不能出现大片空白。
+
+### 3.3.5 推荐布局结构
+
+推荐把 `view === 'templateCenter'` 区域整理为类似结构：
+
+```vue
+<div class="sr-template-center">
+  <header class="sr-tc-header">...</header>
+  <el-card class="sr-tc-filter-card" shadow="never">...</el-card>
+  <div class="sr-tc-layout">
+    <el-card class="sr-tc-list-card" shadow="never">
+      <template #header>模板列表</template>
+      <el-scrollbar class="sr-tc-list-scroll">...</el-scrollbar>
+    </el-card>
+    <el-card class="sr-tc-detail-card" shadow="never">
+      ...
+      <el-table ... />
+    </el-card>
+  </div>
+</div>
+```
+
+不要求一字不差，但必须体现：
+
+- Element Plus 卡片语义
+- token.css 样式变量
+- 正确滚动
+- 无多余空白
+- 业务内容不丢失
 
 优先使用：
 
@@ -129,6 +224,8 @@
 - 如果使用 `height: calc(...)`，必须保证父容器 `min-height: 0`、`overflow` 关系正确。
 - 如果内容不足一屏，页面自然结束；如果内容超过一屏，页面或内部区域正常滚动。
 - 不要把内容藏在底部不可见区域。
+- 不要同时出现页面滚动、左侧原生滚动、右侧原生滚动三层混乱滚动。
+- 优先让模板中心主内容区在一屏内形成左右两栏，内部列表/表格用 Element Plus 滚动承载。
 
 ---
 

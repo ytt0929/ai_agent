@@ -319,6 +319,52 @@
       </div>
     </el-drawer>
 
+    
+    <!-- 报告库 -->
+    <div v-if="view === 'reportLibrary'" class="sr-report-library">
+      <div class="sr-rl__top-bar">
+        <el-button size="small" text @click="view = 'home'">
+          <el-icon><ArrowLeft /></el-icon> 返回首页
+        </el-button>
+        <div class="sr-rl__top-title-group">
+          <h2 class="sr-rl__title">报告库</h2>
+          <p class="sr-rl__sub">查看全部历史报告、按状态筛选、继续修改或导出</p>
+        </div>
+      </div>
+      <div class="sr-rl__filters">
+        <el-input v-model="reportLibKeyword" placeholder="搜索企业名称/报告名称" clearable size="small" style="width:220px" />
+        <el-select v-model="reportLibStatusFilter" placeholder="状态" clearable size="small" style="width:120px">
+          <el-option label="待确认" value="待确认" />
+          <el-option label="资料缺失" value="缺失" />
+          <el-option label="已完成" value="已确认" />
+        </el-select>
+      </div>
+      <el-card shadow="never" class="sr-rl__table-card">
+        <el-table :data="filteredReportLibTasks" size="small" stripe style="width:100%">
+          <el-table-column prop="enterpriseName" label="企业名称" width="160" />
+          <el-table-column prop="reportName" label="报告名称" width="200" />
+          <el-table-column prop="templateName" label="模板" width="140" />
+          <el-table-column prop="source" label="来源" width="90" />
+          <el-table-column label="状态" width="110">
+            <template #default="{ row }">
+              <el-tag size="small" :type="row.status.includes('待确认') ? 'warning' : row.status.includes('缺失') ? 'danger' : 'success'">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="materialComplete" label="资料完整度" width="100">
+            <template #default="{ row }">{{ row.materialComplete }}%</template>
+          </el-table-column>
+          <el-table-column prop="nextStep" label="下一步" />
+          <el-table-column label="操作" width="120" align="center">
+            <template #default="{ row }">
+              <el-button v-if="row.status.includes('待确认')" size="small" type="primary" text @click="openReport(row, 'continue-edit')">继续修改</el-button>
+              <el-button v-else-if="row.status.includes('缺失')" size="small" type="danger" text @click="openReport(row, 'view-missing')">查看缺失</el-button>
+              <el-button v-else size="small" type="primary" text @click="openReport(row, 'open')">打开</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
+
     <!-- 上传新版模板 -->
     <div v-if="view === 'templateUpload'" class="sr-template-upload">
       <!-- 页面顶部 -->
@@ -907,7 +953,8 @@
   </div>
 </template>
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ArrowLeft, Upload, CircleCheck, Close, Document, MagicStick, DataAnalysis, EditPen, DocumentCopy, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElDialog } from 'element-plus'
 import {
@@ -1137,7 +1184,19 @@ function generateReportFromTpl(row) {
 const allBanks = computed(() => [...new Set(templateCenterRows.value.map(t => t.bank))].sort())
 const allReportTypes = computed(() => [...new Set(templateCenterRows.value.map(t => t.reportType))].sort())
 
-const filteredTemplateRows = computed(() => {
+const filteredReportLibTasks = computed(() => {
+    let list = reportTasks
+    if (reportLibKeyword.value) {
+      const kw = reportLibKeyword.value.toLowerCase()
+      list = list.filter(t => t.enterpriseName.toLowerCase().includes(kw) || t.reportName.toLowerCase().includes(kw))
+    }
+    if (reportLibStatusFilter.value) {
+      list = list.filter(t => t.status.includes(reportLibStatusFilter.value))
+    }
+    return list
+  })
+
+  const filteredTemplateRows = computed(() => {
   let rows = templateCenterRows.value
   if (templateKeyword.value) {
     const kw = templateKeyword.value.toLowerCase()
@@ -1365,11 +1424,20 @@ const aiSuggestions = [
   '按浙江分行 V2024 模板重排报告',
   '检查宁波天合报告缺失材料',
   '打开模板中心',
+  '打开报告库',
 ]
 function handleAiTask(label) {
   const text = label || aiTaskInput.value.trim()
   if (!text) return
   aiTaskInput.value = ''
+  if (text.includes('打开模板中心') || text.includes('模板中心')) {
+    view.value = 'templateCenter'
+    return
+  }
+  if (text.includes('打开报告库') || text.includes('报告库')) {
+    view.value = 'reportLibrary'
+    return
+  }
   // 进入任务识别页，不在首页显示任务卡
   view.value = 'taskDialog'
   startTaskDialog(text)
@@ -1564,6 +1632,8 @@ function saveMaterialSummary() {
 }
 
 const aiMsgs = ref([])
+  const reportLibKeyword = ref('')
+  const reportLibStatusFilter = ref('')
 const aiInput = ref('')
 const aiBusy = ref(false)
 
@@ -1644,6 +1714,28 @@ function openReport(task) {
 }
 
 function backToHome() { view.value = 'home'; activeReport.value = null }
+
+// ════════════════════════════════════════
+// Phase 3-D-2: 从 URL query 自动打开报告编辑
+// ════════════════════════════════════════
+const route = useRoute()
+const _openedReportId = ref('')
+
+function openReportFromQuery() {
+  const reportId = route.query.reportId
+  if (!reportId) return
+  if (_openedReportId.value === reportId && view.value === 'editor') return // 避免重复打开
+  const task = reportTasks.find(t => t.id === reportId)
+  if (task) {
+    _openedReportId.value = reportId
+    openReport(task)
+  } else if (reportId) {
+    ElMessage.warning('未找到对应报告任务')
+  }
+}
+
+onMounted(() => openReportFromQuery())
+watch(() => route.query.reportId, () => openReportFromQuery())
 
 // === Template center computed ===
 const selectedTplDetailSections = computed(() => {
@@ -2304,6 +2396,15 @@ function viewEvidenceFromRewrite() {
 /* 提交前检查表 */
 .sr-check-table { width: 100%; }
 
+/* ═══ 报告库 ═══ */
+.sr-report-library { max-width: 1200px; margin: 0 auto; }
+.sr-rl__top-bar { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.sr-rl__title-group { display: flex; flex-direction: column; gap: 2px; }
+.sr-rl__title { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.sr-rl__sub { margin: 0; font-size: 13px; color: var(--text-tertiary); }
+.sr-rl__filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.sr-rl__table-card { border: 1px solid var(--border-light); }
+
 /* ═══ AI 任务确认工作区 ═══ */
 .sr-task-workspace { max-width: 1360px; margin: 0 auto; }
 .sr-task-workspace__header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
@@ -2408,12 +2509,12 @@ function viewEvidenceFromRewrite() {
   margin: 0 0 4px;
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 .sr-tc__sub {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 /* 筛选区 */
@@ -2423,9 +2524,9 @@ function viewEvidenceFromRewrite() {
   gap: 8px;
   padding: 12px 16px;
   margin-bottom: 12px;
-  background: #fff;
-  border: 1px solid #dbe7f5;
-  border-radius: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   flex-wrap: wrap;
 }
 .sr-tc-filter__actions {
@@ -2446,9 +2547,9 @@ function viewEvidenceFromRewrite() {
 
 /* 左侧模板列表 */
 .sr-tc__sidebar {
-  background: #fff;
-  border: 1px solid #dbe7f5;
-  border-radius: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2459,13 +2560,14 @@ function viewEvidenceFromRewrite() {
   padding: 12px 16px 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-light);
 }
 .sr-tc__sidebar-list {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  padding-right: 4px;
 }
 .sr-tc-sidebar-item {
   padding: 10px 12px;
@@ -2475,16 +2577,16 @@ function viewEvidenceFromRewrite() {
   margin-bottom: 4px;
 }
 .sr-tc-sidebar-item:hover {
-  background: #f8fafc;
+  background: var(--surface-soft);
 }
 .sr-tc-sidebar-item.active {
-  background: #eef2ff;
-  border: 1px solid #dbe7f5;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--border-light);
 }
 .sr-tc-sidebar-item__name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2495,24 +2597,24 @@ function viewEvidenceFromRewrite() {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 .sr-tc-sidebar-empty {
   padding: 24px 16px;
   text-align: center;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 /* 右侧详情 */
 .sr-tc__detail {
-  background: #fff;
-  border: 1px solid #dbe7f5;
-  border-radius: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   padding: 16px;
   overflow-y: auto;
   min-height: 0;
-  max-height: calc(100vh - 280px);
+  max-height: none;
 }
 .sr-tc-detail__info-card {
   margin-bottom: 16px;
