@@ -694,6 +694,7 @@ const router = useRouter()
 const isNewMode = route.params.creditCode === '_new'
 let initialCreditCode = isNewMode ? null : (route.params.creditCode || null)
 const questionParam = route.query.q || ''
+const demoCreditCode = '91130203MA7EEQ2N0T'
 
 const creditCode = ref(initialCreditCode)
 const sourceData = ref(null)
@@ -913,6 +914,13 @@ const activeEvidenceIndicator = ref(null)
 const activeEvidenceList = ref([])
 
 const chatInput = ref('')
+
+function fillDemoCreditCodeIfNeeded() {
+  if (!creditCode.value && !chatInput.value.trim()) {
+    chatInput.value = demoCreditCode
+  }
+}
+
 const chatMessages = ref([])
 const chatPanelCollapsed = ref(false)
 const chatRef = ref(null)
@@ -926,16 +934,56 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 async function typeAiMessage(fullText, options = {}) {
   const msg = { role: 'ai', text: '' }
   chatMessages.value.push(msg)
-  for (let i = 1; i <= fullText.length; i++) {
-    msg.text = fullText.slice(0, i)
-    await delay(18)
+  // P0: 3-6 字符一批更新，节流滚动
+  const batchSize = 5
+  for (let i = 1; i <= fullText.length; i += batchSize) {
+    msg.text = fullText.slice(0, Math.min(i + batchSize - 1, fullText.length))
+    if (i % 15 < batchSize) scrollToBottom()
+    await delay(12)
   }
+  msg.text = fullText
   if (options.actions) msg.actions = options.actions
   scrollToBottom()
   return msg
 }
 
 // ══ 问题类型分类 ══
+async function safeStreamMessage(fullText, options = {}) {
+  // P0: 安全流式输出——禁止并发、分批输出、节流滚动、异常兜底、最终释放
+  if (isExploring.value) {
+    // 已有流式输出在进行，直接追加完整文本
+    const msg = { role: 'ai', text: fullText }
+    if (options.actions) msg.actions = options.actions
+    chatMessages.value.push(msg)
+    scrollToBottom()
+    return msg
+  }
+  isExploring.value = true
+  try {
+    const msg = { role: 'ai', text: '' }
+    chatMessages.value.push(msg)
+    const batchSize = 6
+    for (let i = 0; i < fullText.length; i += batchSize) {
+      msg.text = fullText.slice(0, Math.min(i + batchSize, fullText.length))
+      if (i % 18 < batchSize) scrollToBottom()
+      await delay(10)
+    }
+    msg.text = fullText
+    if (options.actions) msg.actions = options.actions
+    scrollToBottom()
+    return msg
+  } catch (error) {
+    console.error('safeStreamMessage error:', error)
+    const fallbackMsg = { role: 'ai', text: fullText || '回复生成异常，请重新发送。' }
+    if (options.actions) fallbackMsg.actions = options.actions
+    chatMessages.value.push(fallbackMsg)
+    scrollToBottom()
+    return fallbackMsg
+  } finally {
+    isExploring.value = false
+  }
+}
+
 function classifyQuestion(text) {
   const q = text.toLowerCase()
 
@@ -983,88 +1031,88 @@ async function runExploreFlow(text) {
   const qa = classifyQuestion(text)
   const shouldRunFullEngine = !hasResult.value
 
-  // ══ 只在对话中回答 ══
-  if (chatOnlyTypes.includes(qa.type)) {
-    const reply = buildChatReply(qa, text)
-    await typeAiMessage(reply, { actions: buildChatActions(qa.type) })
-    isExploring.value = false
-    return
-  }
+  try {
+    // ══ 只在对话中回答 ══
+    if (chatOnlyTypes.includes(qa.type)) {
+      const reply = buildChatReply(qa, text)
+      await safeStreamMessage(reply, { actions: buildChatActions(qa.type) })
+      return
+    }
 
-  // ══ 明细类：左侧打开表格，右侧一句话说明 ══
-  if (detailTypes.includes(qa.type)) {
+    // ══ 明细类：左侧打开表格，右侧一句话说明 ══
+    if (detailTypes.includes(qa.type)) {
+      const viewName = qa.viewName
+      const newView = qa.newView
+      // 数据缺失检查
+      if (qa.type === 'detail_tax_declarations' && !hasTaxData.value) {
+        await safeStreamMessage('当前**税票数据未授权**，无法查看申报明细。请先授权税票。', {
+          actions: [{ label: '授权税票', action: 'auth', type: 'warning' }]
+        })
+        return
+      }
+      if (qa.type === 'detail_shareholders' && !sourceData.value) {
+        await safeStreamMessage('当前数据未加载，请刷新页面。')
+        return
+      }
+      currentView.value = newView
+      if (!hasResult.value) hasResult.value = true
+      if (!workspaceActive.value) workspaceActive.value = true
+      const detailLabels = { detail_shareholders: '股东明细', detail_tax_declarations: '近12个月申报明细', detail_social_security: '从业/社保概览' }
+      await safeStreamMessage('已为你打开**' + (detailLabels[qa.type] || viewName) + '**，数据来源见左侧。')
+      return
+    }
+
+    // ══ 报告类 ══
+    if (qa.type.startsWith('report_')) {
+      await handleReportRequest(text)
+      return
+    }
+
+    // ══ 复杂分析：走引擎流程，打开左侧视图 ══
+    const newView = qa.newView || 'overview'
     const viewName = qa.viewName
-    const newView = qa.newView
-    // 数据缺失检查
-    if (qa.type === 'detail_tax_declarations' && !hasTaxData.value) {
-      await typeAiMessage('当前**税票数据未授权**，无法查看申报明细。请先授权税票。', {
-        actions: [{ label: '授权税票', action: 'auth', type: 'warning' }]
-      })
-      isExploring.value = false
-      return
+
+    if (shouldRunFullEngine) {
+      await typeAiMessage('我先识别企业，并检查可用数据范围。')
+      await delay(300)
+
+      chatMessages.value.push({ role: 'ai', type: 'engine' })
+      explorationPhase.value = 'identifying'
+      scrollToBottom()
+      await delay(600)
+
+      explorationPhase.value = 'checking'
+      scrollToBottom()
+      await delay(600)
+
+      explorationPhase.value = 'judging'
+      scrollToBottom()
+      await delay(600)
+
+      explorationPhase.value = 'rendering'
+      scrollToBottom()
+      await delay(400)
+
+      explorationPhase.value = 'done'
+
+      const summaryText = buildAnalysisSummary(qa)
+      await safeStreamMessage(summaryText, { actions: buildMsgActions(newView) })
+      await delay(300)
+
+      currentView.value = newView
+      hasResult.value = true
+      if (!workspaceActive.value) workspaceActive.value = true
+    } else {
+      await safeStreamMessage('正在查看「' + viewName + '」。', { actions: buildMsgActions(newView) })
+      currentView.value = newView
+      if (!workspaceActive.value) workspaceActive.value = true
     }
-    if (qa.type === 'detail_shareholders' && !sourceData.value) {
-      await typeAiMessage('当前数据未加载，请刷新页面。')
-      isExploring.value = false
-      return
-    }
-    currentView.value = newView
-    if (!hasResult.value) hasResult.value = true
-    if (!workspaceActive.value) workspaceActive.value = true
-    const detailLabels = { detail_shareholders: '股东明细', detail_tax_declarations: '近12个月申报明细', detail_social_security: '从业/社保概览' }
-    await typeAiMessage('已为你打开**' + (detailLabels[qa.type] || viewName) + '**，数据来源见左侧。')
+  } catch (error) {
+    console.error('runExploreFlow error:', error)
+    await safeStreamMessage('当前问题已识别，但回复生成异常。你可以重新发送或点击下方快捷问题继续。')
+  } finally {
     isExploring.value = false
-    return
   }
-
-  // ══ 报告类 ══
-  if (qa.type.startsWith('report_')) {
-    await handleReportRequest(text)
-    isExploring.value = false
-    return
-  }
-
-  // ══ 复杂分析：走引擎流程，打开左侧视图 ══
-  const newView = qa.newView || 'overview'
-  const viewName = qa.viewName
-
-  if (shouldRunFullEngine) {
-    await typeAiMessage('我先识别企业，并检查可用数据范围。')
-    await delay(300)
-
-    chatMessages.value.push({ role: 'ai', type: 'engine' })
-    explorationPhase.value = 'identifying'
-    scrollToBottom()
-    await delay(600)
-
-    explorationPhase.value = 'checking'
-    scrollToBottom()
-    await delay(600)
-
-    explorationPhase.value = 'judging'
-    scrollToBottom()
-    await delay(600)
-
-    explorationPhase.value = 'rendering'
-    scrollToBottom()
-    await delay(400)
-
-    explorationPhase.value = 'done'
-
-    const summaryText = buildAnalysisSummary(qa)
-    await typeAiMessage(summaryText, { actions: buildMsgActions(newView) })
-    await delay(300)
-
-    currentView.value = newView
-    hasResult.value = true
-    if (!workspaceActive.value) workspaceActive.value = true
-  } else {
-    await typeAiMessage('正在查看「' + viewName + '」。', { actions: buildMsgActions(newView) })
-    currentView.value = newView
-    if (!workspaceActive.value) workspaceActive.value = true
-  }
-
-  isExploring.value = false
 }
 
 // ══ 事实查询 / 指标计算的对话回复（使用源数据） ══
@@ -1326,6 +1374,7 @@ onMounted(() => {
       }
     }
     chatMessages.value.push({ role: 'ai', text: hintMsg })
+    fillDemoCreditCodeIfNeeded()
     return
   }
   if (currentQuestion.value) {
@@ -1357,14 +1406,15 @@ async function sendChat() {
         // 有待处理问题：继续执行
         const origQ = pendingQuestion.value
         pendingQuestion.value = ''
-        await typeAiMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n我将继续处理你的问题。')
+        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n我将继续处理你的问题。')
         await delay(300)
         chatMessages.value.push({ role: 'user', text: origQ })
         runExploreFlow(origQ)
       } else {
-        typeAiMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
+        safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
       }
     } else {
+      fillDemoCreditCodeIfNeeded()
       typeAiMessage('当前 Demo 只内置了少量企业样例，请输入：唐山物桥商贸有限公司 或 91130203MA7EEQ2N0T。')
     }
     return

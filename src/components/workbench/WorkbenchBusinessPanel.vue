@@ -36,6 +36,7 @@ import TaxCollectionArtifact from './artifacts/TaxCollectionArtifact.vue'
 import MaterialsArtifact from './artifacts/MaterialsArtifact.vue'
 import RiskDiagnosisArtifact from './artifacts/RiskDiagnosisArtifact.vue'
 import DeliverablesArtifact from './artifacts/DeliverablesArtifact.vue'
+import WorkbenchDeliveryPackageArtifact from './artifacts/WorkbenchDeliveryPackageArtifact.vue'
 import ReportEditorArtifact from './artifacts/ReportEditorArtifact.vue'
 import MonitorArtifact from './artifacts/MonitorArtifact.vue'
 import DueDiligenceArtifact from './artifacts/DueDiligenceArtifact.vue'
@@ -52,6 +53,8 @@ defineEmits([
   'enter-risk', 'view-diagnosis-report', 'sync-report', 'enter-deliverables',
   'edit-report', 'export-report',
   'send-reminder', 'switch-to-upload', 'download-qr',
+  'generate-delivery-package',
+  'mock-download', 'view-list',
 ])
 
 // Ensure data is never null/undefined
@@ -65,6 +68,7 @@ const artifactComponent = computed(() => ({
   materials: MaterialsArtifact,
   riskDiagnosis: RiskDiagnosisArtifact,
   deliverables: DeliverablesArtifact,
+  deliveryPackage: WorkbenchDeliveryPackageArtifact,
   reportEditor: ReportEditorArtifact,
   monitor: MonitorArtifact,
   dueDiligence: DueDiligenceArtifact,

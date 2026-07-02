@@ -49,80 +49,72 @@
       </div>
     </section>
 
-    <!-- 列表工具栏 -->
-    <div class="edl-toolbar">
-      <div class="edl-toolbar__left">
+    <!-- 最近探查卡片 -->
+    <el-card shadow="never" class="edl-recent-card">
+      <!-- 工具栏 -->
+      <div class="edl-toolbar">
         <h2 class="edl-toolbar-title">最近探查</h2>
+        <el-segmented v-model="riskFilter" :options="riskFilterOptions" size="default" />
       </div>
-      <div class="edl-toolbar__right">
-        <div class="edl-filters">
-          <el-button-group>
-            <el-button size="small" :type="riskFilter === 'all' ? 'primary' : ''" plain @click="riskFilter = 'all'">全部</el-button>
-            <el-button size="small" :type="riskFilter === 'high' ? 'danger' : ''" plain @click="riskFilter = 'high'">高风险</el-button>
-            <el-button size="small" :type="riskFilter === 'medium' ? 'warning' : ''" plain @click="riskFilter = 'medium'">中风险</el-button>
-            <el-button size="small" :type="riskFilter === 'low' ? 'success' : ''" plain @click="riskFilter = 'low'">低风险</el-button>
-          </el-button-group>
-        </div>
-      </div>
-    </div>
 
-    <!-- 探查记录表格 -->
-    <el-table :data="filteredRows" size="small" class="edl-table" stripe>
-      <el-table-column label="企业名称" min-width="140">
-        <template #default="{ row }">
-          <span class="edl-cell--name">{{ row.name }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="数据覆盖" width="240">
-        <template #default="{ row }">
-          <div class="edl-tags">
-            <el-tag
-              v-for="tag in row.sourceTags"
-              :key="tag.label"
-              :type="tag.variant === 'ok' ? 'info' : 'warning'"
-              size="small"
-              effect="plain"
-            >
-              {{ tag.label }}
-            </el-tag>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="当前结论" min-width="180">
-        <template #default="{ row }">
-          <span class="edl-cell--conclusion">{{ row.shortConclusion }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="风险等级" width="130">
-        <template #default="{ row }">
-          <span class="edl-risk-level">
-            <el-tag :type="riskTagType(row.riskLevel)" size="small">
-              {{ riskLabel(row.riskLevel) }}
-            </el-tag>
-            <el-tag :type="gradeTagType(row.grade)" size="small" class="edl-grade-tag">{{ row.grade }}</el-tag>
-            <span class="edl-risk-score">{{ row.score }}</span>
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column label="最近问题" width="120">
-        <template #default="{ row }">
-          <span class="edl-cell--question">{{ row.lastQuestion }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="最近时间" width="100">
-        <template #default="{ row }">
-          <span class="edl-cell--time">{{ row.lastDiagnosedAt }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" text type="primary" @click="continueExplore(row)">继续探查</el-button>
-          <el-button size="small" text type="primary" @click="viewEvidence(row)">查看证据链</el-button>
-          <el-button size="small" text @click="pushToDD(row)">推送尽调</el-button>
-          <el-button v-if="row.needsAuth" size="small" text type="warning" @click="authData(row)">授权税票</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <!-- 探查记录表格 -->
+      <el-table :data="filteredRows" size="small" class="edl-table" stripe>
+        <el-table-column prop="name" label="企业名称" min-width="140">
+          <template #default="{ row }">
+            <span class="edl-cell--name">{{ row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="数据覆盖" width="240">
+          <template #default="{ row }">
+            <div class="edl-tags">
+              <el-tag
+                v-for="tag in row.sourceTags"
+                :key="tag.label"
+                :type="tag.tagType"
+                size="small"
+                effect="plain"
+              >
+                {{ tag.label }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="当前结论" min-width="200">
+          <template #default="{ row }">
+            <span class="edl-cell--conclusion" :title="row.shortConclusion">{{ row.shortConclusion }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="风险等级" width="130">
+          <template #default="{ row }">
+            <span class="edl-risk-level">
+              <el-tag :type="riskTagType(row.riskLevel)" size="small">
+                {{ riskLabel(row.riskLevel) }}
+              </el-tag>
+              <el-tag :type="gradeTagType(row.grade)" size="small" class="edl-grade-tag">{{ row.grade }}</el-tag>
+              <span class="edl-risk-score">{{ row.score }}</span>
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="最近问题" width="120">
+          <template #default="{ row }">
+            <span class="edl-cell--question">{{ row.lastQuestion }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="最近时间" width="110">
+          <template #default="{ row }">
+            <span class="edl-cell--time">{{ row.lastDiagnosedAt }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="320" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="continueExplore(row)">继续探查</el-button>
+            <el-button link type="primary" size="small" @click="viewEvidence(row)">查看证据链</el-button>
+            <el-button link size="small" @click="pushToDD(row)">推送尽调</el-button>
+            <el-button v-if="row.needsAuth" link type="warning" size="small" @click="authData(row)">授权税票</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
@@ -136,6 +128,13 @@ import { findEnterpriseFromText } from '../data/mockEnterpriseSourceData.js'
 const router = useRouter()
 const heroInput = ref('')
 const riskFilter = ref('all')
+
+const riskFilterOptions = [
+  { label: '全部', value: 'all' },
+  { label: '高风险', value: 'high' },
+  { label: '中风险', value: 'medium' },
+  { label: '低风险', value: 'low' },
+]
 
 const chipGroups = [
   {
@@ -169,10 +168,10 @@ const listRows = computed(() => {
     const hasOps = ent.creditCode === '91130203MA7EEQ2N0T'
 
     const sourceTags = [
-      { label: '工商', variant: 'ok' },
-      { label: '司法', variant: 'ok' },
-      hasTax ? { label: '税票', variant: 'ok' } : { label: '税票未授权', variant: 'missing' },
-      hasOps ? { label: '经营', variant: 'ok' } : { label: '流水缺失', variant: 'missing' },
+      { label: '工商', tagType: 'success' },
+      { label: '司法', tagType: 'success' },
+      hasTax ? { label: '税票', tagType: 'success' } : { label: '税票未授权', tagType: 'danger' },
+      hasOps ? { label: '经营', tagType: 'success' } : { label: '流水缺失', tagType: 'warning' },
     ]
 
     const firstHigh = riskItems.find(i => i.level === 'high')
@@ -400,6 +399,17 @@ function authData(row) {
   color: var(--border-default);
 }
 
+/* ===== 最近探查卡片 ===== */
+.edl-recent-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+
+.edl-recent-card :deep(.el-card__body) {
+  padding: var(--space-lg) var(--space-xl);
+}
+
 /* ===== 工具栏 ===== */
 .edl-toolbar {
   display: flex;
@@ -408,16 +418,15 @@ function authData(row) {
   margin-bottom: var(--space-md);
 }
 
-.edl-toolbar__left {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-}
-
 .edl-toolbar-title {
   font-size: var(--font-size-body-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  margin: 0;
+}
+
+.edl-toolbar :deep(.el-segmented) {
+  --el-segmented-item-selected-color: var(--color-primary);
 }
 
 /* ===== 表格 ===== */
@@ -425,25 +434,30 @@ function authData(row) {
   width: 100%;
 }
 
+.edl-table :deep(.el-table__header-wrapper) {
+  border-radius: var(--radius-sm);
+}
+
 .edl-table :deep(.el-table__header th) {
   font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .edl-table :deep(.el-table__row) {
-  height: 44px;
+  height: 48px;
 }
 
 .edl-cell--name {
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  font-size: var(--font-size-sm);
   white-space: nowrap;
 }
 
 .edl-cell--conclusion {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
-  max-width: 240px;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -458,6 +472,7 @@ function authData(row) {
 .edl-cell--time {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .edl-tags {
@@ -466,15 +481,21 @@ function authData(row) {
   flex-wrap: wrap;
 }
 
+.edl-tags :deep(.el-tag) {
+  font-size: var(--font-size-xs);
+}
+
 .edl-risk-level {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
 }
 
 .edl-grade-tag {
   font-weight: var(--font-weight-semibold);
+  min-width: 32px;
+  text-align: center;
 }
 
 .edl-risk-score {

@@ -178,6 +178,9 @@
               @send-material-list="assistant.sendMaterialList()"
               @send-reminder="assistant.sendTaxAuthReminder()"
               @switch-to-upload="assistant.switchTaxToMaterialUpload()"
+              @generate-delivery-package="assistant.generateDeliveryPackage()"
+              @mock-download="assistant.mockDownloadDeliveryPackage()"
+              @view-list="assistant.viewDeliveryPackageList()"
             />
           </main>
           <!-- 右侧：AI 对话面板 -->

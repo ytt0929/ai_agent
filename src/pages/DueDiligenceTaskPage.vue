@@ -243,6 +243,7 @@ const processSteps = computed(() => {
 const _initialStageKey = computed(() => {
   const t = task.value
   if (!t) return 'verify-business'
+  if (t.currentStep === 'delivery-package' || t.currentStage === 'delivery-package' || t.deliveryPackageStatus) return 'delivery-package'
   if (t.status === '已完成') return 'artifacts'
   return t.currentStep || 'verify-business'
 })

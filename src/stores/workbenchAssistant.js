@@ -24,6 +24,7 @@ const STAGE_LABEL_MAP = {
   evidence: '证据整合',
   riskDiagnosis: '风险诊断',
   deliverables: '产物确认',
+  deliveryPackage: '交付包',
   reportEditor: '报告编辑',
 }
 
@@ -39,6 +40,7 @@ const STAGE_TOOL_MAP = {
   evidence: 'evidence',
   riskDiagnosis: 'riskDiagnosis',
   deliverables: 'deliverables',
+  deliveryPackage: 'deliveryPackage',
   reportEditor: 'reportEditor',
 }
 
@@ -80,7 +82,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   const linkedDueTaskId = ref('')
 
   /** 当前是否在尽调工作区 */
-  const DUE_STAGE_KEYS = ['dueDiligence', 'business', 'judicial', 'tax', 'materials', 'evidence', 'riskDiagnosis', 'deliverables', 'reportEditor']
+  const DUE_STAGE_KEYS = ['dueDiligence', 'business', 'judicial', 'tax', 'materials', 'evidence', 'riskDiagnosis', 'deliverables', 'deliveryPackage', 'reportEditor']
   const isDueWorkspace = computed(() => DUE_STAGE_KEYS.includes(activeStageId.value))
 
   /** 统一尽调头部数据 */
@@ -91,7 +93,122 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     const dueStage = flowStages.find(s => s.id === currentArtifactType.value)
     const dueFlow = dueStage?.artifactData?.dueFlow
     const statusText = dueFlow?.statusText || ''
-    return {
+  
+  /** 生成交付包（从产物确认进入） */
+  async function generateDeliveryPackage() {
+    waitingForInput.value = false
+    await pushMessage('user', '确认产物并生成交付包')
+    await delay(300)
+
+    const ent = selectedEnterprise.value
+    const entName = ent?.name || '唐山物桥商贸有限公司'
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const packageName = entName + '_尽调交付包_' + dateStr + '.zip'
+
+    const dpArtifactData = {
+      enterprise: ent,
+      status: '已生成',
+      packageName,
+      generatedAt: new Date().toLocaleString('zh-CN'),
+      downloaded: false,
+      downloadedAt: '',
+      summary: ['尽调报告', '阶段报告', '证据链文件', '原始资料包'],
+      files: [
+        '尽职调查报告.pdf',
+        '尽职调查报告.docx / 可编辑草稿',
+        '工商核验报告.pdf',
+        '司法查询报告.pdf',
+        '税票分析报告.pdf',
+        '风险诊断报告.pdf',
+        '企业基础资料证据链.xlsx',
+        '风险事项证据链.pdf',
+        '营业执照.pdf',
+        '纳税申报表.pdf',
+        '发票明细.xlsx',
+        '合同文件.pdf',
+      ],
+    }
+
+    // 同步到智能尽调任务
+    if (linkedDueTaskId.value) {
+      const dueStore = useDueDiligenceStore()
+      const task = dueStore.tasks.find(t => t.id === linkedDueTaskId.value)
+      if (task) {
+        task.deliveryPackageStatus = '已生成'
+        task.deliveryPackageName = packageName
+        task.deliveryPackageGeneratedAt = dpArtifactData.generatedAt
+        task.deliveryPackageDownloaded = false
+        task.currentStep = 'delivery-package'
+        task.currentStage = 'delivery-package'
+        task.statusText = '交付包已生成'
+        task.status = '已完成'
+      }
+    }
+
+    upsertStage({ id: 'deliveryPackage', label: '交付包', icon: '📦', status: 'done', artifactData: { ...dpArtifactData } })
+    setActiveStage('deliveryPackage')
+
+    await pushStreamingMessage('报告和待确认项已确认。我已整理轻量尽调交付包，包含尽调报告、阶段报告、证据链文件和原始资料包。')
+    await delay(600)
+    await pushStreamingMessage('Demo 阶段可在左侧查看交付清单并模拟下载。完整交付记录可在智能尽调任务台账查看。')
+
+    currentFlowStatus.value = 'delivery_package_ready'
+    waitingForInput.value = true
+    fillSuggestions('delivery_package_ready')
+  }
+
+  /** 模拟下载交付包 */
+  async function mockDownloadDeliveryPackage() {
+    waitingForInput.value = false
+    const ent = selectedEnterprise.value
+    const entName = ent?.name || '唐山物桥商贸有限公司'
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const packageName = entName + '_尽调交付包_' + dateStr + '.zip'
+
+    await pushMessage('user', '模拟下载交付包')
+    await delay(300)
+    await pushStreamingMessage('正在生成「' + packageName + '」。')
+    await delay(800)
+    await pushStreamingMessage('交付包已生成，Demo 阶段已模拟下载完成。')
+
+    // 更新左侧 artifact 数据
+    const dpStage = flowStages.find(s => s.id === 'deliveryPackage')
+    if (dpStage && dpStage.artifactData) {
+      dpStage.artifactData.downloaded = true
+      dpStage.artifactData.downloadedAt = new Date().toLocaleString('zh-CN')
+      Object.assign(leftPanelData, dpStage.artifactData)
+      Object.assign(artifactData, dpStage.artifactData)
+    }
+
+    // 同步到智能尽调任务
+    if (linkedDueTaskId.value) {
+      const dueStore = useDueDiligenceStore()
+      const task = dueStore.tasks.find(t => t.id === linkedDueTaskId.value)
+      if (task) {
+        task.deliveryPackageDownloaded = true
+        task.deliveryPackageDownloadedAt = new Date().toLocaleString('zh-CN')
+        task.updatedAt = new Date().toLocaleString('zh-CN')
+      }
+    }
+
+    contextSuggestions.length = 0
+    fillSuggestions('delivery_package_ready')
+  }
+
+  /** 查看交付清单 */
+  async function viewDeliveryPackageList() {
+    waitingForInput.value = false
+    await pushMessage('user', '查看交付清单')
+    await delay(300)
+
+    setActiveStage('deliveryPackage')
+    await pushStreamingMessage('左侧已展示本次尽调交付清单摘要。完整交付包目录可在智能尽调任务详情中查看。')
+
+    contextSuggestions.length = 0
+    fillSuggestions('delivery_package_ready')
+  }
+
+  return {
       enterprise: ent,
       template: tpl,
       score: ent?.score || 72,
@@ -103,6 +220,119 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   })
 
   /** 统一设置左侧面板数据源 */
+  /** 生成工作台轻量交付包（从产物确认进入） */
+  async function generateDeliveryPackage() {
+    waitingForInput.value = false
+    await pushMessage('user', '确认产物并生成交付包')
+    await delay(300)
+
+    const ent = selectedEnterprise.value
+    const entName = ent?.name || '唐山物桥商贸有限公司'
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const packageName = `${entName}_尽调交付包_${dateStr}.zip`
+    const generatedAt = new Date().toLocaleString('zh-CN')
+
+    const dpArtifactData = {
+      enterprise: ent,
+      status: '已生成',
+      packageName,
+      generatedAt,
+      downloaded: false,
+      downloadedAt: '',
+      summary: ['尽调报告', '阶段报告', '证据链文件', '原始资料包'],
+      files: [
+        '尽职调查报告.pdf',
+        '尽职调查报告.docx / 可编辑草稿',
+        '工商核验报告.pdf',
+        '司法查询报告.pdf',
+        '税票分析报告.pdf',
+        '风险诊断报告.pdf',
+        '企业基础资料证据链.xlsx',
+        '风险事项证据链.pdf',
+        '营业执照.pdf',
+        '纳税申报表.pdf',
+        '发票明细.xlsx',
+        '合同文件.pdf',
+      ],
+    }
+
+    if (linkedDueTaskId.value) {
+      const dueStore = useDueDiligenceStore()
+      const task = dueStore.tasks.find(t => t.id === linkedDueTaskId.value)
+      if (task) {
+        task.deliveryPackageStatus = '已生成'
+        task.deliveryPackageName = packageName
+        task.deliveryPackageGeneratedAt = generatedAt
+        task.deliveryPackageDownloaded = false
+        task.currentStep = 'delivery-package'
+        task.currentStage = 'delivery-package'
+        task.statusText = '交付包已生成'
+        task.status = '已完成'
+      }
+    }
+
+    upsertStage({ id: 'deliveryPackage', label: '交付包', icon: '📦', status: 'done', artifactData: { ...dpArtifactData } })
+    setActiveStage('deliveryPackage')
+
+    await pushStreamingMessage('报告和待确认项已确认。我已整理轻量尽调交付包，包含尽调报告、阶段报告、证据链文件和原始资料包。')
+    await delay(600)
+    await pushStreamingMessage('Demo 阶段可在左侧查看交付清单并模拟下载。完整交付记录可在智能尽调任务台账查看。')
+
+    currentFlowStatus.value = 'delivery_package_ready'
+    waitingForInput.value = true
+    fillSuggestions('delivery_package_ready')
+  }
+
+  /** 模拟下载工作台轻量交付包 */
+  async function mockDownloadDeliveryPackage() {
+    waitingForInput.value = false
+    const ent = selectedEnterprise.value
+    const entName = ent?.name || '唐山物桥商贸有限公司'
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const packageName = `${entName}_尽调交付包_${dateStr}.zip`
+    const downloadedAt = new Date().toLocaleString('zh-CN')
+
+    await pushMessage('user', '模拟下载交付包')
+    await delay(300)
+    await pushStreamingMessage(`正在生成「${packageName}」。`)
+    await delay(800)
+    await pushStreamingMessage('交付包已生成，demo 阶段已模拟下载完成。')
+
+    const dpStage = flowStages.find(s => s.id === 'deliveryPackage')
+    if (dpStage && dpStage.artifactData) {
+      dpStage.artifactData.downloaded = true
+      dpStage.artifactData.downloadedAt = downloadedAt
+      Object.assign(leftPanelData, dpStage.artifactData)
+      Object.assign(artifactData, dpStage.artifactData)
+    }
+
+    if (linkedDueTaskId.value) {
+      const dueStore = useDueDiligenceStore()
+      const task = dueStore.tasks.find(t => t.id === linkedDueTaskId.value)
+      if (task) {
+        task.deliveryPackageDownloaded = true
+        task.deliveryPackageDownloadedAt = downloadedAt
+        task.updatedAt = downloadedAt
+      }
+    }
+
+    contextSuggestions.length = 0
+    fillSuggestions('delivery_package_ready')
+  }
+
+  /** 查看工作台轻量交付清单 */
+  async function viewDeliveryPackageList() {
+    waitingForInput.value = false
+    await pushMessage('user', '查看交付清单')
+    await delay(300)
+
+    setActiveStage('deliveryPackage')
+    await pushStreamingMessage('左侧已展示本次尽调交付清单摘要。完整交付包目录可在智能尽调任务详情中查看。')
+
+    contextSuggestions.length = 0
+    fillSuggestions('delivery_package_ready')
+  }
+
   function setLeftPanel(tool, payload = {}) {
     activeTool.value = tool
     Object.keys(leftPanelData).forEach(k => delete leftPanelData[k])
@@ -123,10 +353,16 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     if (value === 'edit_report') { await startReportEditor(); return }
     if (value === 'export_report') { await exportFinalReport(); return }
     if (value === 'start_monitor') { await startMonitor(); return }
+    if (value === 'continue_due_flow') {
+      await runBusinessVerification()
+      return
+    }
     if (value === 'open_due_task') {
       // 跳转到智能尽调，由 WorkbenchPage.vue 处理路由
       return
     }
+    if (value === 'mock_download_delivery_package') { await mockDownloadDeliveryPackage(); return }
+    if (value === 'view_delivery_package_list') { await viewDeliveryPackageList(); return }
     if (value === 'pause_due_task') {
       contextSuggestions.length = 0
       await pushStreamingMessage('已为你保留该尽调任务。稍后请点击左侧菜单「智能尽调」，在任务台账中继续处理。')
@@ -562,11 +798,15 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       linkedDueTaskId.value = result.task.id
 
       if (result.reused) {
-        await pushStreamingMessage(`已找到「${ent.name}」的尽调任务，当前任务已在智能尽调中保留。你可以继续在工作台操作，或稍后去智能尽调任务台账继续处理。`)
-      } else {
-        await pushStreamingMessage(`已为「${ent.name}」创建尽调任务，模板为「${template.name}」。`)
+        await pushStreamingMessage('已找到「' + ent.name + '」的尽调任务，当前任务已在智能尽调中保留。你可以继续在工作台完成 demo 流程，也可以稍后去智能尽调任务台账处理。')
         await delay(300)
-        await pushStreamingMessage(`该任务已同步到智能尽调任务台账。你可以继续在工作台完成当前 demo 流程；如果稍后再处理，可点击「稍后处理」。`)
+        await pushStreamingMessage('你可以点击「开始工商核验」继续推进，或选择「稍后处理」。')
+      } else {
+        await pushStreamingMessage('已为「' + ent.name + '」创建尽调任务，模板为「' + template.name + '」。该任务已同步到智能尽调任务台账。')
+        await delay(300)
+        await pushStreamingMessage('你可以继续在工作台完成 demo 流程，也可以稍后从智能尽调任务台账处理。')
+        await delay(300)
+        await pushStreamingMessage('你可以点击「开始工商核验」继续推进，或选择「稍后处理」。')
       }
     }
     const dueFlowSteps = freshDueFlowSteps('business')
@@ -1307,6 +1547,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       ],
       waiting_template: [{ label: '选择模板「尽职调查报告」', value: '尽职调查报告' }],
       waiting_due_diligence_action: [
+        { label: '开始工商核验', value: 'continue_due_flow' },
         { label: '稍后处理', value: 'pause_due_task' },
       ],
       waiting_tax_confirmation: [{ label: '确认发送采集链接', value: 'confirm_tax_send' }],
@@ -1324,6 +1565,11 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         { label: '改写风险结论', value: '改写风险结论' },
         { label: '补充税票说明', value: '补充税票说明' },
         { label: '生成授信建议', value: '生成授信建议' },
+      ],
+      delivery_package_ready: [
+        { label: '模拟下载交付包', value: 'mock_download_delivery_package' },
+        { label: '查看交付清单', value: 'view_delivery_package_list' },
+        { label: '稍后处理', value: 'pause_due_task' },
       ],
     }
     const items = map[flowStatus] || []
@@ -1385,6 +1631,32 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         await startReportEditor()
       } else if (lower.includes('监控')) {
         await startMonitor()
+      } else if (lower.includes('下载') || lower.includes('交付包') || lower.includes('zip')) {
+        await mockDownloadDeliveryPackage()
+        return
+      } else if (lower.includes('清单') || lower.includes('查看交付清单')) {
+        await viewDeliveryPackageList()
+        return
+      } else if (lower.includes('稍后')) {
+        contextSuggestions.length = 0
+        await pushStreamingMessage('已为你保留该尽调任务。稍后请点击左侧菜单「智能尽调」，在任务台账中继续处理。')
+        currentFlowStatus.value = 'idle'
+        waitingForInput.value = false
+        return
+      }
+    } else if (currentFlowStatus.value === 'delivery_package_ready') {
+      if (lower.includes('下载') || lower.includes('交付包') || lower.includes('zip')) {
+        await mockDownloadDeliveryPackage()
+        return
+      } else if (lower.includes('清单') || lower.includes('查看交付清单')) {
+        await viewDeliveryPackageList()
+        return
+      } else if (lower.includes('稍后')) {
+        contextSuggestions.length = 0
+        await pushStreamingMessage('已为你保留该尽调任务。稍后请点击左侧菜单「智能尽调」，在任务台账中继续处理。')
+        currentFlowStatus.value = 'idle'
+        waitingForInput.value = false
+        return
       }
     } else if (currentFlowStatus.value === 'editing') {
       await pushStreamingMessage('好的，我来帮你处理。')
@@ -1527,6 +1799,6 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
     runMaterialsStep, switchTaxToMaterialUpload,
     exportFinalReport, viewDiagnosisReport,
     sendMaterialList, sendTaxAuthReminder,
+    generateDeliveryPackage, mockDownloadDeliveryPackage, viewDeliveryPackageList,
   }
 })
-
