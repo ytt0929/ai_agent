@@ -1,13 +1,20 @@
 <template>
   <div class="artifact-risk">
-    <!-- 风险评分卡片 -->
-    <el-card shadow="never" class="artifact-card artifact-card--score">
-      <div class="artifact-score">
-        <div class="artifact-score__value" :style="{ color: scoreColor }">{{ score }}</div>
-        <div class="artifact-score__label">综合评分</div>
-        <div class="artifact-score__grade">等级 {{ grade }} · <el-tag :type="riskLevelTag" size="small">{{ riskLevel }}风险</el-tag></div>
+    <!-- 顶部轻量状态条 -->
+    <div class="risk-summary-bar">
+      <div class="risk-summary-bar__left">
+        <div class="risk-summary-bar__title-row">
+          <span class="risk-summary-bar__title">风险诊断</span>
+          <el-tag type="success" size="small">已完成</el-tag>
+          <el-tag :type="riskLevelTag" size="small">{{ riskLevel }}风险</el-tag>
+        </div>
+        <p class="risk-summary-bar__desc">基于工商、司法、税票、资料和证据链完成诊断，识别到 {{ riskIssues.length }} 项风险事项。建议有条件授信，并补充交易真实性和税负异常说明。</p>
       </div>
-    </el-card>
+      <div class="risk-summary-bar__tags">
+        <el-tag size="small" effect="plain">评分 {{ score }}</el-tag>
+        <el-tag size="small" effect="plain">{{ grade }}</el-tag>
+      </div>
+    </div>
 
     <!-- 诊断结论 -->
     <el-alert v-if="conclusion" :title="conclusion" type="warning" :closable="false" show-icon class="artifact-alert" />
@@ -17,7 +24,7 @@
       :issues="riskIssues"
       :highlights="highlights"
       :indicators="indicators"
-      title="风险诊断事项"
+      title="风险事项"
     />
 
     <!-- 建议动作 -->
@@ -26,7 +33,7 @@
       <el-tag v-for="(a, ai) in suggestedActions" :key="ai" size="small" effect="plain">{{ a }}</el-tag>
     </div>
 
-    <!-- 动作区 -->
+    <!-- 操作区 -->
     <div class="artifact-risk__actions">
       <el-button plain @click="$emit('view-diagnosis-report')">查看诊断报告</el-button>
       <el-button plain @click="$emit('sync-report')">同步到最终报告</el-button>
@@ -54,23 +61,83 @@ const indicators = computed(() => props.data.indicators || [])
 </script>
 
 <style scoped>
-.artifact-risk { display: flex; flex-direction: column; gap: 12px; }
-.artifact-card :deep(.el-card__header) { padding: 12px 16px; }
-.artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.artifact-card--score { text-align: center; }
-.artifact-score__value { font-size: 36px; font-weight: 800; }
-.artifact-score__label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-.artifact-score__grade { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.artifact-risk {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 16px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ====== 顶部轻量状态条 ====== */
+.risk-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md, 12px);
+  padding: var(--space-md, 12px) var(--space-md, 16px);
+  background: var(--surface-soft, #f8fafc);
+  border-bottom: 1px solid var(--border-default, #dbe3ef);
+  border-radius: var(--radius-sm, 4px);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.risk-summary-bar__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.risk-summary-bar__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+}
+
+.risk-summary-bar__title {
+  font-size: var(--font-size-body, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary);
+}
+
+.risk-summary-bar__desc {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.risk-summary-bar__tags {
+  display: flex;
+  gap: var(--space-xs, 4px);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+
+
+/* ====== 诊断结论 ====== */
 .artifact-alert { margin: 0; }
+
+/* ====== 建议动作 ====== */
 .artifact-risk__suggestions {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-  padding: 8px 0; font-size: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs, 4px);
+  padding: var(--space-sm, 8px) 0; font-size: var(--font-size-xs, 12px);
 }
 .artifact-risk__suggestions-label {
-  font-weight: 500; color: var(--text-secondary); margin-right: 4px;
+  font-weight: 500; color: var(--text-secondary); margin-right: var(--space-xs, 4px);
 }
+
+/* ====== 操作区 ====== */
 .artifact-risk__actions {
-  display: flex; gap: 8px; padding: 10px 0;
-  border-top: 1px solid var(--border-color-divider);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 8px);
+  padding: var(--space-sm, 10px) 0;
+  border-top: 1px solid var(--border-default, #dbe3ef);
+  min-width: 0;
 }
 </style>

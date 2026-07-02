@@ -132,7 +132,10 @@ function showEvidence(issue) {
 .risk-issue-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-sm, 8px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .risk-issue-list__header {
   padding: 2px 0;
@@ -143,7 +146,7 @@ function showEvidence(issue) {
   color: var(--text-primary);
 }
 .risk-issue-list__tabs :deep(.el-tabs__header) {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-sm, 8px);
 }
 .risk-issue-list__tabs :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
@@ -156,56 +159,69 @@ function showEvidence(issue) {
 .risk-issue-list__filter {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: var(--space-xs, 4px);
+  margin-bottom: var(--space-sm, 8px);
 }
 .risk-issue-list__filter .el-button {
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-xs, 11px);
 }
 
 /* 风险事项列表 */
 .risk-issue-list__items {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs, 4px);
   max-height: 280px;
   overflow-y: auto;
 }
 .risk-issue-item {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr auto;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 8px 10px;
-  background: var(--bg-page);
-  border-radius: var(--radius-6, 6px);
-  font-size: 12px;
+  gap: var(--space-sm, 8px);
+  padding: var(--space-sm, 8px) var(--space-md, 10px);
+  background: transparent;
+  border-bottom: 1px solid var(--border-color-divider, #e5eaf2);
+  min-width: 0;
+  font-size: var(--font-size-xs, 12px);
   line-height: 1.4;
+}
+.risk-issue-item:last-child {
+  border-bottom: none;
+}
+.risk-issue-item__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
 }
 .risk-issue-item__name {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-sm, 13px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .risk-issue-item__category {
-  font-size: 11px;
+  font-size: var(--font-size-xs, 11px);
   color: var(--text-tertiary);
-  margin-top: 2px;
 }
 .risk-issue-item__desc {
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xs, 12px);
 }
 .risk-issue-item__actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  align-items: center;
+  gap: var(--space-xs, 4px);
   flex-shrink: 0;
 }
 

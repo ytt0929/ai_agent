@@ -2,24 +2,44 @@
   <div class="artifact-deliverables">
     <!-- ====== 状态 1：产物确认列表态 ====== -->
     <template v-if="viewMode === 'list'">
+      <!-- 顶部轻量状态条 -->
+      <div class="dl-summary-bar">
+        <div class="dl-summary-bar__left">
+          <div class="dl-summary-bar__title-row">
+            <span class="dl-summary-bar__title">产物确认</span>
+            <el-tag type="success" size="small">已生成</el-tag>
+          </div>
+          <p class="dl-summary-bar__desc">尽调报告草稿、阶段报告、证据链和资料包已生成，请确认后生成交付包。</p>
+        </div>
+        <div class="dl-summary-bar__tags">
+          <el-tag size="small" effect="plain" type="warning">待确认 {{ pendingCount }} 项</el-tag>
+          <el-tag size="small" effect="plain">资料完整度 {{ materialComplete }}%</el-tag>
+        </div>
+      </div>
+
+      <!-- 核心产物表格 -->
       <el-card shadow="never" class="artifact-card">
         <template #header>
           <div class="artifact-card__header">
-            <span class="artifact-card__title">尽调产物</span>
-            <el-tag type="success" size="small">已生成</el-tag>
+            <span class="artifact-card__title">核心产物</span>
           </div>
         </template>
-        <el-table :data="items" size="small" stripe border>
-          <el-table-column label="产物名称" min-width="140">
+        <el-table :data="items" size="small" stripe border style="width: 100%">
+          <el-table-column label="产物名称" min-width="160">
             <template #default="{ row }"><span class="artifact-dl-name">{{ row.name }}</span></template>
+          </el-table-column>
+          <el-table-column label="类型" width="110" align="center">
+            <template #default="{ row }">
+              <el-tag size="small" effect="plain" :type="typeTagType(row.type)">{{ typeLabel(row.type) }}</el-tag>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }"><el-tag size="small" :type="row.status.includes('已') || row.status.includes('归档') ? 'success' : 'warning'">{{ row.status }}</el-tag></template>
           </el-table-column>
-          <el-table-column label="数量" width="70" align="center">
+          <el-table-column label="数量" width="80" align="center">
             <template #default="{ row }">{{ row.count }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="120" align="center">
+          <el-table-column label="操作" width="140" align="center">
             <template #default="{ row }">
               <template v-if="row.type === 'report'">
                 <el-button size="small" text type="primary" @click="viewReport(row)">查看</el-button>
@@ -27,7 +47,7 @@
               </template>
               <template v-else-if="row.type === 'evidence' && row.status === '已归档'">
                 <el-button size="small" text type="primary" @click="openSimplePreview(row)">查看</el-button>
-                <el-button size="small" text type="success" @click="generateEvidence(row)">生成</el-button>
+                <el-button size="small" text type="primary" @click="generateEvidence(row)">生成</el-button>
               </template>
               <template v-else-if="row.status === '已生成' || row.status === '已归档'">
                 <el-button size="small" text type="primary" @click="openSimplePreview(row)">查看</el-button>
@@ -40,24 +60,28 @@
         </el-table>
       </el-card>
 
-      <!-- 报告模板与资料包清单 -->
+      <!-- 报告模板与资料包 -->
       <el-card shadow="never" class="artifact-card">
         <template #header><span class="artifact-card__title">报告模板与资料包</span></template>
-        <el-descriptions :column="2" size="small" border>
+        <el-descriptions :column="1" size="small" border>
           <el-descriptions-item label="报告模板">{{ reportTemplate }}</el-descriptions-item>
           <el-descriptions-item label="报告底稿">尽职调查报告</el-descriptions-item>
-          <el-descriptions-item label="资料包">工商资料 / 司法查询 / 税票数据 / 上传资料 / 证据链</el-descriptions-item>
-          <el-descriptions-item label="当前状态">底稿已生成，等待确认和编辑</el-descriptions-item>
+          <el-descriptions-item label="资料包">{{ dataPacks }}</el-descriptions-item>
+          <el-descriptions-item label="当前状态">{{ draftStatus }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
 
       <!-- 待确认项 -->
-      <el-card v-if="pendingItems?.length" shadow="never" class="artifact-card artifact-card--warn">
-        <template #header><span class="artifact-card__title">待确认项</span></template>
-        <div v-for="(item, i) in pendingItems" :key="i" class="artifact-deliverables__pending">
-          <span class="pending-icon">⚠</span>
-          <span class="pending-text">{{ item }}</span>
-        </div>
+      <el-card v-if="pendingItems?.length" shadow="never" class="artifact-card">
+        <template #header>
+          <div class="artifact-card__header">
+            <span class="artifact-card__title">待确认项</span>
+            <el-tag size="small" type="warning" effect="plain">{{ pendingItems.length }} 项</el-tag>
+          </div>
+        </template>
+        <el-alert v-for="(item, i) in pendingItems" :key="i" :title="item" type="warning" :closable="false" show-icon class="artifact-deliverables__pending-alert">
+          <template #default class="artifact-deliverables__pending-desc">请确认该事项后再进行交付包生成。</template>
+        </el-alert>
       </el-card>
 
       <!-- 导出状态 -->
@@ -65,15 +89,7 @@
         <span>✓ {{ exportStatus }}</span>
       </div>
 
-      <!-- 动作区 -->
-      <div class="artifact-deliverables__actions">
-        <el-button type="primary" @click="$emit('generate-delivery-package')">确认产物并生成交付包</el-button>
-        <el-button plain type="success" @click="$emit('sync-to-report')">同步到智能报告</el-button>
-        <el-button plain @click="$emit('export-report')">导出报告</el-button>
-        <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
-      </div>
-
-      <!-- 非报告产物轻量预览（列表下方小面板） -->
+      <!-- 非报告产物轻量预览 -->
       <el-card v-if="simplePreviewVisible" shadow="never" class="artifact-card artifact-card--preview-simple">
         <template #header>
           <div class="artifact-card__header">
@@ -87,6 +103,14 @@
           <el-descriptions-item label="摘要">{{ getSimplePreviewSummary(simplePreviewItem) }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
+
+      <!-- 操作区 -->
+      <div class="artifact-deliverables__actions">
+        <el-button type="primary" @click="$emit('generate-delivery-package')">确认产物并生成交付包</el-button>
+        <el-button plain type="success" @click="$emit('sync-to-report')">同步到智能报告</el-button>
+        <el-button plain @click="$emit('export-report')">导出报告</el-button>
+        <el-button plain @click="$emit('start-monitor')">加入监控</el-button>
+      </div>
     </template>
 
     <!-- ====== 状态 2：报告预览态（整区切换） ====== -->
@@ -222,7 +246,10 @@ const emit = defineEmits(['edit-report', 'export-report', 'start-monitor', 'sync
 
 const items = computed(() => props.data.items || [])
 const exportStatus = computed(() => props.data.exportStatus || '')
-const reportTemplate = computed(() => '尽职调查报告')
+const reportTemplate = computed(() => props.data.reportTemplate || '尽职调查报告')
+const dataPacks = computed(() => props.data.dataPacks || '工商资料 / 司法查询 / 税票数据 / 上传资料 / 证据链')
+const draftStatus = computed(() => props.data.draftStatus || '底稿已生成，等待确认和编辑')
+const materialComplete = computed(() => props.data.materialComplete ?? 86)
 const enterpriseName = computed(() => props.data.enterprise?.name || '唐山物桥商贸有限公司')
 const pendingItems = computed(() => {
   const list = []
@@ -231,6 +258,15 @@ const pendingItems = computed(() => {
   if (props.data.creditAdvice !== false) list.push('授信建议待确认')
   return list.length ? list : ['风险结论需确认', '授信建议待确认']
 })
+const pendingCount = computed(() => pendingItems.value.length)
+
+function typeLabel(type) {
+  return { report: '尽调报告', business: '阶段报告', judicial: '阶段报告', tax: '阶段报告', risk: '阶段报告', evidence: '证据链' }[type] || '产物'
+}
+
+function typeTagType(type) {
+  return { report: 'primary', business: 'info', judicial: 'info', tax: 'info', risk: 'info', evidence: 'success' }[type] || 'info'
+}
 
 // ====== 三态 ======
 const viewMode = ref('list') // 'list' | 'reportPreview'
@@ -303,24 +339,94 @@ function getSimplePreviewSummary(row) {
 </script>
 
 <style scoped>
-.artifact-deliverables { display: flex; flex-direction: column; gap: 12px; }
+.artifact-deliverables {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 16px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ====== 顶部轻量状态条 ====== */
+.dl-summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md, 12px);
+  padding: var(--space-md, 12px) var(--space-md, 16px);
+  background: var(--surface-soft, #f8fafc);
+  border-bottom: 1px solid var(--border-default, #dbe3ef);
+  border-radius: var(--radius-sm, 4px);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.dl-summary-bar__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dl-summary-bar__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+}
+
+.dl-summary-bar__title {
+  font-size: var(--font-size-body, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary);
+}
+
+.dl-summary-bar__desc {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.dl-summary-bar__tags {
+  display: flex;
+  gap: var(--space-xs, 4px);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
 .artifact-card :deep(.el-card__header) { padding: 12px 16px; }
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
 .artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.artifact-dl-name { font-weight: 600; }
+.artifact-dl-name { font-weight: 600; word-break: break-all; }
+
+/* ====== 操作区 ====== */
 .artifact-deliverables__actions {
-  display: flex; gap: 8px; padding: 10px 0;
-  border-top: 1px solid var(--border-color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 8px);
+  min-width: 0;
+  padding: var(--space-sm, 10px) 0;
+  border-top: 1px solid var(--border-default, #dbe3ef);
 }
-.artifact-card--warn { border-left: 3px solid var(--color-warning); }
-.artifact-deliverables__pending { font-size: 13px; color: var(--text-secondary); display: flex; gap: 6px; align-items: flex-start; margin-bottom: 6px; }
-.artifact-deliverables__pending:last-child { margin-bottom: 0; }
-.pending-icon { color: var(--color-warning); flex-shrink: 0; }
-.pending-text { flex: 1; }
+
+/* ====== 待确认项 ====== */
+.artifact-deliverables__pending-alert {
+  margin-bottom: var(--space-xs, 4px);
+  font-size: var(--font-size-sm, 12px);
+}
+
 .artifact-deliverables__export-status {
-  padding: 8px 12px; background: var(--color-success-bg); border-radius: var(--radius-6, 6px);
-  font-size: 13px; font-weight: 500; color: var(--color-success);
+  padding: var(--space-sm, 8px) var(--space-md, 12px);
+  background: var(--color-success-bg, #ecfdf5);
+  border-radius: var(--radius-sm, 4px);
+  font-size: var(--font-size-sm, 12px);
+  font-weight: 500;
+  color: var(--color-success);
 }
+
 .artifact-card--preview-simple { border-left: 3px solid var(--color-primary); }
 
 /* ====== 报告预览整区 ====== */
@@ -353,7 +459,9 @@ function getSimplePreviewSummary(row) {
 
 .report-preview-bar__actions {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 8px);
+  flex-shrink: 0;
 }
 
 /* 企业摘要 */
@@ -542,10 +650,11 @@ function getSimplePreviewSummary(row) {
 
 /* 底部操作 */
 .report-section-actions {
-  padding-top: 16px;
+  padding-top: var(--space-lg, 16px);
   border-top: 1px solid var(--border-divider, #e5eaf2);
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 8px);
   justify-content: flex-end;
 }
 

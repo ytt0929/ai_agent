@@ -102,7 +102,7 @@ const checks = computed(() => props.data.checks || [
 </script>
 
 <style scoped>
-.artifact-business { display: flex; flex-direction: column; gap: 12px; }
+.artifact-business { display: flex; flex-direction: column; gap: var(--space-md, 12px); min-width: 0; max-width: 100%; box-sizing: border-box; }
 .artifact-business__summary {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 12px; background: var(--bg-page); border-radius: var(--radius-6, 6px);

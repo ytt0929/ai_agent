@@ -84,7 +84,7 @@ function matTag(status) { return { '已收集': 'success', '缺失': 'danger', '
 </script>
 
 <style scoped>
-.artifact-materials { display: flex; flex-direction: column; gap: 12px; }
+.artifact-materials { display: flex; flex-direction: column; gap: var(--space-md, 12px); min-width: 0; max-width: 100%; box-sizing: border-box; }
 .artifact-card :deep(.el-card__header) { padding: 12px 16px; }
 .artifact-card__header { display: flex; align-items: center; gap: 8px; }
 .artifact-card__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
@@ -93,7 +93,7 @@ function matTag(status) { return { '已收集': 'success', '缺失': 'danger', '
 .artifact-metric-label { font-size: 12px; color: var(--text-secondary); }
 .artifact-metric-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
 .artifact-materials__actions {
-  display: flex; gap: 8px; padding: 10px 0;
+  display: flex; flex-wrap: wrap; gap: var(--space-sm, 8px); padding: var(--space-sm, 10px) 0;
   border-top: 1px solid var(--border-color-divider);
 }
 </style>

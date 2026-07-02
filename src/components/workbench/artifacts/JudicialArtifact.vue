@@ -118,7 +118,7 @@ function riskTag(level) {
 </script>
 
 <style scoped>
-.artifact-judicial { display: flex; flex-direction: column; gap: 12px; }
+.artifact-judicial { display: flex; flex-direction: column; gap: var(--space-md, 12px); min-width: 0; max-width: 100%; box-sizing: border-box; }
 .artifact-judicial__header { display: flex; align-items: center; justify-content: space-between; }
 .artifact-judicial__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .artifact-judicial__desc { font-size: 12px; color: var(--text-tertiary); margin: 0; }

@@ -117,7 +117,7 @@ function confidenceTag(level) {
 </script>
 
 <style scoped>
-.artifact-evidence { display: flex; flex-direction: column; gap: 12px; }
+.artifact-evidence { display: flex; flex-direction: column; gap: var(--space-md, 12px); min-width: 0; max-width: 100%; box-sizing: border-box; }
 .artifact-evidence__header { display: flex; align-items: center; justify-content: space-between; }
 .artifact-evidence__title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 
@@ -140,7 +140,7 @@ function confidenceTag(level) {
 
 .artifact-evidence__risk-name { font-weight: 600; color: var(--text-primary); }
 .artifact-evidence__actions {
-  display: flex; gap: 8px; padding: 10px 0;
+  display: flex; flex-wrap: wrap; gap: var(--space-sm, 8px); padding: var(--space-sm, 10px) 0;
   border-top: 1px solid var(--border-color-divider);
 }
 </style>
