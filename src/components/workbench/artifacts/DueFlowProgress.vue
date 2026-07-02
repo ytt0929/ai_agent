@@ -60,6 +60,7 @@ const headerTagType = computed(() => {
   background: var(--surface-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
 .wb-due-flow__header { display: flex; align-items: center; justify-content: space-between; }
@@ -70,9 +71,9 @@ const headerTagType = computed(() => {
 .wb-due-flow__pct { font-size: 18px; font-weight: 700; color: var(--color-primary); }
 
 /* 流程条 */
-.wb-due-flow__bar { display: flex; align-items: center; gap: 0; }
+.wb-due-flow__bar { display: flex; align-items: center; gap: 0; width: 100%; min-width: 0; overflow: hidden; }
 
-.wb-due-flow__step { display: flex; align-items: center; flex: 1; justify-content: center; gap: 6px; padding: 4px 6px; border-radius: var(--radius-sm); position: relative; cursor: default; transition: background 0.15s; }
+.wb-due-flow__step { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; justify-content: center; gap: 4px; padding: 4px 3px; border-radius: var(--radius-sm); position: relative; cursor: default; transition: background 0.15s; }
 .wb-due-flow__step:hover { background: var(--bg-page); }
 .wb-due-flow__step__node { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 600; color: #fff; }
 
@@ -87,10 +88,10 @@ const headerTagType = computed(() => {
 .wb-due-flow__step--pending .wb-due-flow__step__node { background: var(--bg-page); color: var(--text-tertiary); border: 1px solid var(--border-light); }
 .wb-due-flow__step--pending .wb-due-flow__step__label { color: var(--text-tertiary); }
 .wb-due-flow__step__num { font-size: 11px; line-height: 1; }
-.wb-due-flow__step__label { font-size: 12px; white-space: nowrap; }
+.wb-due-flow__step__label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 64px; }
 
 /* 连接线 */
-.wb-due-flow__connector { flex: 1; height: 2px; min-width: 10px; margin: 0 6px; pointer-events: none; background: var(--border-divider); }
+.wb-due-flow__connector { flex: 1 1 8px; height: 2px; min-width: 8px; max-width: 18px; margin: 0 2px; pointer-events: none; background: var(--border-divider); }
 .wb-due-flow__connector--done { background: var(--color-success); }
 .wb-due-flow__connector--active { background: linear-gradient(to right, var(--color-primary), var(--border-divider)); }
 

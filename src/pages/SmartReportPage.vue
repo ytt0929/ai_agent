@@ -509,7 +509,82 @@
           </div>
         </div>
       </div>
-    </div><!-- AI 任务识别/确认页面 -->
+    </div>
+
+    <!-- 关联交付包预览抽屉 -->
+    <el-drawer v-model="showDeliveryDrawer" title="关联尽调交付包" size="520px" :close-on-click-modal="false">
+      <template v-if="relatedDueTask">
+        <el-descriptions :column="1" size="small" border>
+          <el-descriptions-item label="企业">{{ relatedDueTask.enterpriseName }}</el-descriptions-item>
+          <el-descriptions-item label="尽调任务">{{ relatedDueTask.id }}</el-descriptions-item>
+          <el-descriptions-item label="报告名称">{{ relatedDueTask.reportName || activeReport?.reportName }}</el-descriptions-item>
+          <el-descriptions-item label="交付包状态">
+            <el-tag size="small" :type="relatedDeliveryStatus.type" effect="plain">
+              {{ relatedDeliveryStatus.label }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="relatedDueTask.deliveryPackageName" label="交付包名称">{{ relatedDueTask.deliveryPackageName }}</el-descriptions-item>
+          <el-descriptions-item v-if="relatedDueTask.deliveryPackageGeneratedAt" label="生成时间">{{ relatedDueTask.deliveryPackageGeneratedAt }}</el-descriptions-item>
+        </el-descriptions>
+
+        <div class="sr-dp-drawer__section">
+          <h4 class="sr-dp-drawer__section-title">交付目录摘要</h4>
+          <ul class="sr-dp-drawer__tree">
+            <li class="sr-dp-drawer__folder">
+              <span class="sr-dp-drawer__folder-label">尽调报告</span>
+              <ul class="sr-dp-drawer__sub">
+                <li class="sr-dp-drawer__file">尽职调查报告.pdf</li>
+                <li class="sr-dp-drawer__file">尽职调查报告.docx / 可编辑草稿</li>
+              </ul>
+            </li>
+            <li class="sr-dp-drawer__folder">
+              <span class="sr-dp-drawer__folder-label">阶段报告</span>
+              <ul class="sr-dp-drawer__sub">
+                <li class="sr-dp-drawer__file">工商核验报告.pdf</li>
+                <li class="sr-dp-drawer__file">司法查询报告.pdf</li>
+                <li class="sr-dp-drawer__file">税票分析报告.pdf</li>
+                <li class="sr-dp-drawer__file">资料识别报告.pdf</li>
+                <li class="sr-dp-drawer__file">风险诊断报告.pdf</li>
+              </ul>
+            </li>
+            <li class="sr-dp-drawer__folder">
+              <span class="sr-dp-drawer__folder-label">证据链文件</span>
+              <ul class="sr-dp-drawer__sub">
+                <li class="sr-dp-drawer__file">企业基础资料证据链.xlsx</li>
+                <li class="sr-dp-drawer__file">风险事项证据链.pdf</li>
+                <li class="sr-dp-drawer__file">税票数据证据链.xlsx</li>
+                <li class="sr-dp-drawer__file">资料完整性清单.xlsx</li>
+              </ul>
+            </li>
+            <li class="sr-dp-drawer__folder">
+              <span class="sr-dp-drawer__folder-label">原始资料包</span>
+              <ul class="sr-dp-drawer__sub">
+                <li class="sr-dp-drawer__file">营业执照.pdf</li>
+                <li class="sr-dp-drawer__file">纳税申报表.pdf</li>
+                <li class="sr-dp-drawer__file">发票明细.xlsx</li>
+                <li class="sr-dp-drawer__file">合同文件.pdf</li>
+                <li class="sr-dp-drawer__file">上传资料.zip</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </template>
+      <template v-else-if="activeReport?.dueTaskId">
+        <el-alert type="warning" :closable="false">未找到关联智能尽调任务，请从智能尽调任务台账确认任务是否存在。</el-alert>
+      </template>
+      <template v-else>
+        <el-alert type="info" :closable="false">当前报告未关联智能尽调任务。</el-alert>
+      </template>
+      <template #footer>
+        <div class="sr-dp-drawer__footer">
+          <el-button type="primary" size="small" @click="mockDownloadDeliveryPackage">模拟下载交付包</el-button>
+          <el-button size="small" @click="goToDueDiligenceDetail" :disabled="!relatedDueTask">进入智能尽调详情</el-button>
+          <el-button size="small" @click="showDeliveryDrawer = false">关闭</el-button>
+        </div>
+      </template>
+    </el-drawer>
+
+    <!-- AI 任务识别/确认页面 -->
     <div v-if="view === 'taskDialog'" class="sr-task-workspace">
       <div class="sr-task-workspace__header">
         <el-button size="small" text @click="view = 'home'">
@@ -685,6 +760,8 @@
           <span class="sr-editor__top-name">{{ activeReport?.enterpriseName }}</span>
           <span class="sr-editor__top-report">{{ activeReport?.reportName }}</span>
           <span class="sr-editor__top-meta">模板：{{ activeReport?.templateName }} &#183; 来源：{{ activeReport?.source }} &#183; 资料完整度 {{ activeReport?.materialComplete }}%</span>
+          <el-tag v-if="activeReport?.dueTaskId" size="small" type="primary" effect="plain">关联尽调</el-tag>
+          <el-tag v-if="activeReport?.dueTaskId" size="small" :type="relatedDeliveryStatus.type" effect="plain">交付包{{ relatedDeliveryStatus.label }}</el-tag>
           <span v-if="activeReport?.pendingCount" class="sr-editor__top-pending">待确认：{{ activeReport.pendingCount }} 项</span>
           <el-tag v-if="activeReport?.status" size="small" :type="statusTagType(activeReport?.status)">{{ activeReport?.status }}</el-tag>
         </div>
@@ -694,6 +771,7 @@
           <el-button size="small" @click="handleExportReport">导出报告</el-button>
           <el-button size="small" type="primary" plain @click="handleExportAll">导出报告和资料包</el-button>
           <el-button size="small" type="primary" @click="handleSubmitConfirm">提交确认</el-button>
+          <el-button v-if="activeReport?.dueTaskId" size="small" type="success" plain @click="showDeliveryDrawer = true">查看关联交付包</el-button>
         </div>
       </div>
       <div class="sr-editor__body">
@@ -954,6 +1032,7 @@
 </template>
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useDueDiligenceStore } from '../stores/dueDiligence.js'
 import { useRoute } from 'vue-router'
 import { ArrowLeft, Upload, CircleCheck, Close, Document, MagicStick, DataAnalysis, EditPen, DocumentCopy, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElDialog } from 'element-plus'
@@ -1238,6 +1317,25 @@ const tplParseSections = ref([])
 const uploadFromTemplateId = ref(null)
 
 const activeReport = ref(null)
+const dueStore = useDueDiligenceStore()
+
+const relatedDueTask = computed(() => {
+  if (!activeReport.value?.dueTaskId) return null
+  return dueStore.tasks.find(t => t.id === activeReport.value.dueTaskId) || null
+})
+
+const relatedDeliveryStatus = computed(() => {
+  const task = relatedDueTask.value
+  if (!task) return { label: '未关联', type: 'info' }
+  if (task.deliveryPackageDownloaded) return { label: '已下载', type: 'success' }
+  if (task.deliveryPackageStatus === '已生成' || task.currentStep === 'delivery-package') {
+    return { label: '已生成', type: 'success' }
+  }
+  if (task.currentStep === 'artifacts') return { label: '待生成', type: 'warning' }
+  return { label: '未生成', type: 'info' }
+})
+
+const showDeliveryDrawer = ref(false)
 const activeSectionId = ref('')
 const editingSectionId = ref('')
 const editText = ref('')
@@ -1715,6 +1813,28 @@ function openReport(task) {
 
 function backToHome() { view.value = 'home'; activeReport.value = null }
 
+function mockDownloadDeliveryPackage() {
+  const task = relatedDueTask.value
+  if (!task) {
+    ElMessage.warning('未找到关联尽调任务')
+    return
+  }
+  if (!task.deliveryPackageStatus && task.currentStep !== 'delivery-package') {
+    ElMessage.warning('交付包尚未生成，请先在智能尽调中完成产物确认')
+    return
+  }
+  dueStore.downloadDeliveryPackageFromHome(task.id)
+  ElMessage.success('已模拟下载关联尽调交付包')
+}
+
+function goToDueDiligenceDetail() {
+  if (!relatedDueTask.value) return
+  import('vue-router').then(({ useRouter }) => {
+    const router = useRouter()
+    router.push('/due-diligence/' + relatedDueTask.value.id)
+  })
+}
+
 // ════════════════════════════════════════
 // Phase 3-D-2: 从 URL query 自动打开报告编辑
 // ════════════════════════════════════════
@@ -2128,6 +2248,15 @@ function viewEvidenceFromRewrite() {
 .sr-generating__steps { margin-top: 8px; }
 
 /* ═══ 三栏编辑器 ═══ */
+.sr-dp-drawer__section { margin-top: 16px; }
+.sr-dp-drawer__section-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 10px; }
+.sr-dp-drawer__tree { list-style: none; padding: 0; margin: 0; }
+.sr-dp-drawer__folder { margin-bottom: 8px; }
+.sr-dp-drawer__folder-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.sr-dp-drawer__sub { list-style: none; padding: 0 0 0 16px; margin: 4px 0; }
+.sr-dp-drawer__file { font-size: 12px; color: var(--text-secondary); padding: 2px 0; }
+.sr-dp-drawer__footer { display: flex; gap: 8px; justify-content: flex-end; }
+
 .sr-editor { display: flex; flex-direction: column; height: calc(100vh - 140px); }
 .sr-editor__header { display: flex; align-items: center; gap: var(--space-md); background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-md) 20px; margin-bottom: var(--space-md); flex-shrink: 0; flex-wrap: wrap; }
 .sr-editor__top-info { flex: 1; display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; min-width: 0; }

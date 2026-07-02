@@ -20,9 +20,13 @@
       @enter-deliverables="$emit('enter-deliverables')"
       @edit-report="$emit('edit-report')"
       @export-report="$emit('export-report')"
+      @generate-delivery-package="$emit('generate-delivery-package')"
+      @confirm-and-generate="$emit('generate-delivery-package')"
       @send-reminder="$emit('send-reminder')"
       @switch-to-upload="$emit('switch-to-upload')"
       @download-qr="$emit('download-qr')"
+      @mock-download="$emit('mock-download')"
+      @view-list="$emit('view-list')"
     />
   </div>
 </template>
@@ -53,6 +57,7 @@ defineEmits([
   'enter-risk', 'view-diagnosis-report', 'sync-report', 'enter-deliverables',
   'edit-report', 'export-report',
   'send-reminder', 'switch-to-upload', 'download-qr',
+  'confirm-and-generate',
   'generate-delivery-package',
   'mock-download', 'view-list',
 ])

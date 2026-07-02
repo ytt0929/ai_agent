@@ -925,6 +925,7 @@ const chatMessages = ref([])
 const chatPanelCollapsed = ref(false)
 const chatRef = ref(null)
 const isExploring = ref(false)
+const isStreaming = ref(false)
 const hasResult = ref(false)
 const workspaceActive = ref(false)
 const lastDueTaskId = ref(null)
@@ -949,38 +950,39 @@ async function typeAiMessage(fullText, options = {}) {
 
 // ══ 问题类型分类 ══
 async function safeStreamMessage(fullText, options = {}) {
-  // P0: 安全流式输出——禁止并发、分批输出、节流滚动、异常兜底、最终释放
-  if (isExploring.value) {
-    // 已有流式输出在进行，直接追加完整文本
-    const msg = { role: 'ai', text: fullText }
+  const text = String(fullText || '')
+
+  if (isStreaming.value) {
+    const msg = { role: 'ai', text }
     if (options.actions) msg.actions = options.actions
     chatMessages.value.push(msg)
     scrollToBottom()
     return msg
   }
-  isExploring.value = true
+
+  isStreaming.value = true
+  const msg = { role: 'ai', text: '' }
+  chatMessages.value.push(msg)
+
   try {
-    const msg = { role: 'ai', text: '' }
-    chatMessages.value.push(msg)
-    const batchSize = 6
-    for (let i = 0; i < fullText.length; i += batchSize) {
-      msg.text = fullText.slice(0, Math.min(i + batchSize, fullText.length))
-      if (i % 18 < batchSize) scrollToBottom()
-      await delay(10)
+    const batchSize = 5
+    for (let i = 0; i < text.length; i += batchSize) {
+      msg.text = text.slice(0, i + batchSize)
+      if (i % 20 === 0) scrollToBottom()
+      await delay(12)
     }
-    msg.text = fullText
+    msg.text = text
     if (options.actions) msg.actions = options.actions
     scrollToBottom()
     return msg
   } catch (error) {
     console.error('safeStreamMessage error:', error)
-    const fallbackMsg = { role: 'ai', text: fullText || '回复生成异常，请重新发送。' }
-    if (options.actions) fallbackMsg.actions = options.actions
-    chatMessages.value.push(fallbackMsg)
+    msg.text = text || '回复生成异常，请重新发送。'
+    if (options.actions) msg.actions = options.actions
     scrollToBottom()
-    return fallbackMsg
+    return msg
   } finally {
-    isExploring.value = false
+    isStreaming.value = false
   }
 }
 
@@ -1073,7 +1075,7 @@ async function runExploreFlow(text) {
     const viewName = qa.viewName
 
     if (shouldRunFullEngine) {
-      await typeAiMessage('我先识别企业，并检查可用数据范围。')
+      await safeStreamMessage('我先识别企业，并检查可用数据范围。')
       await delay(300)
 
       chatMessages.value.push({ role: 'ai', type: 'engine' })
@@ -1250,7 +1252,7 @@ async function runReportGenerationFlow(reportType) {
     tax: '正在基于税票、纳税申报、发票数据生成纳税全景报告。',
     diagnosis: '正在基于已获取的工商、司法' + (hasTaxData.value ? '、税票' : '') + '等数据，生成企业诊断报告。',
   }
-  await typeAiMessage(introMap[reportType] || '正在生成报告。')
+  await safeStreamMessage(introMap[reportType] || '正在生成报告。')
   await delay(300)
 
   // 2. 推送 engine 流程卡
@@ -1309,7 +1311,7 @@ async function runReportGenerationFlow(reportType) {
     })(),
   }
 
-  await typeAiMessage(doneMap[reportType], { actions: actionsMap[reportType] })
+  await safeStreamMessage(doneMap[reportType], { actions: actionsMap[reportType] })
   await delay(200)
 
   // 4. 打开左侧报告
@@ -1333,7 +1335,7 @@ async function handleReportRequest(text) {
     // ══ 纳税全景报告 ══
     if (/纳税|税票/.test(text)) {
       if (!hasTaxData.value) {
-        await typeAiMessage('当前**税票数据未授权**，无法生成纳税全景报告。\n\n请先授权税票数据后，系统将生成包含税负分析、申报明细、开票差异等内容的纳税全景报告。', {
+        await safeStreamMessage('当前**税票数据未授权**，无法生成纳税全景报告。\n\n请先授权税票数据后，系统将生成包含税负分析、申报明细、开票差异等内容的纳税全景报告。', {
           actions: [{ label: '授权税票', action: 'auth', type: 'warning' }]
         })
         return
@@ -1350,7 +1352,7 @@ async function handleReportRequest(text) {
     }
 
     // ══ 兜底：企业未识别 ══
-    await typeAiMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
+    await safeStreamMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
   } finally {
     isExploring.value = false
   }
@@ -1409,18 +1411,18 @@ async function sendChat() {
         await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n我将继续处理你的问题。')
         await delay(300)
         chatMessages.value.push({ role: 'user', text: origQ })
-        runExploreFlow(origQ)
+        await runExploreFlow(origQ)
       } else {
-        safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
+        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
       }
     } else {
       fillDemoCreditCodeIfNeeded()
-      typeAiMessage('当前 Demo 只内置了少量企业样例，请输入：唐山物桥商贸有限公司 或 91130203MA7EEQ2N0T。')
+      await safeStreamMessage('当前 Demo 只内置了少量企业样例，请输入：唐山物桥商贸有限公司 或 91130203MA7EEQ2N0T。')
     }
     return
   }
 
-  runExploreFlow(text)
+  await runExploreFlow(text)
 }
 
 function buildMsgActions(view) {
