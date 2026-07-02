@@ -34,7 +34,9 @@
     <el-card shadow="never" class="artifact-card">
       <template #header><span class="artifact-card__title">资料清单</span></template>
       <el-table :data="materials" size="small" stripe border>
-        <el-table-column label="资料名称" min-width="120">{{ row => row.name }}</el-table-column>
+        <el-table-column label="资料名称" min-width="120">
+          <template #default="{ row }">{{ row.name }}</template>
+        </el-table-column>
         <el-table-column label="类型" width="90" align="center">
           <template #default="{ row }"><el-tag size="small" type="info" effect="plain">{{ row.type || '—' }}</el-tag></template>
         </el-table-column>

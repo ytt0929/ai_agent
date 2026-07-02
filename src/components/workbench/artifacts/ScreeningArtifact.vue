@@ -45,7 +45,7 @@
           <template #default="{ row }"><el-tag size="small" :type="riskTag(row.risk)">{{ row.risk }}</el-tag></template>
         </el-table-column>
         <el-table-column label="匹配度" width="80" align="center">
-          <template #default="{ row }"><el-progress :percentage="row.matchPercent || 0" :stroke-width="6" :color="row.matchPercent > 80 ? '#10b981' : '#f59e0b'" /></template>
+          <template #default="{ row }"><el-progress :percentage="row.match || row.matchPercent || 0" :stroke-width="6" :color="(row.match || row.matchPercent) > 80 ? '#10b981' : '#f59e0b'" /></template>
         </el-table-column>
         <el-table-column label="操作" width="80" align="center">
           <template #default="{ row }"><el-button size="small" text type="primary" @click="$emit('explore', row)">探查</el-button></template>

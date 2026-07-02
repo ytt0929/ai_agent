@@ -1,9 +1,9 @@
 <template>
-  <div class="wb-business-panel">
+  <div class="wb-business-panel" :key="`${tool || 'empty'}-${data?.status || data?.step || ''}`">
     <component
       :is="artifactComponent"
-      :key="tool || 'empty'"
-      :data="data"
+      :key="`${tool || 'empty'}-${data?.currentStage || data?.step || data?.status || 'default'}`"
+      :data="componentData"
       @explore="$emit('explore', $event)"
       @select-template="$emit('select-template', $event)"
     />
@@ -26,6 +26,9 @@ import EmptyArtifact from './artifacts/EmptyArtifact.vue'
 
 const props = defineProps({ tool: { type: String, default: null }, data: { type: Object, default: () => ({}) } })
 defineEmits(['explore', 'select-template'])
+
+// Ensure data is never null/undefined
+const componentData = computed(() => props.data || {})
 
 const artifactComponent = computed(() => ({
   screening: ScreeningArtifact,

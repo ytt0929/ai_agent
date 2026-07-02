@@ -29,7 +29,9 @@
         <el-table-column label="案件类型" width="100">
           <template #default="{ row }"><el-tag size="small" :type="row.type === '无' ? 'success' : 'info'">{{ row.type }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="详情" min-width="160">{{ row => row.detail }}</el-table-column>
+        <el-table-column label="详情" min-width="160">
+          <template #default="{ row }">{{ row.detail }}</template>
+        </el-table-column>
       </el-table>
     </el-card>
 
@@ -37,9 +39,13 @@
       <template #header>
         <span class="artifact-card__title">关联企业</span>
       </template>
-      <el-table :data="relatedCompanies" size="small" stripe border>
-        <el-table-column label="企业名称" min-width="140">{{ row => row.name }}</el-table-column>
-        <el-table-column label="关系" width="100">{{ row => row.relation }}</el-table-column>
+      <el-table :data="relatedCompaniesList" size="small" stripe border>
+        <el-table-column label="企业名称" min-width="140">
+          <template #default="{ row }">{{ row.name }}</template>
+        </el-table-column>
+        <el-table-column label="关系" width="100">
+          <template #default="{ row }">{{ row.relation }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }"><el-tag size="small" :type="row.status === '正常' ? 'success' : 'info'">{{ row.status }}</el-tag></template>
         </el-table-column>
@@ -49,6 +55,8 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 const entityStatus = computed(() => props.data.entityStatus || '—')
 const legalPerson = computed(() => props.data.legalPerson || '—')
@@ -56,7 +64,15 @@ const registeredCapital = computed(() => props.data.registeredCapital || '—')
 const establishedDate = computed(() => props.data.establishedDate || '—')
 const judicialRisk = computed(() => props.data.judicialRisk || '—')
 const judicialDetails = computed(() => props.data.judicialDetails || [])
-const relatedCompanies = computed(() => props.data.relatedCompanies || [])
+const relatedCompaniesList = computed(() => {
+  const rc = props.data.relatedCompanies
+  if (Array.isArray(rc)) return rc
+  if (typeof rc === 'string' && rc !== '—') {
+    // If it's a count string like "3 家", return empty since no detail data
+    return []
+  }
+  return []
+})
 </script>
 
 <style scoped>

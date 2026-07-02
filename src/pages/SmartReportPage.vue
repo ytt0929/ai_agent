@@ -520,10 +520,11 @@
               <!-- 识别过程消息 -->
               <div v-for="(m, i) in aiMsgs" :key="i" class="ai-message" :class="m.role === 'ai' ? 'ai-message--ai' : 'ai-message--user'">
                 <div class="ai-message__avatar">{{ m.role === 'ai' ? 'AI' : '&#25105;' }}</div>
-                <div class="ai-message__bubble" v-html="renderMd(m.text)"></div>
-                <!-- 推荐按钮在 AI 消息气泡下方 -->
-                <div v-if="m.quickActions && m.quickActions.length" class="sr-ai-quick-inline">
-                  <el-button v-for="(qa, qi) in m.quickActions" :key="qi" size="small" text type="primary" @click="qa.handler">{{ qa.label }}</el-button>
+                <div class="ai-message__content">
+                  <div class="ai-message__bubble" v-html="renderMd(m.text)"></div>
+                  <div v-if="m.quickActions && m.quickActions.length" class="sr-ai-quick-inline">
+                    <el-button v-for="(qa, qi) in m.quickActions" :key="qi" size="small" plain @click="qa.handler">{{ qa.label }}</el-button>
+                  </div>
                 </div>
               </div>
               <!-- 识别中状态 -->
@@ -2064,7 +2065,28 @@ function viewEvidenceFromRewrite() {
 .ai-assistant-panel__footer { flex-shrink: 0; padding: 8px 12px; border-top: 1px solid var(--border-light); display: flex; gap: 8px; align-items: center; }
 
 /* AI 内联快捷按钮 */
-.sr-ai-quick-inline { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-light); }
+.sr-ai-quick-inline { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-light); }
+
+.ai-message__content {
+  max-width: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-message--ai .ai-message__content {
+  align-items: flex-start;
+}
+
+.ai-message--user .ai-message__content {
+  align-items: flex-end;
+}
+
+.ai-message__bubble {
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
 
 /* AI 第一条消息 - 章节信息 */
 .sr-ai-first-msg__section-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -2216,11 +2238,11 @@ function viewEvidenceFromRewrite() {
 .sr-check-table { width: 100%; }
 
 /* ═══ AI 任务确认工作区 ═══ */
-.sr-task-workspace { max-width: 1200px; margin: 0 auto; }
+.sr-task-workspace { max-width: 1360px; margin: 0 auto; }
 .sr-task-workspace__header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
 .sr-task-workspace__header-title h2 { font-size: 20px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
 .sr-task-workspace__header-title p { font-size: 13px; color: var(--text-tertiary); margin: 0; }
-.sr-task-workspace__body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; height: calc(100vh - 160px); overflow: hidden; }
+.sr-task-workspace__body { display: grid; grid-template-columns: minmax(560px, 1fr) minmax(380px, 420px); gap: 20px; height: calc(100vh - 160px); overflow: hidden; }
 .sr-task-workspace__main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 8px; }
 .sr-task-workspace__assistant { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 
@@ -2288,11 +2310,11 @@ function viewEvidenceFromRewrite() {
 .ai-assistant-panel__title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); }
 
 @media (max-width: 1200px) {
-  .sr-task-dialog__body { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 1200px) {
-  .sr-task-dialog__body { grid-template-columns: 1fr; }
+  .sr-task-workspace__body {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
 }
 
 /* ===== Template Center ===== */

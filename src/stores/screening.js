@@ -33,6 +33,7 @@ export const useScreeningStore = defineStore('screening', () => {
     summary.highMatched = 18
     summary.canTransfer = 12
     customers.value = [
+      { id: 'ts-wq-sm', name: '唐山物桥商贸有限公司', industry: '建材批发 / 商贸流通', region: '河北省·唐山市', revenue: '2275.98', taxLevel: 'A级', risk: '中', match: 91, transferable: '可转尽调', reason: '企业开票活跃，但存在税负率偏低、购销两头在外、开票收入与申报收入不一致等风险事项，适合进入尽调流程。', status: '可转尽调', filters: ['建材批发', '商贸流通', '中风险', '有开票记录', '可转尽调'] },
       { id: 'c001', name: '浙江恒远制造有限公司', industry: '制造业', region: '浙江省·杭州市', revenue: '82', taxLevel: 'A级', risk: '低', match: 98, transferable: '可转尽调', reason: '经营稳定，近一年开票连续，暂无重大司法风险', status: '可转尽调', filters: ['浙江省', '制造业', '低风险', '有开票记录'] },
       { id: 'c002', name: '明达精工有限公司', industry: '制造业', region: '浙江省·宁波市', revenue: '156', taxLevel: 'A级', risk: '低', match: 95, transferable: '可转尽调', reason: '制造业匹配度高，纳税信用良好，营收趋势稳定', status: '可转尽调', filters: ['浙江省', '制造业', '低风险', '有开票记录'] },
       { id: 'c003', name: '宁波天合新材料有限公司', industry: '新材料', region: '浙江省·宁波市', revenue: '120', taxLevel: 'A级', risk: '中', match: 92, transferable: '待确认', reason: '经营增长较好，但部分资料需要补充确认', status: '待确认', filters: ['浙江省', '新材料', '中风险'] },

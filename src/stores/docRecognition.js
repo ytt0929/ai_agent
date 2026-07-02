@@ -3,6 +3,27 @@ import { ref, computed } from 'vue'
 
 /** Mock 字段提取结果 — key 为文件 id */
 const mockFields = {
+  f008: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 99 },
+    { label: '统一社会信用代码', value: '91130203MA7EEQ2N0T', confidence: 99 },
+    { label: '法定代表人', value: '马丽', confidence: 98 },
+    { label: '注册资本', value: '500万元', confidence: 97 },
+    { label: '成立日期', value: '2021-12-24', confidence: 96 },
+    { label: '经营范围', value: '建材批发、商贸流通...', confidence: 85 },
+  ],
+  f009: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 98 },
+    { label: '纳税人识别号', value: '91130203MA7EEQ2N0T', confidence: 99 },
+    { label: '申报收入', value: '2175.46万元', confidence: 95 },
+    { label: '应纳税额', value: '18.21万元', confidence: 91 },
+    { label: '税负率', value: '0.8%', confidence: 93 },
+  ],
+  f010: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 97 },
+    { label: '开票收入', value: '2275.98万元', confidence: 96 },
+    { label: '进项发票', value: '128份', confidence: 94 },
+    { label: '销项发票', value: '96份', confidence: 92 },
+  ],
   f001: [
     { label: '企业名称', value: '杭州智造装备有限公司', confidence: 98 },
     { label: '统一社会信用代码', value: '91330100MA27XXXX3X', confidence: 99 },
@@ -112,6 +133,23 @@ const mockCrossCompare = {
 export const useDocRecognitionStore = defineStore('docRecognition', () => {
   // 按任务/企业分组的文件列表
   const tasks = ref([
+    {
+      id: 'dd-ts-wq',
+      name: '唐山物桥商贸有限公司',
+      industry: '建材批发 / 商贸流通',
+      region: '河北唐山',
+      amount: '500万',
+      files: [
+        { id: 'f008', name: '营业执照.pdf', type: '营业执照', status: '已完成', size: '920KB', uploadedAt: '2026-07-02 08:20' },
+        { id: 'f009', name: '纳税申报表.xlsx', type: '纳税申报', status: '待确认', size: '1.5MB', uploadedAt: '2026-07-02 08:22' },
+        { id: 'f010', name: '增值税发票.pdf', type: '发票', status: '已完成', size: '2.1MB', uploadedAt: '2026-07-02 08:25' },
+        { id: 'f011', name: '企业所得税.pdf', type: '税务', status: '已完成', size: '1.8MB', uploadedAt: '2026-07-02 08:28' },
+        { id: 'f012', name: '发票明细.xlsx', type: '发票', status: '已完成', size: '3.2MB', uploadedAt: '2026-07-02 08:30' },
+        { id: 'f013', name: '纳税评级.pdf', type: '税务', status: '已完成', size: '560KB', uploadedAt: '2026-07-02 08:32' },
+        { id: 'f014', name: '银行流水摘要.pdf', type: '银行', status: '识别中', size: '4.1MB', uploadedAt: '2026-07-02 08:35' },
+        { id: 'f015', name: '工商登记信息.pdf', type: '工商', status: '已完成', size: '780KB', uploadedAt: '2026-07-02 08:38' },
+      ],
+    },
     {
       id: 'dd001',
       name: '杭州智造装备有限公司',

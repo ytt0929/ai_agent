@@ -5,6 +5,22 @@ export const useTaxRpaStore = defineStore('taxRpa', () => {
   // 授权任务列表
   const tasks = ref([
     {
+      id: 'rpa-ts-wq',
+      enterprise: '唐山物桥商贸有限公司',
+      creditCode: '91130203MA7EEQ2N0T',
+      status: '授权中',
+      authUrl: 'https://ai-copilot.demo/auth/rpa-ts-wq',
+      qrCode: null,
+      createdAt: '2026-07-02 08:15',
+      authExpireAt: '2026-07-03 08:15',
+      authedAt: null,
+      collectedCount: 0,
+      totalCount: 12,
+      lastReminderAt: null,
+      nextReminderAt: '2026-07-03 08:15',
+      remindCount: 0,
+    },
+    {
       id: 'rpa001',
       enterprise: '杭州智造科技有限公司',
       creditCode: '91330100MA27XXXX3X',
@@ -89,6 +105,7 @@ export const useTaxRpaStore = defineStore('taxRpa', () => {
 
   // 新建企业选项（从尽调任务来）
   const enterpriseOptions = ref([
+    { name: '唐山物桥商贸有限公司', creditCode: '91130203MA7EEQ2N0T' },
     { name: '杭州智造科技有限公司', creditCode: '91330100MA27XXXX3X' },
     { name: '宁波天合新材料股份有限公司', creditCode: '91330200MA2HXXXX8Y' },
     { name: '温州瑞达机械制造有限公司', creditCode: '91330300MA29XXXX1Z' },

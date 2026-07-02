@@ -14,7 +14,9 @@
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }"><el-tag size="small" :type="row.status.includes('已') || row.status.includes('归档') ? 'success' : 'warning'">{{ row.status }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="数量" width="70" align="center">{{ row => row.count }}</el-table-column>
+        <el-table-column label="数量" width="70" align="center">
+          <template #default="{ row }">{{ row.count }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="100" align="center">
           <template #default="{ row }">
             <el-button v-if="row.status === '已生成'" size="small" text type="primary">查看</el-button>

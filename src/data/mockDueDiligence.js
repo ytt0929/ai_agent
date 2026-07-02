@@ -71,6 +71,37 @@ export const enterprises = [
     currentStep: 'materials',
     autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
   },
+  {
+    id: 'dd005',
+    name: '唐山物桥商贸有限公司',
+    creditCode: '91130203MA7EEQ2N0T',
+    industry: '建材批发 / 商贸流通',
+    region: '河北唐山',
+    amount: '500万',
+    manager: '张经理',
+    type: '贷前尽调',
+    status: '等待税票RPA',
+    progress: 42,
+    nextAction: '等待企业授权',
+    currentStep: 'tax-rpa',
+    autoCapabilities: ['自动拆解流程', '税票RPA', '跨天提醒', '自动生成产物'],
+    source: '企业探查',
+    template: '标准授信尽调',
+    dueFlow: {
+      statusText: '等待税票RPA',
+      progress: 42,
+      activeKey: 'tax',
+      steps: [
+        { key: 'business', label: '工商核验', status: 'done' },
+        { key: 'judicial', label: '司法查询', status: 'done' },
+        { key: 'tax', label: '税票采集', status: 'active' },
+        { key: 'materials', label: '资料补充', status: 'pending' },
+        { key: 'evidence', label: '证据整合', status: 'pending' },
+        { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
+        { key: 'deliverables', label: '产物确认', status: 'pending' },
+      ],
+    },
+  },
 ]
 
 // 资料补充清单

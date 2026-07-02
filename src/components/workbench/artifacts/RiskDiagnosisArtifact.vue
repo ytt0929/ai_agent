@@ -1,5 +1,6 @@
 <template>
   <div class="artifact-risk">
+    <!-- 风险评分卡片 -->
     <el-card shadow="never" class="artifact-card artifact-card--score">
       <div class="artifact-score">
         <div class="artifact-score__value" :style="{ color: scoreColor }">{{ score }}</div>
@@ -8,52 +9,28 @@
       </div>
     </el-card>
 
-    <el-card shadow="never" class="artifact-card">
-      <template #header><span class="artifact-card__title">风险统计</span></template>
-      <el-row :gutter="12">
-        <el-col :span="8">
-          <div class="artifact-risk-stat">
-            <div class="artifact-risk-stat__label">高风险</div>
-            <div class="artifact-risk-stat__value" style="color: var(--color-danger)">{{ highCount }}</div>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="artifact-risk-stat">
-            <div class="artifact-risk-stat__label">中风险</div>
-            <div class="artifact-risk-stat__value" style="color: var(--color-warning)">{{ midCount }}</div>
-          </div>
-        </el-col>
-        <el-col :span="8">
-          <div class="artifact-risk-stat">
-            <div class="artifact-risk-stat__label">低风险</div>
-            <div class="artifact-risk-stat__value" style="color: var(--color-success)">{{ lowCount }}</div>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
+    <!-- 诊断结论 -->
+    <el-alert v-if="conclusion" :title="conclusion" type="warning" :closable="false" show-icon class="artifact-alert" />
 
-    <el-card shadow="never" class="artifact-card">
-      <template #header><span class="artifact-card__title">风险事项</span></template>
-      <el-table :data="riskItems" size="small" stripe border>
-        <el-table-column label="类别" width="100" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="riskTag(row.level)">{{ row.category }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="等级" width="70" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="riskTag(row.level)">{{ row.level }}</el-tag></template>
-        </el-table-column>
-        <el-table-column label="详情" min-width="140">{{ row => row.detail }}</el-table-column>
-        <el-table-column label="建议动作" min-width="100">
-          <template #default="{ row }"><el-tag size="small" effect="plain">{{ row.suggestion || '—' }}</el-tag></template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <!-- 风险诊断事项 -->
+    <RiskIssueList
+      :issues="riskIssues"
+      :highlights="[]"
+      :indicators="[]"
+      title="风险诊断事项"
+    />
 
-    <el-alert v-if="conclusion" :title="conclusion" type="warning" :closable="false" show-icon />
+    <!-- 建议动作 -->
+    <div v-if="suggestedActions?.length" class="artifact-risk__actions">
+      <span class="artifact-risk__actions-label">建议动作：</span>
+      <el-tag v-for="(a, ai) in suggestedActions" :key="ai" size="small" effect="plain">{{ a }}</el-tag>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import RiskIssueList from './RiskIssueList.vue'
 
 const props = defineProps({ data: { type: Object, default: () => ({}) } })
 const score = computed(() => props.data.score || '—')
@@ -61,13 +38,9 @@ const grade = computed(() => props.data.grade || '—')
 const riskLevel = computed(() => props.data.riskLevel || '')
 const riskLevelTag = computed(() => ({ '低': 'success', '中': 'warning', '高': 'danger' }[riskLevel.value] || 'info'))
 const scoreColor = computed(() => ({ '低': 'var(--color-success)', '中': 'var(--color-warning)', '高': 'var(--color-danger)' }[riskLevel.value] || 'var(--text-primary)'))
-const riskItems = computed(() => props.data.riskItems || [])
+const riskIssues = computed(() => props.data.riskIssues || props.data.riskItems || [])
 const conclusion = computed(() => props.data.conclusion || '')
-const highCount = computed(() => riskItems.value.filter(r => r.level === '高').length)
-const midCount = computed(() => riskItems.value.filter(r => r.level === '中').length)
-const lowCount = computed(() => riskItems.value.filter(r => r.level === '低').length)
-
-function riskTag(level) { return { '低': 'success', '中': 'warning', '高': 'danger' }[level] || 'info' }
+const suggestedActions = computed(() => props.data.suggestedActions || [])
 </script>
 
 <style scoped>
@@ -78,7 +51,18 @@ function riskTag(level) { return { '低': 'success', '中': 'warning', '高': 'd
 .artifact-score__value { font-size: 36px; font-weight: 800; }
 .artifact-score__label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 .artifact-score__grade { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.artifact-risk-stat { text-align: center; padding: 8px; }
-.artifact-risk-stat__label { font-size: 12px; color: var(--text-secondary); }
-.artifact-risk-stat__value { font-size: 24px; font-weight: 700; }
+.artifact-alert { margin: 0; }
+.artifact-risk__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.artifact-risk__actions-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
 </style>

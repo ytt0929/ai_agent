@@ -8,8 +8,12 @@
         </div>
       </template>
       <el-table :data="sections" size="small" stripe border>
-        <el-table-column label="章节" width="50" align="center">{{ row => row.no }}</el-table-column>
-        <el-table-column label="标题" min-width="120">{{ row => row.title }}</el-table-column>
+        <el-table-column label="章节" width="50" align="center">
+          <template #default="{ row }">{{ row.no }}</template>
+        </el-table-column>
+        <el-table-column label="标题" min-width="120">
+          <template #default="{ row }">{{ row.title }}</template>
+        </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="{ row }"><el-tag size="small" :type="secTag(row.status)">{{ row.status }}</el-tag></template>
         </el-table-column>
