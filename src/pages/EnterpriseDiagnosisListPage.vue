@@ -6,19 +6,21 @@
       <p class="edl-hero-sub">输入企业名称、税号，或直接提问。系统会识别企业、检查数据覆盖，并在对话中打开分析视图。</p>
 
       <!-- 主输入区 -->
-      <div class="edl-hero-input">
-        <el-input
-          v-model="heroInput"
-          class="edl-hero-field"
-          size="large"
-          placeholder="输入企业名称、税号，或直接问：税负率是多少、查看股东明细、近12个月申报记录如何…"
-          @keydown.enter="handleHeroSearch"
-          clearable
-        />
-        <el-button type="primary" size="large" @click="handleHeroSearch">
-          开始探查
-        </el-button>
-      </div>
+      <el-card class="edl-hero-card" shadow="never">
+        <div class="edl-hero-input">
+          <el-input
+            v-model="heroInput"
+            class="edl-hero-field"
+            size="large"
+            placeholder="输入企业名称、税号，或直接问：税负率是多少、查看股东明细、近12个月申报记录如何…"
+            @keydown.enter="handleHeroSearch"
+            clearable
+          />
+          <el-button type="primary" size="large" @click="handleHeroSearch">
+            开始探查
+          </el-button>
+        </div>
+      </el-card>
 
       <!-- 五组示例问题 -->
       <div class="edl-hero-chips">
@@ -257,11 +259,13 @@ function authData(row) {
 
 <style scoped>
 .edl-page {
-  padding: var(--space-2xl) 32px;
-  max-width: 1280px;
+  padding: var(--space-2xl) var(--space-4xl);
+  max-width: var(--layout-page-data);
   margin: 0 auto;
   background: var(--surface-page);
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ===== Hero ===== */
@@ -270,8 +274,8 @@ function authData(row) {
 }
 
 .edl-hero-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--font-size-workbench-title);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   margin: 0 0 var(--space-xs);
 }
@@ -282,23 +286,27 @@ function authData(row) {
   margin: 0 0 var(--space-lg);
 }
 
-/* 主输入区 */
-.edl-hero-input {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+/* 主输入区 — 卡片容器 */
+.edl-hero-card {
   background: var(--surface-card);
   border: 1.5px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: var(--space-lg) var(--space-xl);
   margin-bottom: var(--space-lg);
-  max-width: 860px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  max-width: var(--layout-page-data);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--duration-slower) var(--ease-out), box-shadow var(--duration-slower) var(--ease-out);
 }
 
-.edl-hero-input:focus-within {
+.edl-hero-card:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
+  box-shadow: var(--shadow-primary);
+}
+
+.edl-hero-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
 }
 
 .edl-hero-input .edl-hero-field {
@@ -316,8 +324,8 @@ function authData(row) {
 .edl-hero-input .edl-hero-field :deep(.el-input__inner) {
   color: var(--text-primary);
   font-size: var(--font-size-lg);
-  line-height: 1.6;
-  height: 32px;
+  line-height: var(--line-height-relaxed);
+  height: var(--space-2xl);
 }
 
 .edl-hero-input .edl-hero-field :deep(.el-input__inner::placeholder) {
@@ -326,10 +334,9 @@ function authData(row) {
 
 .edl-hero-input .el-button {
   flex-shrink: 0;
-  height: 48px;
   border-radius: var(--radius-md);
   padding: 0 var(--space-xl);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 /* 示例问题 */
@@ -338,7 +345,7 @@ function authData(row) {
   flex-direction: column;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
-  max-width: 860px;
+  max-width: var(--layout-page-narrow);
 }
 
 .edl-chip-group {
@@ -358,12 +365,18 @@ function authData(row) {
 
 .edl-hero-chip {
   border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
   height: 32px;
   padding: 0 var(--space-lg);
   color: var(--color-primary);
   background: var(--color-primary-bg);
-  border-color: var(--border-default);
+  border-color: var(--color-primary-border);
+}
+
+.edl-hero-chip :deep(span) {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
 }
 
 .edl-hero-chip:hover,
@@ -398,14 +411,13 @@ function authData(row) {
 .edl-toolbar__left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2xs);
 }
 
 .edl-toolbar-title {
   font-size: var(--font-size-body-lg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
-  margin: 0;
 }
 
 /* ===== 表格 ===== */
@@ -414,7 +426,7 @@ function authData(row) {
 }
 
 .edl-table :deep(.el-table__header th) {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
 }
 
@@ -423,7 +435,7 @@ function authData(row) {
 }
 
 .edl-cell--name {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   white-space: nowrap;
 }
@@ -462,7 +474,7 @@ function authData(row) {
 }
 
 .edl-grade-tag {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .edl-risk-score {

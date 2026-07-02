@@ -21,6 +21,9 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
   // 对话消息（每个任务+步骤独立）
   const chatMessages = ref({})
 
+  // 任务级对话消息（跨阶段连续，taskId 为 key）
+  const taskChatMessages = ref({})
+
   // 用户输入
   const chatInput = ref('')
 
@@ -102,6 +105,26 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
         task.progress = Math.min(100, Math.round(((idx + 1) / stepsDef.length) * 100))
       }
     }
+  }
+
+  function nowTime() {
+    return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+  }
+
+  // 任务级消息操作
+  function getTaskChatMessages(taskId) {
+    return taskChatMessages.value[taskId] || []
+  }
+
+  function addTaskChatMessage(taskId, msg) {
+    if (!taskChatMessages.value[taskId]) {
+      taskChatMessages.value[taskId] = []
+    }
+    taskChatMessages.value[taskId].push(msg)
+  }
+
+  function clearTaskChatMessages(taskId) {
+    taskChatMessages.value[taskId] = []
   }
 
   // 添加对话消息
@@ -350,6 +373,11 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     enterRisk,
     enterArtifacts,
     markReportExported,
+    taskChatMessages,
+    getTaskChatMessages,
+    addTaskChatMessage,
+    clearTaskChatMessages,
+    nowTime,
     addChatMessage,
     addFile,
     createTaskFromScreening,
