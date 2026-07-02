@@ -318,6 +318,30 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     task.updatedAt = new Date().toLocaleString('zh-CN')
   }
 
+  // 进入交付包下载
+  function enterDeliveryPackage(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.currentStep = 'delivery-package'
+    task.currentStage = 'delivery-package'
+    task.progress = 100
+    task.status = '已完成'
+    task.statusText = '交付包已生成'
+    task.deliveryPackageStatus = '已生成'
+    task.deliveryPackageName = task.name + '_尽调交付包_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '.zip'
+    task.deliveryPackageGeneratedAt = new Date().toLocaleString('zh-CN')
+    task.deliveryPackageDownloaded = false
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 标记交付包已下载
+  function markDeliveryPackageDownloaded(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.deliveryPackageDownloaded = true
+    task.deliveryPackageDownloadedAt = new Date().toLocaleString('zh-CN')
+  }
+
   // 标记报告已导出
   function markReportExported(taskId) {
     const task = tasks.value.find(t => t.id === taskId)
@@ -412,6 +436,8 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     enterEvidence,
     enterRisk,
     enterArtifacts,
+    enterDeliveryPackage,
+    markDeliveryPackageDownloaded,
     markReportExported,
     taskChatMessages,
     getTaskChatMessages,

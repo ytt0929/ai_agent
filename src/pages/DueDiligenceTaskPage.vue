@@ -111,6 +111,17 @@
             <el-button size="small" plain @click="handleEnterSmartReport">进入智能报告</el-button>
           </div>
         </el-card>
+
+        <!-- 交付包下载 -->
+        <el-card v-else-if="selectedStageKey === 'delivery-package'" shadow="never" class="workspace-card">
+          <DeliveryPackageArtifact
+            :data="deliveryPackageArtifactData"
+            :downloading="deliveryDownloading"
+            @download-all="handleDownloadPackage"
+            @download-pdf="handleDownloadPdf"
+            @back-to-artifacts="handleBackToArtifacts"
+          />
+        </el-card>
       </main>
 
       <!-- 右侧：对话式尽调助手 -->
@@ -188,6 +199,7 @@ import RiskDiagnosisArtifact from '../components/workbench/artifacts/RiskDiagnos
 import BusinessVerifyArtifact from '../components/workbench/artifacts/BusinessVerifyArtifact.vue'
 import JudicialArtifact from '../components/workbench/artifacts/JudicialArtifact.vue'
 import ReportEditorArtifact from '../components/workbench/artifacts/ReportEditorArtifact.vue'
+import DeliveryPackageArtifact from '../components/workbench/artifacts/DeliveryPackageArtifact.vue'
 import { createOrReuseReportTaskFromDueDiligence, reportTasks, reportTemplates, reportSections as reportSectionsData } from '../data/mockSmartReport.js'
 
 const router = useRouter()
@@ -206,6 +218,7 @@ const DUE_STAGES = [
   { key: 'evidence',        label: '证据整合' },
   { key: 'risk',            label: '风险诊断' },
   { key: 'artifacts',       label: '产物确认' },
+  { key: 'delivery-package',label: '交付包下载' },
 ]
 
 const processSteps = computed(() => {
@@ -241,11 +254,13 @@ const stageInfo = {
   'evidence':        { label: '证据整合', prompt: '证据整合已完成，共收集 31 条有效证据，核心维度覆盖率 92%。可进入风险诊断。', waiting: '无（已完成）', tagType: 'success' },
   'risk':            { label: '风险诊断', prompt: '风险诊断已完成，共识别 8 项风险事项（2 高、2 中、2 低）。可进入产物确认。', waiting: '无（已完成）', tagType: 'success' },
   'artifacts':       { label: '产物确认', prompt: '尽调产物已全部生成。报告草稿有 3 处结论待确认，确认后即可提交。', waiting: '客户经理确认和修改', tagType: 'primary' },
+  'delivery-package':{ label: '交付包下载', prompt: '尽调交付包已整理完成，包含尽调报告、阶段报告、证据链文件和原始资料包。', waiting: '无', tagType: 'success' },
 }
 
 const chatInputText = ref('')
 const chatScrollbarRef = ref(null)
 const reportEditorMode = ref(false)
+const deliveryDownloading = ref(false)
 
 const reportEditorData = computed(() => {
   return {
@@ -304,6 +319,46 @@ function handleEnterSmartReport() {
 
 function exitReportEditor() {
   reportEditorMode.value = false
+}
+
+// ── 交付包下载 ──
+const deliveryPackageArtifactData = computed(() => ({
+  enterpriseName: task.value?.name || '唐山物桥商贸有限公司',
+  packageName: task.value?.deliveryPackageName || '',
+  packageStatus: task.value?.deliveryPackageStatus || '未生成',
+  generatedAt: task.value?.deliveryPackageGeneratedAt || '',
+  downloaded: task.value?.deliveryPackageDownloaded || false,
+}))
+
+function handleGenerateDeliveryPackage() {
+  pushUser('确认产物，生成交付包')
+  pushAi('报告和待确认项已确认。我已整理完整尽调交付包，包含尽调报告、阶段报告、证据链文件和原始资料包。')
+  store.enterDeliveryPackage(taskId)
+  selectedStageKey.value = 'delivery-package'
+}
+
+function handleDownloadPackage() {
+  deliveryDownloading.value = true
+  pushUser('下载完整交付包')
+  pushAi('正在生成「' + (task.value?.deliveryPackageName || '尽调交付包') + '」。')
+  setTimeout(() => {
+    deliveryDownloading.value = false
+    store.markDeliveryPackageDownloaded(taskId)
+    pushAi('交付包已生成。demo 阶段已模拟下载完成。')
+    ElMessage.success('交付包已生成，demo 阶段模拟下载完成')
+  }, 1200)
+}
+
+function handleDownloadPdf() {
+  pushUser('单独下载报告PDF')
+  pushAi('已模拟导出「尽职调查报告.pdf」。正式环境将由后端渲染 PDF。')
+  ElMessage.success('已模拟导出「尽职调查报告.pdf」。正式环境将由后端渲染 PDF。')
+}
+
+function handleBackToArtifacts() {
+  selectedStageKey.value = 'artifacts'
+  pushUser('返回产物确认')
+  pushAi('已返回产物确认阶段。交付包状态已保留。')
 }
 
 let msgIdCounter = 0
@@ -537,8 +592,13 @@ const assistantChips = computed(() => {
   if (stage === 'artifacts') return [
     { label: '查看报告', handler: handleViewReport },
     { label: '编辑报告', handler: handleEditReport },
-    { label: '导出报告', handler: () => handleExportReport(tid) },
+    { label: '生成交付包', handler: handleGenerateDeliveryPackage },
     { label: '稍后继续', handler: handleLaterContinue },
+  ]
+  if (stage === 'delivery-package') return [
+    { label: '下载完整交付包', type: 'primary', handler: handleDownloadPackage },
+    { label: '单独下载报告PDF', handler: handleDownloadPdf },
+    { label: '返回产物确认', handler: handleBackToArtifacts },
   ]
   return [
     { label: '稍后继续', handler: handleLaterContinue },
@@ -742,6 +802,23 @@ function handleSendInput() {
     else { pushAi('请先完成风险诊断后再生成产物。') }
     return
   }
+  if (t.includes('下载') || t.includes('交付包') || t.includes('zip')) {
+    if (selectedStageKey.value === 'delivery-package') { handleDownloadPackage() }
+    else if (selectedStageKey.value === 'artifacts') { handleGenerateDeliveryPackage() }
+    else { pushAi('请先完成尽调流程进入产物确认阶段。') }
+    return
+  }
+  if (t.includes('pdf') || t.includes('报告pdf')) {
+    if (selectedStageKey.value === 'delivery-package') { handleDownloadPdf() }
+    else { pushAi('请先完成尽调流程并生成交付包。') }
+    return
+  }
+  if (t.includes('返回') || t.includes('产物确认')) {
+    if (selectedStageKey.value === 'delivery-package') { handleBackToArtifacts() }
+    else { pushAi('当前已在产物确认或更早的阶段。') }
+    return
+  }
+
   if (t.includes('导出') || t.includes('报告')) {
     if (selectedStageKey.value === 'artifacts') { handleExportReport(tid) }
     else if (t.includes('查看报告') || t.includes('打开报告')) { handleViewReport() }
