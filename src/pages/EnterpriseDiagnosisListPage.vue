@@ -2,7 +2,7 @@
   <div class="edl-page">
     <!-- 顶部标题区 -->
     <section class="edl-hero">
-      <h1 class="edl-hero-title">AI 企业探查</h1>
+      <h1 class="edl-hero-title">企业探查</h1>
       <p class="edl-hero-sub">输入企业名称、税号，或直接提问。系统会识别企业、检查数据覆盖，并在对话中打开分析视图。</p>
 
       <!-- 主输入区 -->
