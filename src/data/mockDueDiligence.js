@@ -1,14 +1,35 @@
 // Mock 数据 - 智能尽调
 
+// 统一 7 节点流程（详情页 / store / mock 共用）
 export const steps = [
-  { key: 'launch', label: '发起尽调', icon: 'RocketLaunch' },
-  { key: 'verify', label: '主体核验', icon: 'Verified' },
-  { key: 'tax-rpa', label: '税票RPA', icon: 'Printer' },
-  { key: 'materials', label: '资料补充', icon: 'DocumentAdd' },
-  { key: 'evidence', label: '证据整合', icon: 'Collection' },
-  { key: 'risk', label: '风险诊断', icon: 'WarningFilled' },
-  { key: 'artifacts', label: '产物确认', icon: 'Finished' },
+  { key: 'verify-business', label: '工商核验', icon: 'Verified' },
+  { key: 'verify-legal',    label: '司法查询', icon: 'Search' },
+  { key: 'tax-rpa',         label: '税票采集', icon: 'Printer' },
+  { key: 'materials',       label: '资料补充', icon: 'DocumentAdd' },
+  { key: 'evidence',        label: '证据整合', icon: 'Collection' },
+  { key: 'risk',            label: '风险诊断', icon: 'WarningFilled' },
+  { key: 'artifacts',       label: '产物确认', icon: 'Finished' },
 ]
+
+// 进度映射
+export const STAGE_PROGRESS = {
+  'verify-business': 14,
+  'verify-legal':    28,
+  'tax-rpa':         43,
+  'materials':       57,
+  'evidence':        71,
+  'risk':            86,
+  'artifacts':       100,
+}
+
+// 状态映射
+export const STAGE_STATUS_MAP = {
+  'tax-rpa':     { status: '等待客户', statusText: '税票采集 / 待授权' },
+  'materials':   { status: '等待客户', statusText: '资料补充 / 待上传' },
+  'risk':        { status: '进行中',   statusText: '风险诊断' },
+  'artifacts':   { status: '待确认',   statusText: '报告待确认' },
+  'completed':   { status: '已完成',   statusText: '尽调完成' },
+}
 
 /**
  * 尽调任务对象
@@ -33,7 +54,7 @@ export const dueDiligenceTasks = [
     priority: '普通',
     status: '等待客户',
     statusText: '税票采集 / 待授权',
-    currentStage: 'taxCollection',
+    currentStage: 'tax-rpa',
     currentStep: 'tax-rpa',
     progress: 43,
     riskLevel: '中风险',
@@ -83,7 +104,7 @@ export const dueDiligenceTasks = [
     priority: '较高',
     status: '待确认',
     statusText: '报告待确认',
-    currentStage: 'deliverables',
+    currentStage: 'artifacts',
     currentStep: 'artifacts',
     progress: 100,
     riskLevel: '中风险',
@@ -140,10 +161,12 @@ export const uploadedFiles = [
 
 // 尽调产物（兼容）
 export const artifactsList = [
-  { name: '证据包', status: '已生成', count: '31条证据', icon: 'Files' },
-  { name: '风险诊断摘要', status: '已生成', count: '8项风险', icon: 'Warning' },
-  { name: '尽调报告草稿', status: 'V2待确认', count: '3处待确认', icon: 'Document' },
-  { name: '客户补充清单', status: '可发送', count: '3项资料', icon: 'List' },
+  { name: '尽职调查报告', status: 'V2待确认', count: '3处待确认', icon: 'Document' },
+  { name: '工商核验报告', status: '已生成', count: '1份', icon: 'Files' },
+  { name: '司法查询报告', status: '已生成', count: '1份', icon: 'Search' },
+  { name: '税票分析报告', status: '已生成', count: '1份', icon: 'Printer' },
+  { name: '风险诊断报告', status: '已生成', count: '8项风险', icon: 'Warning' },
+  { name: '证据链文件', status: '已生成', count: '31条证据', icon: 'Collection' },
 ]
 
 // 风险事项（兼容）

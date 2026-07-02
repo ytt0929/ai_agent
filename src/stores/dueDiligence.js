@@ -9,8 +9,8 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
   // 当前选中的任务
   const currentTask = ref(null)
 
-  // 当前步骤 key
-  const currentStepKey = ref('launch')
+  // 当前步骤 key — 默认工商核验
+  const currentStepKey = ref('verify-business')
 
   // 每个任务的步骤状态 { taskId: { stepKey: 'pending' | 'active' | 'done' | 'skipped' } }
   const stepStates = ref({})
@@ -136,11 +136,10 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
       templateName: '尽职调查报告',
       source: '筛客转入',
       status: '进行中',
-      statusText: '主体核验',
-      currentStage: 'businessVerify',
+      statusText: '工商核验',
+      currentStage: 'verify-business',
       currentStep: 'verify-business',
       progress: 14,
-      statusText: '工商核验',
       riskLevel: '待评估',
       score: 0,
       grade: '—',
@@ -207,10 +206,8 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
       templateName: payload.templateName || '尽职调查报告',
       source: '本页创建',
       status: '进行中',
-      currentStage: 'businessVerify',
-      currentStep: 'verify-business',
-      progress: 14,
       statusText: '工商核验',
+      currentStage: 'verify-business',
       riskLevel: '待评估',
       score: 0,
       grade: '—',
@@ -222,6 +219,88 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     tasks.value.unshift(task)
     initTaskSteps(id)
     return { created: true, task }
+  }
+
+  // 更新任务阶段
+  function updateTaskStage(taskId, stageKey) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    const idx = stepsDef.findIndex(s => s.key === stageKey)
+    if (idx < 0) return
+    const progress = (idx + 1) / stepsDef.length * 100
+    task.currentStep = stageKey
+    task.currentStage = stageKey
+    task.progress = Math.min(100, Math.round(progress))
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 税票授权
+  function markTaxAuthorized(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.currentStep = 'materials'
+    task.currentStage = 'materials'
+    task.progress = 57
+    task.status = '进行中'
+    task.statusText = '资料补充'
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 资料上传完成
+  function markMaterialsUploaded(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.materialCompleteness = 86
+    task.currentStep = 'evidence'
+    task.currentStage = 'evidence'
+    task.progress = 71
+    task.status = '进行中'
+    task.statusText = '证据整合'
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 进入证据整合
+  function enterEvidence(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.currentStep = 'evidence'
+    task.currentStage = 'evidence'
+    task.progress = 71
+    task.status = '进行中'
+    task.statusText = '证据整合'
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 进入风险诊断
+  function enterRisk(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.currentStep = 'risk'
+    task.currentStage = 'risk'
+    task.progress = 86
+    task.status = '进行中'
+    task.statusText = '风险诊断'
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 进入产物确认
+  function enterArtifacts(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.currentStep = 'artifacts'
+    task.currentStage = 'artifacts'
+    task.progress = 100
+    task.status = '待确认'
+    task.statusText = '报告待确认'
+    task.updatedAt = new Date().toLocaleString('zh-CN')
+  }
+
+  // 标记报告已导出
+  function markReportExported(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (!task) return
+    task.reportDraftId = 'RPT-' + taskId
+    task.updatedAt = new Date().toLocaleString('zh-CN')
   }
 
   // chip 操作反馈
@@ -264,6 +343,13 @@ export const useDueDiligenceStore = defineStore('dueDiligence', () => {
     selectTask,
     goToStep,
     advanceStep,
+    updateTaskStage,
+    markTaxAuthorized,
+    markMaterialsUploaded,
+    enterEvidence,
+    enterRisk,
+    enterArtifacts,
+    markReportExported,
     addChatMessage,
     addFile,
     createTaskFromScreening,
