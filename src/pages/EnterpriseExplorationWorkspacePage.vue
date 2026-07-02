@@ -15,7 +15,7 @@
     </header>
 
     <!-- 阶段 A：对话优先 -->
-    <div v-if="!workspaceActive" class="edw-chat-only" ref="chatRef">
+    <div v-if="!workspaceActive" class="edw-chat-only" ref="chatOnlyRef">
       <div class="ai-message ai-message--ai" v-if="!chatMessages.length && explorationPhase === 'idle'">
         <div class="ai-message__avatar">AI</div>
         <div class="ai-message__content">
@@ -65,10 +65,10 @@
         />
         <el-button
           type="primary"
-          :disabled="!chatInput.trim() || isExploring"
+          :disabled="!chatInput.trim()"
           @click="sendChat"
         >
-          {{ isExploring ? '探查中' : '发送' }}
+          {{ isBusy ? '排队中' : '发送' }}
         </el-button>
       </div>
     </div>
@@ -619,7 +619,7 @@
           <h3 class="ai-assistant-panel__title">AI 探查助手</h3>
           <el-button size="small" text @click="toggleChatPanel" title="收起面板">收起</el-button>
         </div>
-        <div class="edw-chat-messages ai-assistant-panel__messages" ref="chatRef">
+        <div class="edw-chat-messages ai-assistant-panel__messages" ref="chatPanelRef">
           <div v-for="(msg, i) in chatMessages" :key="i" class="ai-message" :class="messageClass(msg)">
             <div class="ai-message__avatar">{{ msg.role === 'user' ? '我' : 'AI' }}</div>
             <div class="ai-message__content">
@@ -665,10 +665,10 @@
           <el-button
             type="primary"
             class="ai-assistant-panel__send-btn"
-            :disabled="!chatInput.trim() || isExploring"
+            :disabled="!chatInput.trim()"
             @click="sendChat"
           >
-            {{ isExploring ? '探查中' : '发送' }}
+            {{ isBusy ? '排队中' : '发送' }}
           </el-button>
         </div>
       </aside>
@@ -923,9 +923,13 @@ function fillDemoCreditCodeIfNeeded() {
 
 const chatMessages = ref([])
 const chatPanelCollapsed = ref(false)
-const chatRef = ref(null)
+const chatOnlyRef = ref(null)
+const chatPanelRef = ref(null)
 const isExploring = ref(false)
 const isStreaming = ref(false)
+const messageQueue = ref([])
+const isProcessingQueue = ref(false)
+const isBusy = computed(() => isProcessingQueue.value || isStreaming.value)
 const hasResult = ref(false)
 const workspaceActive = ref(false)
 const lastDueTaskId = ref(null)
@@ -952,12 +956,9 @@ async function typeAiMessage(fullText, options = {}) {
 async function safeStreamMessage(fullText, options = {}) {
   const text = String(fullText || '')
 
-  if (isStreaming.value) {
-    const msg = { role: 'ai', text }
-    if (options.actions) msg.actions = options.actions
-    chatMessages.value.push(msg)
-    scrollToBottom()
-    return msg
+  // 队列已保证业务顺序，等待上一段流式完成
+  while (isStreaming.value) {
+    await delay(16)
   }
 
   isStreaming.value = true
@@ -1028,8 +1029,6 @@ const detailTypes = ['detail_shareholders', 'detail_social_security', 'detail_ta
 const analysisTypes = ['analysis_ops', 'analysis_tax', 'analysis_fraud', 'analysis_risk', 'evidence', 'report_business', 'report_tax', 'report_diagnosis']
 
 async function runExploreFlow(text) {
-  if (isExploring.value) return
-  isExploring.value = true
   const qa = classifyQuestion(text)
   const shouldRunFullEngine = !hasResult.value
 
@@ -1112,8 +1111,6 @@ async function runExploreFlow(text) {
   } catch (error) {
     console.error('runExploreFlow error:', error)
     await safeStreamMessage('当前问题已识别，但回复生成异常。你可以重新发送或点击下方快捷问题继续。')
-  } finally {
-    isExploring.value = false
   }
 }
 
@@ -1323,7 +1320,6 @@ async function runReportGenerationFlow(reportType) {
 // ══ 报告请求处理 ══
 async function handleReportRequest(text) {
   try {
-    isExploring.value = true
     hasResult.value = true
 
     // ══ 工商分析报告 ══
@@ -1353,8 +1349,9 @@ async function handleReportRequest(text) {
 
     // ══ 兜底：企业未识别 ══
     await safeStreamMessage('当前无法生成报告，请先输入企业名称或统一社会信用代码完成识别。')
-  } finally {
-    isExploring.value = false
+  } catch (error) {
+    console.error('handleReportRequest error:', error)
+    await safeStreamMessage('报告生成异常，请重新发送。')
   }
 }
 
@@ -1381,49 +1378,9 @@ onMounted(() => {
   }
   if (currentQuestion.value) {
     chatMessages.value.push({ role: 'user', text: currentQuestion.value })
-    runExploreFlow(currentQuestion.value)
+    enqueueUserMessage(currentQuestion.value)
   }
 })
-
-async function sendChat() {
-  const text = chatInput.value.trim()
-  if (!text || isExploring.value) return
-  chatInput.value = ''
-  chatMessages.value.push({ role: 'user', text })
-
-  // 如果企业未识别，先尝试识别
-  if (!creditCode.value) {
-    const found = findEnterpriseFromText(text)
-    if (found && enterpriseSourceData[found.creditCode]) {
-      initDataFor(found.creditCode)
-      isIdentityNeeded.value = false
-
-      // 构建数据覆盖描述
-      const covList = (coverage.value ? Object.entries(coverage.value).filter(([k,v]) => k !== 'name').map(([k,v]) => {
-        const labels = { business: '工商', judicial: '司法', tax: '税票', flow: '流水', socialSecurity: '社保' }
-        return labels[k] + (v ? '已获取' : '缺失')
-      }).join('、') : '数据加载中')
-
-      if (pendingQuestion.value) {
-        // 有待处理问题：继续执行
-        const origQ = pendingQuestion.value
-        pendingQuestion.value = ''
-        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n我将继续处理你的问题。')
-        await delay(300)
-        chatMessages.value.push({ role: 'user', text: origQ })
-        await runExploreFlow(origQ)
-      } else {
-        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
-      }
-    } else {
-      fillDemoCreditCodeIfNeeded()
-      await safeStreamMessage('当前 Demo 只内置了少量企业样例，请输入：唐山物桥商贸有限公司 或 91130203MA7EEQ2N0T。')
-    }
-    return
-  }
-
-  await runExploreFlow(text)
-}
 
 function buildMsgActions(view) {
   const base = [
@@ -1541,7 +1498,75 @@ function messageClass(msg) {
   return msg.role === 'user' ? 'ai-message--user' : 'ai-message--ai'
 }
 function renderMd(text) { return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') }
-function scrollToBottom() { nextTick(() => { if (chatRef.value) chatRef.value.scrollTop = chatRef.value.scrollHeight }) }
+function scrollToBottom() { nextTick(() => { const el = workspaceActive.value ? chatPanelRef.value : chatOnlyRef.value; if (el) el.scrollTop = el.scrollHeight }) }
+
+// ══ 消息队列 ══
+function enqueueUserMessage(text) {
+  messageQueue.value.push(text)
+  processMessageQueue()
+}
+
+async function processMessageQueue() {
+  if (isProcessingQueue.value) return
+  isProcessingQueue.value = true
+  isExploring.value = true
+
+  try {
+    while (messageQueue.value.length) {
+      const text = messageQueue.value.shift()
+      await handleUserMessage(text)
+    }
+  } catch (error) {
+    console.error('processMessageQueue error:', error)
+    await safeStreamMessage('当前对话处理异常，请重新发送或点击快捷问题继续。')
+  } finally {
+    isProcessingQueue.value = false
+    isExploring.value = false
+  }
+}
+
+async function handleUserMessage(text) {
+  // 如果企业未识别，先尝试识别
+  if (!creditCode.value) {
+    const found = findEnterpriseFromText(text)
+    if (found && enterpriseSourceData[found.creditCode]) {
+      initDataFor(found.creditCode)
+      isIdentityNeeded.value = false
+
+      const covList = (coverage.value ? Object.entries(coverage.value).filter(([k,v]) => k !== 'name').map(([k,v]) => {
+        const labels = { business: '工商', judicial: '司法', tax: '税票', flow: '流水', socialSecurity: '社保' }
+        return labels[k] + (v ? '已获取' : '缺失')
+      }).join('、') : '数据加载中')
+
+      if (pendingQuestion.value) {
+        const origQ = pendingQuestion.value
+        pendingQuestion.value = ''
+        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n我将继续处理你的问题。')
+        await delay(300)
+        // 原问题已在 sendChat 中作为用户消息追加，此处不再重复追加
+        await runExploreFlow(origQ)
+      } else {
+        await safeStreamMessage('已识别企业：**' + enterprise.value.name + '**。\n当前数据覆盖：' + covList + '。\n你可以继续问：税负率是多少、查看申报明细、查看股东明细、是否存在欺诈风险。')
+      }
+    } else {
+      fillDemoCreditCodeIfNeeded()
+      await safeStreamMessage('当前 Demo 只内置了少量企业样例，请输入：唐山物桥商贸有限公司 或 91130203MA7EEQ2N0T。')
+    }
+    return
+  }
+
+  await runExploreFlow(text)
+}
+
+async function sendChat() {
+  const text = chatInput.value.trim()
+  if (!text) return
+
+  chatInput.value = ''
+  chatMessages.value.push({ role: 'user', text })
+  enqueueUserMessage(text)
+}
+
 function viewFullReport() { openReportView('diagnosis') }
 function generateReport() { openReportView('diagnosis') }
 function gradeColor(grade) { if (['D','E','F'].includes(grade)) return 'danger'; if (grade === 'C') return 'warning'; return 'success' }
