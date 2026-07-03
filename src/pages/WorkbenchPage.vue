@@ -15,7 +15,6 @@
       <!-- ══ 第一屏：AI Copilot 主输入面板 ══ -->
       <section class="wb-ai-hero">
         <div class="wb-ai-hero__head">
-          <div class="wb-ai-hero__eye">AI Copilot</div>
           <h2 class="wb-ai-hero__title">用一句话开始客户经营</h2>
           <p class="wb-ai-hero__desc">可以自然语言筛客、探索企业、发起尽调、查风险、生成报告。</p>
         </div>
