@@ -1,55 +1,63 @@
 <template>
   <div v-if="task" class="due-task">
-    <!-- 返回 + 任务头部 -->
-    <div class="due-task__header">
-      <div class="due-task__header-top">
-        <el-button class="back-btn" @click="goBack" :icon="ArrowLeft" circle size="small" />
-        <div class="due-task__header-info">
-          <h2 class="due-task__name">{{ task.name }}</h2>
-          <span class="due-task__meta">{{ task.industry }} · {{ task.region }} · 注册资本 {{ task.amount }}</span>
+    <!-- ===== 统一增强流程头部（所有尽调阶段共用） ===== -->
+    <div class="due-task-flow-header">
+      <div class="due-task-flow-header__top">
+        <div class="due-task-flow-header__left">
+          <div class="due-task-flow-header__back-row">
+            <el-button class="due-task-flow-header__back" @click="goBack" :icon="ArrowLeft" circle size="small" />
+            <div>
+              <div class="due-task-flow-header__title">{{ task.name }}</div>
+              <div class="due-task-flow-header__meta">{{ task.industry }} / {{ task.region }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="due-task-flow-header__badges">
+          <el-tag size="small" effect="plain" type="info">{{ task.templateName }}</el-tag>
+          <el-tag size="small" effect="plain" type="success">来源：{{ task.source }}</el-tag>
+          <el-tag size="small" effect="plain">负责人：{{ task.manager }}</el-tag>
+          <span class="due-task-flow-header__badge-score">综合评分 <b>{{ task.score }}</b></span>
+          <el-tag size="small" effect="plain" type="warning">{{ task.grade }}</el-tag>
+          <el-tag size="small" effect="plain" :type="riskTagType(task.riskLevel)">{{ task.riskLevel }}</el-tag>
+          <span class="due-task-flow-header__badge-meta">资料完整度 {{ task.materialCompleteness }}%</span>
+          <el-tag :type="getStatusTagType(task.status)" effect="light" size="small">{{ task.statusText }}</el-tag>
+          <el-progress :percentage="task.progress || 0" :stroke-width="6" :color="getProgressColor(task.progress)" style="width:100px" />
         </div>
       </div>
-      <div class="due-task__header-meta">
-        <el-tag size="small" effect="plain" type="info">模板：{{ task.templateName }}</el-tag>
-        <el-tag size="small" effect="plain" type="success">来源：{{ task.source }}</el-tag>
-        <el-tag size="small" effect="plain">负责人：{{ task.manager }}</el-tag>
-        <span class="due-task__score">综合评分 <b>{{ task.score }}</b></span>
-        <el-tag size="small" effect="plain" type="warning">{{ task.grade }}</el-tag>
-        <el-tag size="small" effect="plain" :type="riskTagType(task.riskLevel)">{{ task.riskLevel }}</el-tag>
-        <span class="due-task__material-meta">资料完整度 {{ task.materialCompleteness }}%</span>
-        <el-tag :type="getStatusTagType(task.status)" effect="light" size="small">{{ task.statusText }}</el-tag>
-        <el-progress :percentage="task.progress || 0" :stroke-width="6" :color="getProgressColor(task.progress)" style="width:120px" />
+      <div class="due-task-flow-header__steps">
+        <div
+          v-for="(step, idx) in processSteps"
+          :key="step.key"
+          class="dt-flow-step"
+          :class="{ 'dt-flow-step--done': step.done, 'dt-flow-step--active': step.active, 'dt-flow-step--pending': !step.done && !step.active }"
+          @click="!step.done && (selectedStageKey = step.key)"
+        >
+          <div class="dt-flow-step__node">
+            <el-icon v-if="step.done" :size="14"><CircleCheck /></el-icon>
+            <template v-else-if="step.active">
+              <div class="dt-flow-step__pulse" />
+              <el-icon :size="14" class="dt-flow-step__active-icon"><Loading /></el-icon>
+            </template>
+            <span v-else class="dt-flow-step__num">{{ idx + 1 }}</span>
+          </div>
+          <span class="dt-flow-step__label">{{ step.label }}</span>
+          <div
+            v-if="idx < processSteps.length - 1"
+            class="dt-flow-step__connector"
+            :class="{ 'dt-flow-step__connector--done': step.done, 'dt-flow-step__connector--active': step.active, 'dt-flow-step__connector--pending': !step.done && !step.active }"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- 7 节点流程进度 -->
-    <div class="due-task__process-bar">
-      <div
-        v-for="(step, idx) in processSteps"
-        :key="step.key"
-        class="process-step"
-        :class="{ 'process-step--done': step.done, 'process-step--active': step.active, 'process-step--pending': !step.done && !step.active }"
-        @click="!step.done && (selectedStageKey = step.key)"
-      >
-        <div class="process-step__node">
-          <el-icon v-if="step.done" :size="14"><CircleCheck /></el-icon>
-          <template v-else-if="step.active">
-            <div class="process-step__pulse" />
-            <el-icon :size="14" class="process-step__active-icon"><Loading /></el-icon>
-          </template>
-          <span v-else class="process-step__num">{{ idx + 1 }}</span>
-        </div>
-        <span class="process-step__label">{{ step.label }}</span>
-        <div
-          v-if="idx < processSteps.length - 1"
-          class="process-step__connector"
-          :class="{ 'process-step__connector--done': step.done, 'process-step__connector--active': step.active, 'process-step__connector--pending': !step.done && !step.active }"
-        />
+    <!-- 当前节点摘要（紧跟流程卡下方） -->
+    <div class="due-task-stage-summary">
+      <div class="due-task-stage-summary__label">当前节点</div>
+      <div class="due-task-stage-summary__row">
+        <span>{{ currentStageLabel }} · {{ stageInfo[selectedStageKey]?.tagType === 'success' ? '已完成' : '进行中' }}</span>
+        <el-tag size="small" effect="plain" :type="stageInfo[selectedStageKey]?.tagType || 'info'">{{ stageInfo[selectedStageKey]?.waiting || '' }}</el-tag>
       </div>
-      <div class="due-task__process-actions">
-        <span class="due-task__process-text">当前进度：{{ task.progress }}%</span>
-        <el-button size="small" plain @click="goBack">稍后继续</el-button>
-      </div>
+      <div class="due-task-stage-summary__desc">{{ stageInfo[selectedStageKey]?.prompt || '' }}</div>
     </div>
 
     <!-- 主体：左侧阶段产物工作区 + 右侧尽调任务助手 -->
@@ -852,7 +860,136 @@ function getProgressColor(p) {
 <style scoped>
 
 .due-task { height: 100vh; max-height: 100vh; max-width: var(--layout-page-data, 1200px); margin: 0 auto; padding: var(--space-4xl, 32px); display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
-.due-task__header { margin-bottom: var(--space-lg); flex-shrink: 0; }
+
+/* ═══ 风险诊断合并头 ═══ */
+.due-task-risk-header {
+  margin-bottom: var(--space-lg);
+  flex-shrink: 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.due-task-risk-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.due-task-risk-header__left {
+  min-width: 0;
+}
+
+.due-task-risk-header__back-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.due-task-risk-header__back {
+  flex-shrink: 0;
+}
+
+.due-task-risk-header__title {
+  font-size: var(--font-size-page-title, 20px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.due-task-risk-header__meta {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-secondary);
+}
+
+.due-task-risk-header__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.due-task-risk-header__badge-score {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.due-task-risk-header__badge-score b {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.due-task-risk-header__badge-meta {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.due-task-risk-header__steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color-divider);
+}
+
+.dt-risk-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  transition: background 0.15s;
+  position: relative;
+}
+
+.dt-risk-step:hover {
+  background: var(--surface-soft);
+}
+
+.dt-risk-step__node {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.dt-risk-step--done .dt-risk-step__node { background: var(--color-success); color: #fff; }
+.dt-risk-step--active .dt-risk-step__node { background: #fff; color: var(--color-primary); border: 2px solid var(--color-primary); box-shadow: 0 0 0 3px var(--color-success-bg); }
+.dt-risk-step--pending .dt-risk-step__node { background: var(--surface-page); color: var(--text-tertiary); border: 1px solid var(--border-light); }
+
+.dt-risk-step__label { font-size: var(--font-size-xs); white-space: nowrap; }
+.dt-risk-step--done .dt-risk-step__label { color: var(--text-primary); font-weight: 500; }
+.dt-risk-step--active .dt-risk-step__label { color: var(--color-primary); font-weight: 600; }
+.dt-risk-step--pending .dt-risk-step__label { color: var(--text-tertiary); }
+
+.dt-risk-step--active::after { content: ''; position: absolute; bottom: -4px; left: 20%; right: 20%; height: 2px; background: var(--color-primary); border-radius: 1px; }
+
+.dt-risk-step__pulse { position: absolute; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--color-primary); opacity: 0.4; animation: process-pulse 2s ease-in-out infinite; }
+.dt-risk-step__active-icon { position: relative; z-index: 1; }
+
+.dt-risk-step__connector { flex: 1; height: 2px; min-width: 12px; margin: 0 var(--space-xs); pointer-events: none; }
+.dt-risk-step__connector--done { background: var(--color-success); }
+.dt-risk-step__connector--active { background: linear-gradient(to right, var(--color-primary), var(--border-light)); }
+.dt-risk-step__connector--pending { background: var(--border-divider); }
+
 .due-task__header-top { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); }
 .back-btn { flex-shrink: 0; }
 .due-task__name { font-size: var(--font-size-page-title, 24px); font-weight: var(--font-weight-semibold, 600); color: var(--text-primary); margin: 0; }

@@ -120,6 +120,15 @@
                 <span class="create-rec-label">企业</span>
                 <el-tag size="small" effect="plain">{{ createEnterprise }}</el-tag>
               </div>
+              <div v-if="createParsed.creditCode" class="create-rec-item">
+                <span class="create-rec-label">信用代码</span>
+                <span class="create-rec-credit-code">{{ createParsed.creditCode }}</span>
+              </div>
+              <div v-if="createSource === 'natural-language'" class="create-rec-item">
+                <span class="create-rec-label">识别来源</span>
+                <el-tag size="small" type="warning" effect="plain">自然语言</el-tag>
+              </div>
+              <div class="create-rec-indicators-label">监控指标</div>
               <div v-for="ind in createSelectedIndicators" :key="ind.id" class="create-rec-item">
                 <el-tag size="small" :type="levelTagType(ind.level)" effect="plain">{{ ind.name }}</el-tag>
                 <span class="create-rec-condition">{{ ind.condition }}</span>
@@ -348,7 +357,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import {
   Plus, MagicStick, CircleCheckFilled, CircleCheck, Select, Loading,
   More, WarningFilled, Monitor, Collection,
@@ -783,8 +792,10 @@ function levelText(level) { return { high: '高', medium: '中', low: '低' }[le
 .create-recognized-icon { color: var(--color-success); font-size: 16px; }
 .create-recognized-body { display: flex; flex-direction: column; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .create-rec-item { display: flex; align-items: center; gap: var(--space-sm); font-size: var(--font-size-sm); }
-.create-rec-label { color: var(--text-tertiary); min-width: 36px; }
+.create-rec-label { color: var(--text-tertiary); min-width: 56px; flex-shrink: 0; }
+.create-rec-credit-code { font-family: 'SF Mono', 'Consolas', monospace; font-size: var(--font-size-xs); color: var(--text-secondary); }
 .create-rec-condition { color: var(--text-secondary); }
+.create-rec-indicators-label { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--text-primary); margin-top: var(--space-xs); margin-bottom: 2px; }
 .create-confirm-row { display: flex; justify-content: flex-end; }
 
 /* 手工选择 */

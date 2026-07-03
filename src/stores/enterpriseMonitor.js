@@ -20,47 +20,98 @@ function clone(obj) { return JSON.parse(JSON.stringify(obj)) }
 // ════════════════════════════════════════
 // 自然语言解析（用于新增/编辑监控）
 // ════════════════════════════════════════
+
+// 唐山物桥商贸有限公司专用映射
+const TANGSHAN_WUQIAO = {
+  name: '唐山物桥商贸有限公司',
+  creditCode: '91130203MA7EEQ2N0T',
+}
+
 function parseMonitorText(text) {
   const input = (text || '').trim()
-  const parsed = { enterprises: [], indicators: [], rawText: input }
+  const parsed = { enterprises: [], creditCode: null, indicators: [], rawText: input }
 
-  // 识别企业名
-  const entPatterns = [
-    /(?:监测|监控|盯着|盯住|关注|帮我盯着|帮我监测)([^\uff0c\s,。；;]+)/,
-  ]
-  for (const p of entPatterns) {
-    const m = input.match(p)
-    if (m?.[1] && m[1].length > 1) {
-      parsed.enterprises.push(m[1])
-      break
+  // ── 识别统一社会信用代码 ──
+  const ccMatch = input.match(/\b(91\d{16}[A-Z0-9])\b/)
+  if (ccMatch) {
+    parsed.creditCode = ccMatch[1]
+  }
+
+  // ── 识别企业名：优先已知企业 ──
+  if (input.includes(TANGSHAN_WUQIAO.name) || input.includes('唐山物桥')) {
+    parsed.enterprises.push(TANGSHAN_WUQIAO.name)
+    if (!parsed.creditCode) parsed.creditCode = TANGSHAN_WUQIAO.creditCode
+  } else {
+    // 通用模式
+    const entPatterns = [
+      /(?:监测|监控|盯着|盯住|关注|帮我盯着|帮我监测)([^\uff0c\s,。；;]+)/,
+    ]
+    for (const p of entPatterns) {
+      const m = input.match(p)
+      if (m?.[1] && m[1].length > 1) {
+        parsed.enterprises.push(m[1])
+        break
+      }
     }
   }
   if (!parsed.enterprises.length) parsed.enterprises = ['杭州智造装备有限公司']
 
-  // 识别监控指标
-  if (input.includes('税票') || input.includes('开票')) {
+  // ── 识别监控指标（去重：用 Set 追踪已添加的指标名）──
+  const seen = new Set()
+  const addIndicator = (id, name, condition, level) => {
+    if (!seen.has(name)) {
+      seen.add(name)
+      parsed.indicators.push({ id, name, condition, level, enabled: true })
+    }
+  }
+
+  // 税负率 / 税负 / 税票 / 纳税 / 税务
+  if (input.includes('税负率') || input.includes('税负') || (input.includes('税票') && (input.includes('低') || input.includes('降') || input.includes('异常')))) {
+    addIndicator('ind-tax-rate', '税负率异常', '税负率显著低于行业均值或连续下降', 'high')
+  }
+
+  // 开票 / 收入 / 营收 / 异常波动 / 连续下降
+  if (input.includes('开票收入') || input.includes('开票') && input.includes('波动') || input.includes('开票收入连续下降') || input.includes('收入') && (input.includes('波动') || input.includes('下降'))) {
+    addIndicator('ind-revenue-fluct', '开票收入波动', '开票收入连续下降或异常波动', 'high')
+  }
+
+  // 税票波动（通用兜底，不与上面的重复）
+  if ((input.includes('税票') || input.includes('开票')) && !seen.has('税票波动') && !seen.has('税负率异常')) {
     const cond = input.includes('30%') ? '连续下降超过30%' : '连续下降或异常波动'
-    parsed.indicators.push({ id: 'ind-tax', name: '税票波动', condition: cond, level: 'high', enabled: true })
+    addIndicator('ind-tax', '税票波动', cond, 'high')
   }
-  if (input.includes('被执行') || input.includes('司法') || input.includes('诉讼')) {
-    parsed.indicators.push({ id: 'ind-judicial', name: '司法风险', condition: '新增被执行/诉讼', level: 'high', enabled: true })
+
+  // 被执行 / 诉讼 / 司法 / 裁判 / 失信
+  if (input.includes('被执行') || input.includes('诉讼') || input.includes('司法') || input.includes('裁判') || input.includes('失信')) {
+    addIndicator('ind-judicial', '司法风险', '新增被执行、诉讼、裁判文书或失信记录', 'high')
   }
-  if (input.includes('法人') || input.includes('股东') || input.includes('工商')) {
-    parsed.indicators.push({ id: 'ind-industry', name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium', enabled: true })
+
+  // 法人 / 股东 / 工商 / 经营范围 / 注册地址
+  if (input.includes('法人') || input.includes('股东') || input.includes('工商变更') || input.includes('经营范围') || input.includes('注册地址')) {
+    addIndicator('ind-industry', '工商变更', '法人、股东、经营范围或注册地址发生变更', 'medium')
   }
+
+  // 资料 / 过期 / 征信 / 审计
   if (input.includes('资料') || input.includes('过期') || input.includes('征信') || input.includes('审计')) {
-    parsed.indicators.push({ id: 'ind-expiry', name: '资料有效期', condition: '过期或即将过期', level: 'medium', enabled: true })
+    addIndicator('ind-expiry', '资料有效期', '过期或即将过期', 'medium')
   }
-  if (input.includes('经营异常') || input.includes('经营异常名录')) {
-    parsed.indicators.push({ id: 'ind-abnormal', name: '经营异常', condition: '列入经营异常名录', level: 'medium', enabled: true })
+
+  // 经营异常 / 行政处罚 / 严重违法
+  if (input.includes('经营异常') || input.includes('经营异常名录') || input.includes('行政处罚') || input.includes('严重违法')) {
+    addIndicator('ind-abnormal', '经营异常', '新增经营异常名录、行政处罚或严重违法记录', 'medium')
   }
+
+  // 舆情 / 负面
   if (input.includes('舆情') || input.includes('负面')) {
-    parsed.indicators.push({ id: 'ind-sentiment', name: '舆情风险', condition: '负面舆情集中出现', level: 'medium', enabled: true })
+    addIndicator('ind-sentiment', '舆情风险', '负面舆情集中出现', 'medium')
   }
+
+  // 兜底
   if (!parsed.indicators.length) {
-    parsed.indicators.push({ id: 'ind-industry', name: '工商变更', condition: '法人/股东/经营范围变更', level: 'medium', enabled: true })
-    parsed.indicators.push({ id: 'ind-judicial', name: '司法风险', condition: '新增被执行/诉讼', level: 'medium', enabled: true })
+    addIndicator('ind-industry', '工商变更', '法人/股东/经营范围变更', 'medium')
+    addIndicator('ind-judicial', '司法风险', '新增被执行/诉讼', 'medium')
   }
+
   return parsed
 }
 
@@ -170,7 +221,7 @@ export const useMonitorStore = defineStore('monitor', () => {
   function openCreateMonitor() {
     createOpen.value = true
     createMode.value = 'natural'
-    createInput.value = ''
+    createInput.value = '监控唐山物桥商贸有限公司，重点关注税负率显著低于行业、开票收入连续下降或异常波动、新增被执行或诉讼、法人股东工商变更、经营异常名录；一旦触发高风险请提醒我。'
     createParsed.value = null
     createEnterprise.value = ''
     createSelectedIndicators.value = []
@@ -192,6 +243,10 @@ export const useMonitorStore = defineStore('monitor', () => {
     createEnterprise.value = parsed.enterprises[0] || '杭州智造装备有限公司'
     createSelectedIndicators.value = parsed.indicators.map(i => ({ ...i }))
     createParsing.value = false
+  }
+
+  function getCreateParsedCreditCode() {
+    return createParsed.value?.creditCode || null
   }
 
   const createSteps = [
@@ -225,10 +280,12 @@ export const useMonitorStore = defineStore('monitor', () => {
   function createMonitorTask(parsed, source) {
     const id = 'MT-' + Date.now()
     const entName = parsed.enterprises[0] || createEnterprise.value || '杭州智造装备有限公司'
+    // 优先使用解析出的 creditCode（如唐山物桥的统一社会信用代码），否则生成模拟编码
+    const creditCode = parsed.creditCode || ('91330000MOCK' + Date.now().toString().slice(-4))
     const task = {
       id,
       enterpriseName: entName,
-      creditCode: '91330000MOCK' + Date.now().toString().slice(-4),
+      creditCode,
       source,
       sourceLabel: source === 'due-diligence' ? '尽调转入' : source === 'screening' ? '筛客转入' : source === 'diagnosis' ? '风险探查转入' : source === 'manual' ? '手工新增' : '自然语言',
       status: 'running',
@@ -251,7 +308,7 @@ export const useMonitorStore = defineStore('monitor', () => {
       level: i.level,
       enabled: i.enabled !== false,
     }))
-    const parsed = { enterprises: [createEnterprise.value], indicators }
+    const parsed = { enterprises: [createEnterprise.value], indicators, creditCode: getCreateParsedCreditCode() }
     const source = createSource.value
     const task = createMonitorTask(parsed, source)
     // 模拟首轮扫描

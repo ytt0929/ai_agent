@@ -148,10 +148,47 @@
               :active-stage-id="assistant.activeStageId"
               :readonly="true"
             />
-            <!-- 尽调阶段：统一头部 + 流程进度 -->
-            <DueTaskHeader v-if="assistant.isDueWorkspace" :data="assistant.dueTaskHeader" />
+            <!-- 尽调阶段：风险诊断节点合并头 -->
+            <section v-if="assistant.isDueWorkspace && assistant.activeStageId === 'riskDiagnosis'" class="wb-risk-merged-header">
+              <div class="wb-risk-merged-header__top">
+                <div class="wb-risk-merged-header__left">
+                  <div class="wb-risk-merged-header__title">{{ assistant.dueTaskHeader?.enterpriseName || '企业尽调' }}</div>
+                  <div class="wb-risk-merged-header__meta">{{ dueFlowMetaText }}</div>
+                </div>
+                <div class="wb-risk-merged-header__badges">
+                  <el-tag size="small" effect="plain" type="info">尽职调查报告</el-tag>
+                  <span class="wb-risk-merged-header__badge-score">综合评分 {{ assistant.dueTaskHeader?.score ?? 72 }}</span>
+                  <el-tag size="small" effect="plain" type="warning">{{ assistant.dueTaskHeader?.grade || 'C+' }}</el-tag>
+                  <el-tag size="small" effect="plain" :type="riskTagTypeRaw(assistant.dueTaskHeader?.riskLevel)">{{ assistant.dueTaskHeader?.riskLevel || '中风险' }}</el-tag>
+                  <span class="wb-risk-merged-header__badge-meta">资料完整度 {{ assistant.dueTaskHeader?.completeness ?? 86 }}%</span>
+                  <el-tag size="small" effect="plain" type="success">{{ currentDueFlow?.statusText || '风险诊断已完成' }}</el-tag>
+                </div>
+              </div>
+              <div class="wb-risk-merged-header__steps">
+                <template v-for="(step, idx) in currentDueFlow.steps" :key="step.label">
+                  <span class="wb-risk-step"
+                    :class="{
+                      'wb-risk-step--done': step.status === 'done' || step.done,
+                      'wb-risk-step--active': step.status === 'active' || step.active,
+                      'wb-risk-step--pending': step.status === 'pending' || (!step.done && !step.active)
+                    }">
+                    <el-icon v-if="step.status === 'done' || step.done" :size="13"><CircleCheck /></el-icon>
+                    <span v-else-if="step.status === 'active' || step.active" class="wb-risk-step__dot wb-risk-step__dot--active"></span>
+                    <span v-else class="wb-risk-step__dot wb-risk-step__dot--pending"></span>
+                    <span class="wb-risk-step__label">{{ step.label }}</span>
+                  </span>
+                  <span v-if="idx < currentDueFlow.steps.length - 1" class="wb-risk-step__line"
+                    :class="{
+                      'wb-risk-step__line--done': step.status === 'done' || step.done,
+                      'wb-risk-step__line--active': step.status === 'active' || step.active
+                    }"></span>
+                </template>
+              </div>
+            </section>
+            <!-- 尽调阶段：非风险诊断节点保持原样 -->
+            <DueTaskHeader v-if="assistant.isDueWorkspace && assistant.activeStageId !== 'riskDiagnosis'" :data="assistant.dueTaskHeader" />
             <DueFlowProgress
-              v-if="assistant.isDueWorkspace && currentDueFlow"
+              v-if="assistant.isDueWorkspace && assistant.activeStageId !== 'riskDiagnosis' && currentDueFlow"
               :enterprise="assistant.selectedEnterprise"
               :status-text="currentDueFlow.statusText"
               :progress="currentDueFlow.progress"
@@ -237,7 +274,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, ArrowLeft, ChatDotRound, Promotion, MagicStick, DocumentChecked, Tickets, Picture, Search, Plus } from '@element-plus/icons-vue'
+import { Bell, ArrowLeft, ChatDotRound, Promotion, MagicStick, DocumentChecked, Tickets, Picture, Search, Plus, CircleCheck } from '@element-plus/icons-vue'
 import { useWorkbenchAssistantStore } from '../stores/workbenchAssistant.js'
 import WorkbenchStageStrip from '../components/workbench/WorkbenchStageStrip.vue'
 import WorkbenchConversation from '../components/workbench/WorkbenchConversation.vue'
@@ -314,6 +351,19 @@ const currentDueFlow = computed(() => {
   return stage?.artifactData?.dueFlow || null
 })
 
+const dueFlowMetaText = computed(() => {
+  const ent = assistant.selectedEnterprise
+  const industry = ent?.industry || ''
+  const region = ent?.region || ''
+  return [industry, region].filter(Boolean).join(' / ')
+})
+
+function riskTagTypeRaw(level) {
+  if (level === '高风险' || level === '高') return 'danger'
+  if (level === '中风险' || level === '中') return 'warning'
+  return 'success'
+}
+
 const dialogPlaceholder = computed(() => {
   const s = assistant.currentFlowStatus
   if (s === 'waiting_selection') return '回复企业名称或序号选择企业...'
@@ -334,6 +384,7 @@ function handleIgnore() {}
 function handleNormalSendWith(t) { dialogInputLocal.value = t; handleNormalSend() }
 function onExplore(e) { assistant.selectEnterpriseAndExplore(e) }
 function onTpl(t) { assistant.confirmDueTemplate(t) }
+function riskTagType(r) { return { '高风险':'danger', '高':'danger', '中风险':'warning', '中':'warning', '低风险':'success', '低':'success' }[r] || 'info' }
 
 function handleNormalSend() { const t = dialogInputLocal.value.trim(); if (!t) return; dialogInputLocal.value = ''; assistant.runIntentRecognition(t) }
 function sendMsg() { const t = dialogInputLocal.value.trim(); if (!t) return; dialogInputLocal.value = ''; assistant.sendMessage(t) }
@@ -655,6 +706,154 @@ function handleWorkbenchSuggestion(s) {
 .wb-bp-desc {
   width: 100%;
   min-width: 0;
+}
+
+/* ═══ 风险诊断合并头 ═══ */
+.wb-risk-merged-header {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.wb-risk-merged-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.wb-risk-merged-header__left {
+  min-width: 0;
+}
+
+.wb-risk-merged-header__title {
+  font-size: var(--font-size-workbench-title, 20px);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.wb-risk-merged-header__meta {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.wb-risk-merged-header__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.wb-risk-merged-header__badge-score {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.wb-risk-merged-header__badge-score b,
+.wb-risk-merged-header__badge-score {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.wb-risk-merged-header__badge-meta {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.wb-risk-merged-header__steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-color-divider);
+}
+
+.wb-risk-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.wb-risk-step__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wb-risk-step--done .wb-risk-step__dot,
+.wb-risk-step--done .el-icon {
+  color: var(--color-success);
+}
+
+.wb-risk-step--done .el-icon {
+  font-size: 14px;
+}
+
+.wb-risk-step__dot--active {
+  border: 2px solid var(--color-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--color-success-bg, rgba(16, 185, 129, 0.15));
+}
+
+.wb-risk-step__dot--pending {
+  border: 1px solid var(--border-light);
+  background: var(--surface-page);
+}
+
+.wb-risk-step__label {
+  font-size: var(--font-size-xs, 12px);
+}
+
+.wb-risk-step--done .wb-risk-step__label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.wb-risk-step--active .wb-risk-step__label {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.wb-risk-step--pending .wb-risk-step__label {
+  color: var(--text-tertiary);
+}
+
+.wb-risk-step__line {
+  flex: 1;
+  min-width: 8px;
+  max-width: 24px;
+  height: 2px;
+  background: var(--border-color-divider);
+  border-radius: 1px;
+}
+
+.wb-risk-step__line--done {
+  background: var(--color-success);
+}
+
+.wb-risk-step__line--active {
+  background: linear-gradient(to right, var(--color-primary), var(--border-light));
 }
 
 @media (max-width: 900px) {
