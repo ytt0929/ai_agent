@@ -722,7 +722,7 @@ function handleSync() {
 .doc-rec-fields { display: flex; flex-direction: column; }
 .doc-rec-warning-card {
   display: flex; align-items: center; gap:var(--space-sm); padding:var(--space-sm) 14px;
-  background: var(--color-warning-bg); border: 1px solid #fde68a;
+  background: var(--color-warning-bg); border: 1px solid var(--color-warning);
   border-radius: var(--radius-md); margin-bottom:var(--space-lg);
 }
 .doc-rec-warning-card .el-icon { color: var(--color-warning); font-size:var(--font-size-assist); }
@@ -823,7 +823,7 @@ function handleSync() {
   background: var(--bg-page); border-radius: var(--radius-md);
   border: 1px solid var(--border-color); transition: all .15s;
 }
-.drf-item.lowConf { border-color: #fde68a; background: var(--color-warning-bg); }
+.drf-item.lowConf { border-color: var(--color-warning); background: var(--color-warning-bg); }
 .drf-item.confirmed { border-color: var(--color-success-light); background: var(--color-success-bg); }
 .drf-label { font-size:var(--font-size-sm); color: var(--color-text-tertiary); min-width: 90px; flex-shrink: 0; }
 .drf-value-wrap { flex: 1; min-width: 0; }
