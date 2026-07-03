@@ -197,7 +197,14 @@
             </div>
           </div>
           <div v-else class="doc-rec-panel-empty">
-            <el-empty description="选择文件查看识别结果" />
+            <el-empty description="选择文件查看识别结果">
+              <template #image>
+                <el-icon :size="40" style="color:var(--color-text-tertiary)"><UploadFilled /></el-icon>
+              </template>
+              <p style="font-size:var(--font-size-sm);color:var(--color-text-tertiary);margin-top:var(--space-xs);max-width:280px;text-align:center">
+                建议优先查看「银行流水摘要.pdf」，可用于收入真实性、经营稳定性和偿债能力核验。
+              </p>
+            </el-empty>
           </div>
         </div>
 

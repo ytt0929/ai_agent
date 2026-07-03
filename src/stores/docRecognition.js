@@ -24,6 +24,67 @@ const mockFields = {
     { label: '进项发票', value: '128份', confidence: 94 },
     { label: '销项发票', value: '96份', confidence: 92 },
   ],
+  // 唐山物桥 - 企业所得税
+  f011: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 98 },
+    { label: '所属年度', value: '2025年度', confidence: 99 },
+    { label: '营业收入', value: '2175.46万元', confidence: 95 },
+    { label: '营业成本', value: '1892.30万元', confidence: 93 },
+    { label: '利润总额', value: '156.80万元', confidence: 91 },
+    { label: '应纳税所得额', value: '148.20万元', confidence: 89 },
+    { label: '应纳所得税额', value: '37.05万元', confidence: 94 },
+  ],
+  // 唐山物桥 - 发票明细
+  f012: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 98 },
+    { label: '发票总收入', value: '2275.98万元', confidence: 96 },
+    { label: '进项税额', value: '186.42万元', confidence: 94 },
+    { label: '销项税额', value: '203.18万元', confidence: 93 },
+    { label: '进项发票份数', value: '128份', confidence: 95 },
+    { label: '销项发票份数', value: '96份', confidence: 94 },
+    { label: '前五大客户占比', value: '62.3%', confidence: 82 },
+  ],
+  // 唐山物桥 - 纳税评级
+  f013: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 99 },
+    { label: '纳税信用等级', value: 'B级', confidence: 98 },
+    { label: '评定年度', value: '2025年度', confidence: 97 },
+    { label: '评价指标得分', value: '82.5分', confidence: 90 },
+    { label: '扣分原因', value: '逾期申报1次', confidence: 78 },
+  ],
+  // 唐山物桥 - 银行流水摘要 (核心新增)
+  f014: [
+    { label: '账户名称', value: '唐山物桥商贸有限公司', confidence: 99 },
+    { label: '开户行', value: '中国民生银行唐山分行', confidence: 97 },
+    { label: '账号', value: '6222 **** **** 8791', confidence: 96 },
+    { label: '流水期间', value: '2025-01 至 2025-12', confidence: 98 },
+    { label: '总入账金额', value: '2,086.32万元', confidence: 96 },
+    { label: '总出账金额', value: '1,934.76万元', confidence: 95 },
+    { label: '月均入账', value: '173.86万元', confidence: 93 },
+    { label: '月均出账', value: '161.23万元', confidence: 92 },
+    { label: '经营净现金流', value: '151.56万元', confidence: 91 },
+    { label: '月收入标准差', value: '72.40万元', confidence: 88 },
+    { label: '收入波动率', value: '41.6%', confidence: 85 },
+    { label: '最大单月入账', value: '318.20万元', confidence: 92 },
+    { label: '短期大额进出账', value: '4笔', confidence: 82 },
+    { label: '整数规律交易', value: '12笔', confidence: 78 },
+    { label: '关联账户互转', value: '3笔', confidence: 75 },
+    { label: '临近授信异常转入', value: '2笔', confidence: 80 },
+    { label: '债务本息支出', value: '186.00万元', confidence: 89 },
+    { label: 'DSCR', value: '0.81', confidence: 86 },
+  ],
+  // 唐山物桥 - 工商登记信息
+  f015: [
+    { label: '企业名称', value: '唐山物桥商贸有限公司', confidence: 99 },
+    { label: '统一社会信用代码', value: '91130203MA7EEQ2N0T', confidence: 99 },
+    { label: '法定代表人', value: '马丽', confidence: 98 },
+    { label: '注册资本', value: '500万元', confidence: 97 },
+    { label: '成立日期', value: '2021-12-24', confidence: 98 },
+    { label: '企业类型', value: '有限责任公司', confidence: 96 },
+    { label: '登记机关', value: '唐山市路北区市场监督管理局', confidence: 94 },
+    { label: '经营范围', value: '建材批发、五金交电、机械设备销售...', confidence: 82 },
+    { label: '营业期限', value: '2021-12-24 至 长期', confidence: 95 },
+  ],
   f001: [
     { label: '企业名称', value: '杭州智造装备有限公司', confidence: 98 },
     { label: '统一社会信用代码', value: '91330100MA27XXXX3X', confidence: 99 },
@@ -82,6 +143,45 @@ const mockFields = {
 
 /** Mock 交叉比对结果 — key 为任务 id */
 const mockCrossCompare = {
+  // ========== 唐山物桥商贸有限公司 交叉比对 ==========
+  'dd-ts-wq': {
+    // 数据一致性验证
+    consistencyChecks: [
+      { label: '企业主体一致', status: 'match', detail: '营业执照、纳税申报、发票明细、银行流水、工商登记均指向唐山物桥商贸有限公司', sources: '营业执照, 纳税申报, 发票, 银行流水, 工商登记' },
+      { label: '统一社会信用代码一致', status: 'match', detail: '营业执照 = 纳税申报 = 工商登记 = 91130203MA7EEQ2N0T', sources: '营业执照, 纳税申报, 工商登记' },
+      { label: '发票收入 vs 纳税申报', status: 'match', detail: '发票收入 2275.98 万元，纳税申报收入 2175.46 万元，差异 4.4%，在合理范围内', sources: '增值税发票 vs 纳税申报表' },
+      { label: '银行流水 vs 发票收入', status: 'warning', detail: '银行流水入账 2086.32 万元，发票收入 2275.98 万元，差异 8.3%，需关注未回款部分', sources: '银行流水 vs 增值税发票' },
+      { label: '银行流水 vs 纳税申报收入', status: 'match', detail: '银行流水入账 2086.32 万元，纳税申报收入 2175.46 万元，差异 4.1%，基本匹配', sources: '银行流水 vs 纳税申报表' },
+      { label: '流水异常交易', status: 'warning', detail: '短期大额进出账 4 笔，整数规律交易 12 笔，关联账户互转 3 笔，临近授信异常转入 2 笔', sources: '银行流水摘要' },
+      { label: '偿债能力', status: 'conflict', detail: '经营净现金流 151.56 万元，债务本息支出 186 万元，DSCR 0.81，低于 1，现金流覆盖不足', sources: '银行流水 vs 财报' },
+    ],
+    // 经营指标分析
+    businessMetrics: [
+      { label: '月均入账', value: '173.86万元', benchmark: '参考行业均值', status: 'match', delta: '正常' },
+      { label: '月均出账', value: '161.23万元', benchmark: '流入 > 流出', status: 'match', delta: '净流入' },
+      { label: '经营净现金流', value: '151.56万元', benchmark: '应覆盖债务', status: 'warning', delta: '不足' },
+      { label: '收入波动率', value: '41.6%', benchmark: '建议 ≤ 30%', status: 'warning', delta: '偏高' },
+      { label: '流水发票匹配度', value: '91.7%', benchmark: '合理区间 ≥ 85%', status: 'match', delta: '可验证' },
+      { label: '流水纳税匹配度', value: '95.9%', benchmark: '合理区间 ≥ 90%', status: 'match', delta: '基本匹配' },
+      { label: 'DSCR', value: '0.81', benchmark: '安全线 ≥ 1.2', status: 'danger', delta: '覆盖不足' },
+      { label: '短期冲量交易', value: '4笔', benchmark: '应关注', status: 'warning', delta: '需复核' },
+      { label: '整数规律交易', value: '12笔', benchmark: '应关注', status: 'warning', delta: '需复核' },
+      { label: '关联互转交易', value: '3笔', benchmark: '应关注', status: 'danger', delta: '需重点复核' },
+      { label: '临近授信异常转入', value: '2笔', benchmark: '应关注', status: 'danger', delta: '需重点复核' },
+    ],
+    // AI 初步判断
+    aiJudgment: {
+      summary: '综合银行流水、发票、纳税申报和工商资料，唐山物桥商贸有限公司主体资料一致，收入数据整体可交叉验证。但现金流偿债覆盖不足，且存在若干异常交易信号，建议人工复核异常流水和关联账户往来。',
+      points: [
+        { level: 'match', text: '收入真实性：流水与发票差异 8.3%，未超过 30% 阈值，整体可交叉验证，但需复核异常交易对收入的影响。' },
+        { level: 'warning', text: '经营稳定性：收入波动率 41.6%，显著高于 30% 建议线，月度收入波动较大，经营稳定性偏弱。' },
+        { level: 'danger', text: '偿债能力：DSCR 0.81，低于 1.0 安全线，经营净现金流不足以覆盖债务本息支出，存在违约风险。' },
+        { level: 'warning', text: '异常交易：短期大额进出账 4 笔、整数规律交易 12 笔、关联账户互转 3 笔、临近授信异常转入 2 笔，均建议人工复核。' },
+        { level: 'info', text: '综合建议：建议补充尽调核实异常流水来源、关联账户交易背景及临近授信转入的资金性质。' },
+      ],
+    },
+  },
+  // ========== 杭州智造装备有限公司 ==========
   dd001: {
     consistencyChecks: [
       { label: '企业名称', status: 'match', detail: '5 份文件均为「杭州智造装备有限公司」', sources: '营业执照×2, 身份证, 纳税申报, 销售合同' },
@@ -146,7 +246,7 @@ export const useDocRecognitionStore = defineStore('docRecognition', () => {
         { id: 'f011', name: '企业所得税.pdf', type: '税务', status: '已完成', size: '1.8MB', uploadedAt: '2026-07-02 08:28' },
         { id: 'f012', name: '发票明细.xlsx', type: '发票', status: '已完成', size: '3.2MB', uploadedAt: '2026-07-02 08:30' },
         { id: 'f013', name: '纳税评级.pdf', type: '税务', status: '已完成', size: '560KB', uploadedAt: '2026-07-02 08:32' },
-        { id: 'f014', name: '银行流水摘要.pdf', type: '银行', status: '识别中', size: '4.1MB', uploadedAt: '2026-07-02 08:35' },
+        { id: 'f014', name: '银行流水摘要.pdf', type: '银行', status: '待确认', size: '4.1MB', uploadedAt: '2026-07-02 08:35' },
         { id: 'f015', name: '工商登记信息.pdf', type: '工商', status: '已完成', size: '780KB', uploadedAt: '2026-07-02 08:38' },
       ],
     },
@@ -177,8 +277,8 @@ export const useDocRecognitionStore = defineStore('docRecognition', () => {
     },
   ])
 
-  const currentTaskId = ref('dd001')
-  const currentFileId = ref(null)
+  const currentTaskId = ref('dd-ts-wq')
+  const currentFileId = ref('f014')
   const isUploading = ref(false)
   const statusFilter = ref('all')
   const searchQuery = ref('')
