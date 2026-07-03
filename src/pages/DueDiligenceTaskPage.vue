@@ -30,7 +30,7 @@
           :key="step.key"
           class="dt-flow-step"
           :class="{ 'dt-flow-step--done': step.done, 'dt-flow-step--active': step.active, 'dt-flow-step--pending': !step.done && !step.active }"
-          @click="!step.done && (selectedStageKey = step.key)"
+          @click="handleStageReview(step)"
         >
           <div class="dt-flow-step__node">
             <el-icon v-if="step.done" :size="14"><CircleCheck /></el-icon>
@@ -425,6 +425,18 @@ watch(
 
 function goBack() { router.push('/due-diligence') }
 function go(path) { router.push(path) }
+
+function canReviewStage(step) {
+  return step.done || step.active || step.key === selectedStageKey.value || step.key === task.value?.currentStep
+}
+
+function handleStageReview(step) {
+  if (!canReviewStage(step)) {
+    ElMessage.info('请先完成前序节点')
+    return
+  }
+  selectedStageKey.value = step.key
+}
 
 
 
@@ -979,6 +991,11 @@ function getProgressColor(p) {
 
 .dt-flow-step__pulse { position: absolute; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--color-primary); opacity: 0.4; animation: process-pulse 2s ease-in-out infinite; }
 .dt-flow-step__active-icon { position: relative; z-index: 1; }
+
+.dt-flow-step--pending {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
 .dt-flow-step__connector { flex: 1; height: 2px; min-width: 12px; margin: 0 var(--space-xs); pointer-events: none; }
 .dt-flow-step__connector--done { background: var(--color-success); }

@@ -177,7 +177,8 @@
               <div class="wb-due-flow-header__steps">
                 <template v-for="(step, idx) in currentDueFlow.steps" :key="step.label">
                   <span class="wb-flow-step"
-                    :class="wbFlowStepClass(step)">
+                    :class="wbFlowStepClass(step)"
+                    @click="handleWbFlowStepReview(step)">
                     <!-- done: green solid circle with white check -->
                     <span v-if="wbStepIsDone(step)" class="wb-flow-step__dot wb-flow-step__dot--done">
                       <el-icon :size="14" color="#fff"><CircleCheck /></el-icon>
@@ -279,6 +280,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Bell, ArrowLeft, ChatDotRound, Promotion, MagicStick, DocumentChecked, Tickets, Picture, Search, Plus, CircleCheck, Loading } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useWorkbenchAssistantStore } from '../stores/workbenchAssistant.js'
 import WorkbenchStageStrip from '../components/workbench/WorkbenchStageStrip.vue'
 import WorkbenchConversation from '../components/workbench/WorkbenchConversation.vue'
@@ -465,6 +467,47 @@ function wbRiskTagType(level) {
   if (level === '高风险' || level === '高') return 'danger'
   if (level === '中风险' || level === '中') return 'warning'
   return 'success'
+}
+
+function wbStageIdFromFlowStep(step) {
+  const key = step.key || step.id || step.stage || step.value || step.label || ''
+  const label = step.label || ''
+  const map = {
+    business: 'business',
+    judicial: 'judicial',
+    tax: 'tax',
+    materials: 'materials',
+    evidence: 'evidence',
+    riskDiagnosis: 'riskDiagnosis',
+    risk: 'riskDiagnosis',
+    deliverables: 'deliverables',
+    artifacts: 'deliverables',
+    deliveryPackage: 'deliveryPackage',
+    'delivery-package': 'deliveryPackage',
+  }
+  if (label.includes('工商')) return 'business'
+  if (label.includes('司法')) return 'judicial'
+  if (label.includes('税票')) return 'tax'
+  if (label.includes('资料')) return 'materials'
+  if (label.includes('证据')) return 'evidence'
+  if (label.includes('风险')) return 'riskDiagnosis'
+  if (label.includes('产物')) return 'deliverables'
+  if (label.includes('交付')) return 'deliveryPackage'
+  return map[key] || ''
+}
+
+function canReviewWbFlowStep(step) {
+  return wbStepIsDone(step) || wbStepIsActive(step)
+}
+
+function handleWbFlowStepReview(step) {
+  if (!canReviewWbFlowStep(step)) {
+    ElMessage.info('请先完成前序节点')
+    return
+  }
+  const stageId = wbStageIdFromFlowStep(step)
+  if (!stageId) return
+  assistant.setActiveStage(stageId)
 }
 
 const dialogPlaceholder = computed(() => {
@@ -919,6 +962,12 @@ function handleWorkbenchSuggestion(s) {
   white-space: nowrap;
   position: relative;
   flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.wb-flow-step--pending {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* 圆点尺寸收口：桌面下尽量紧凑 */
