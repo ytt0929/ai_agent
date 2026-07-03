@@ -289,6 +289,45 @@ export const useDocRecognitionStore = defineStore('docRecognition', () => {
   // 右侧面板切换：file（字段识别） / compare（交叉比对）
   const activePanel = ref('file')
 
+  // 字段分组规则 — key 为文件类型
+  const fieldGroupRules = {
+    '银行': [
+      { name: '基础信息', keys: ['账户名称', '开户行', '账号', '流水期间'] },
+      { name: '流水规模', keys: ['总入账金额', '总出账金额', '月均入账', '月均出账', '经营净现金流'] },
+      { name: '经营稳定性', keys: ['月收入标准差', '收入波动率', '最大单月入账'] },
+      { name: '异常交易识别', keys: ['短期大额进出账', '整数规律交易', '关联账户互转', '临近授信异常转入'] },
+      { name: '偿债能力', keys: ['债务本息支出', 'DSCR'] },
+    ],
+    _default: [
+      { name: '基础信息', keys: ['企业名称', '统一社会信用代码', '法定代表人', '注册资本', '成立日期'] },
+      { name: '经营信息', keys: ['经营范围', '企业类型', '营业期限', '登记机关'] },
+      { name: '税务信息', keys: ['纳税人识别号', '申报收入', '应纳税额', '税负率', '纳税信用等级'] },
+      { name: '其他字段', keys: null }, // null = 其余未分组的
+    ],
+  }
+
+  // 关键指标解释
+  const metricExplanations = {
+    '收入波动率': '收入波动率 = 月收入标准差 / 月均收入。偏高说明月度收入波动较大，经营稳定性偏弱。',
+    'DSCR': 'DSCR = 经营净现金流 / 债务本息支出。低于 1 表示现金流不足以覆盖债务本息，存在违约风险。',
+  }
+
+  // 可同步章节映射
+  const syncChapterMap = {
+    '银行': ['财务状况', '收入真实性核实', '主要风险分析'],
+    '税务': ['纳税合规', '财务状况'],
+    '工商': ['企业基本信息', '工商合规'],
+    '_default': ['资料附件'],
+  }
+
+  // 用于核验
+  const verifyPurposeMap = {
+    '银行': ['收入真实性', '经营稳定性', '偿债能力'],
+    '税务': ['纳税合规', '申报真实性'],
+    '工商': ['主体真实性', '工商合规'],
+    '_default': ['资料完整性'],
+  }
+
   // ---- computed ----
 
   const stats = computed(() => {
@@ -361,6 +400,75 @@ export const useDocRecognitionStore = defineStore('docRecognition', () => {
     const cc = crossCompare.value
     if (!cc) return 0
     return cc.aiJudgment.points.filter(p => p.level === 'danger').length
+  })
+
+  // ========== P1 增强 computed ==========
+
+  // 字段分组
+  const groupedFields = computed(() => {
+    const fields = currentFileFields.value
+    if (!fields.length) return []
+    const fileType = currentFile.value?.type || ''
+    const rules = fieldGroupRules[fileType] || fieldGroupRules._default
+    const result = []
+    const assigned = new Set()
+
+    for (const group of rules) {
+      if (group.keys === null) continue // _default 其他字段组
+      const items = fields.filter(f => group.keys.includes(f.label) && !assigned.has(f.label))
+      items.forEach(f => assigned.add(f.label))
+      if (items.length) result.push({ name: group.name, fields: items })
+    }
+    // 其他字段
+    const rest = fields.filter(f => !assigned.has(f.label))
+    const otherGroup = rules.find(g => g.keys === null)
+    if (rest.length) {
+      result.push({ name: otherGroup?.name || '其他字段', fields: rest })
+    }
+    return result
+  })
+
+  // 识别摘要卡
+  const fileSummary = computed(() => {
+    const file = currentFile.value
+    const fields = currentFileFields.value
+    if (!file || !fields.length) return null
+    const avgConf = Math.round(fields.reduce((s, f) => s + f.confidence, 0) / fields.length)
+    const fileType = file.type || ''
+    const chapters = syncChapterMap[fileType] || syncChapterMap._default
+    const purposes = verifyPurposeMap[fileType] || verifyPurposeMap._default
+    return {
+      fileName: file.name,
+      fileType: file.type,
+      fieldCount: fields.length,
+      avgConfidence: avgConf,
+      status: file.status,
+      syncChapters: chapters,
+      verifyPurposes: purposes,
+    }
+  })
+
+  // 关键指标解释
+  function getMetricExplanation(label) {
+    return metricExplanations[label] || null
+  }
+
+  // 交叉比对总览
+  const crossCompareOverview = computed(() => {
+    const cc = crossCompare.value
+    if (!cc) return null
+    const entityOk = cc.consistencyChecks.some(c => c.label === '企业主体一致' && c.status === 'match')
+    const flowMatch = cc.businessMetrics.find(m => m.label === '流水发票匹配度')
+    const dscr = cc.businessMetrics.find(m => m.label === 'DSCR')
+    const manualReview = cc.consistencyChecks.filter(c => c.status === 'warning' || c.status === 'conflict' || c.status === 'danger').length
+      + cc.businessMetrics.filter(m => m.status === 'warning' || m.status === 'danger').length
+    return {
+      entityConsistent: entityOk ? '通过' : '未通过',
+      incomeMatch: flowMatch?.value || '—',
+      materialCompleteness: '86%',
+      dscr: dscr?.value || '—',
+      manualReview,
+    }
   })
 
   // ---- actions ----
@@ -473,10 +581,14 @@ export const useDocRecognitionStore = defineStore('docRecognition', () => {
     conflictCount,
     warningCount,
     judgmentCount,
+    groupedFields,
+    fileSummary,
+    crossCompareOverview,
     selectTask,
     selectFile,
     togglePanel,
     confirmField,
+    getMetricExplanation,
     simulateUpload,
     syncToDueDiligence,
     addChatMessage,

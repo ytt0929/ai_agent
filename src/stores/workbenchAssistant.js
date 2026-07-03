@@ -89,7 +89,16 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
   const dueTaskHeader = computed(() => {
     const ent = selectedEnterprise.value
     const tpl = selectedDueTemplate.value
-    const completeness = leftPanelData.completeness ?? (currentArtifactType.value === 'materials' ? 67 : 86)
+    const completeness = leftPanelData.completeness ?? (() => {
+      const stage = currentArtifactType.value
+      if (stage === 'materials') {
+        return leftPanelData.status === '已补充' ? 86 : 67
+      }
+      if (['evidence', 'riskDiagnosis', 'deliverables', 'deliveryPackage', 'reportEditor'].includes(stage)) {
+        return 86
+      }
+      return null
+    })()
     const dueStage = flowStages.find(s => s.id === currentArtifactType.value)
     const dueFlow = dueStage?.artifactData?.dueFlow
     const statusText = dueFlow?.statusText || ''
@@ -1078,8 +1087,8 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         steps: JSON.parse(JSON.stringify([
           { key: 'business', label: '工商核验', status: 'done' },
           { key: 'judicial', label: '司法查询', status: 'done' },
-          { key: 'tax', label: '税票采集', status: 'done' },
-          { key: 'materials', label: '资料补充', status: 'active' },
+          { key: 'tax', label: '税票采集', status: 'active' },
+          { key: 'materials', label: '资料补充', status: 'pending' },
           { key: 'evidence', label: '证据整合', status: 'pending' },
           { key: 'riskDiagnosis', label: '风险诊断', status: 'pending' },
           { key: 'deliverables', label: '产物确认', status: 'pending' },
@@ -1087,7 +1096,7 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
       },
     }
 
-    upsertStage({ id: 'tax', label: STAGE_LABEL_MAP.tax, icon: '🧾', status: 'done', artifactData: { ...taxArtifactData } })
+    upsertStage({ id: 'tax', label: STAGE_LABEL_MAP.tax, icon: '🧾', status: 'active', artifactData: { ...taxArtifactData } })
     setActiveStage('tax')
 
     await pushStreamingMessage('企业已完成授权，正在采集进项发票、销项发票和纳税申报数据。')

@@ -153,27 +153,44 @@
               <div class="wb-due-flow-header__top">
                 <div class="wb-due-flow-header__left">
                   <div class="wb-due-flow-header__title">{{ wbDueFlowEnterprise }}</div>
-                  <div class="wb-due-flow-header__meta">{{ wbDueFlowMetaText }}</div>
+                  <div class="wb-due-flow-header__subtitle">{{ wbDueFlowMetaText }}</div>
                 </div>
-                <div class="wb-due-flow-header__badges">
-                  <el-tag size="small" effect="plain" type="info">{{ wbDueFlowTemplate }}</el-tag>
+                <div class="wb-due-flow-header__right">
+                  <el-tag :type="wbFlowStatusTag" size="small" effect="plain">{{ currentDueFlow.statusText }}</el-tag>
+                  <span class="wb-due-flow-header__progress">{{ currentDueFlow.progress ?? 0 }}%</span>
+                </div>
+              </div>
+              <div class="wb-due-flow-header__meta">
+                <el-tag size="small" effect="plain" type="info">{{ wbDueFlowTemplate }}</el-tag>
+                <template v-if="wbShowScoreGradeRisk">
                   <span class="wb-due-flow-header__badge-score">综合评分 <b>{{ wbDueFlowScore }}</b></span>
                   <el-tag size="small" effect="plain" type="warning">{{ wbDueFlowGrade }}</el-tag>
                   <el-tag size="small" effect="plain" :type="wbRiskTagType(wbDueFlowRisk)">{{ wbDueFlowRisk }}</el-tag>
-                  <span class="wb-due-flow-header__badge-meta">资料完整度 {{ wbDueFlowCompleteness }}%</span>
-                  <el-tag :type="wbFlowStatusTag" size="small" effect="plain">{{ currentDueFlow.statusText }}</el-tag>
-                </div>
+                </template>
+                <template v-else>
+                  <span class="wb-due-flow-header__badge-pending">综合评分 待诊断</span>
+                </template>
+                <template v-if="wbShowCompleteness">
+                  <span class="wb-due-flow-header__badge-meta">资料完整度 {{ wbDueFlowCompleteness ?? '--' }}%</span>
+                </template>
               </div>
               <div class="wb-due-flow-header__steps">
                 <template v-for="(step, idx) in currentDueFlow.steps" :key="step.label">
                   <span class="wb-flow-step"
                     :class="wbFlowStepClass(step)">
-                    <el-icon v-if="wbStepIsDone(step)" :size="13"><CircleCheck /></el-icon>
+                    <!-- done: green solid circle with white check -->
+                    <span v-if="wbStepIsDone(step)" class="wb-flow-step__dot wb-flow-step__dot--done">
+                      <el-icon :size="14" color="#fff"><CircleCheck /></el-icon>
+                    </span>
+                    <!-- active: white bg + blue border + halo pulse -->
                     <template v-else-if="wbStepIsActive(step)">
-                      <div class="wb-flow-step__pulse" />
-                      <el-icon :size="13" class="wb-flow-step__active-icon"><Loading /></el-icon>
+                      <span class="wb-flow-step__dot wb-flow-step__dot--active">
+                        <div class="wb-flow-step__halo" />
+                        <el-icon :size="14" color="var(--color-primary)"><Loading /></el-icon>
+                      </span>
                     </template>
-                    <span v-else class="wb-flow-step__num">{{ idx + 1 }}</span>
+                    <!-- pending: gray circle with number -->
+                    <span v-else class="wb-flow-step__dot wb-flow-step__dot--pending">{{ idx + 1 }}</span>
                     <span class="wb-flow-step__label">{{ step.label }}</span>
                   </span>
                   <span v-if="idx < currentDueFlow.steps.length - 1" class="wb-flow-step__line"
@@ -380,7 +397,7 @@ const wbDueFlowRisk = computed(() => {
 })
 
 const wbDueFlowCompleteness = computed(() => {
-  return assistant.dueTaskHeader?.materialComplete
+  const raw = assistant.dueTaskHeader?.materialComplete
     ?? assistant.dueTaskHeader?.materialCompleteness
     ?? assistant.dueTaskHeader?.completeness
     ?? currentDueFlow.value?.materialComplete
@@ -389,7 +406,25 @@ const wbDueFlowCompleteness = computed(() => {
     ?? assistant.selectedEnterprise?.materialCompleteness
     ?? assistant.leftPanelData?.materialComplete
     ?? assistant.leftPanelData?.materialCompleteness
-    ?? 86
+    ?? null
+  // 阶段化展示：税票/工商/司法阶段不显示 86%
+  if (raw === null || raw === undefined) return null
+  return raw
+})
+
+/** 是否应该展示资料完整度 */
+const wbShowCompleteness = computed(() => {
+  const stage = assistant.currentArtifactType
+  // 风险诊断及之后才显示完整度
+  const showStages = ['materials', 'evidence', 'riskDiagnosis', 'deliverables', 'deliveryPackage', 'reportEditor']
+  return showStages.includes(stage)
+})
+
+/** 是否应该展示评分/评级/风险等级 */
+const wbShowScoreGradeRisk = computed(() => {
+  const stage = assistant.currentArtifactType
+  const showStages = ['riskDiagnosis', 'deliverables', 'deliveryPackage', 'reportEditor']
+  return showStages.includes(stage)
 })
 
 const wbFlowStatusTag = computed(() => {
@@ -797,32 +832,50 @@ function handleWorkbenchSuggestion(s) {
 
 .wb-due-flow-header__left {
   min-width: 0;
+  flex: 1;
 }
 
 .wb-due-flow-header__title {
-  font-size: var(--font-size-workbench-title, 20px);
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wb-due-flow-header__subtitle {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.wb-due-flow-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.wb-due-flow-header__progress {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .wb-due-flow-header__meta {
-  font-size: var(--font-size-sm, 13px);
-  color: var(--text-tertiary);
-  line-height: 1.4;
-}
-
-.wb-due-flow-header__badges {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs);
-  flex-shrink: 0;
+  margin-bottom: var(--space-sm);
 }
 
 .wb-due-flow-header__badge-score {
-  font-size: var(--font-size-sm, 13px);
+  font-size: 13px;
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -832,8 +885,14 @@ function handleWorkbenchSuggestion(s) {
   font-weight: 700;
 }
 
+.wb-due-flow-header__badge-pending {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
 .wb-due-flow-header__badge-meta {
-  font-size: var(--font-size-xs, 12px);
+  font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -842,66 +901,84 @@ function handleWorkbenchSuggestion(s) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  row-gap: var(--space-sm);
+  column-gap: var(--space-xs);
+  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
   padding-top: var(--space-sm);
   border-top: 1px solid var(--border-color-divider);
 }
 
-/* 流程步骤 */
+/* 流程步骤 — 强流程感：大圆点、长连接线、清晰 active 蓝色圆环 */
 .wb-flow-step {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
+  gap: 6px;
+  padding: 2px 0;
   white-space: nowrap;
   position: relative;
+  flex: 0 0 auto;
 }
 
-.wb-flow-step__num,
-.wb-flow-step__active-icon,
-.wb-flow-step__pulse {
-  width: 18px;
-  height: 18px;
+/* 圆点尺寸收口：桌面下尽量紧凑 */
+.wb-flow-step__dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.wb-flow-step__num {
-  border-radius: 50%;
-  border: 1px solid var(--border-light);
-  background: var(--surface-page);
-  color: var(--text-tertiary);
-  font-size: var(--font-size-xs, 10px);
+  font-size: 11px;
   font-weight: 600;
+  position: relative;
 }
 
-.wb-flow-step--done .el-icon {
-  color: var(--color-success);
-  font-size: 14px;
+/* done: 绿色实心 + 白色对勾 */
+.wb-flow-step__dot--done {
+  background: var(--color-success);
+  color: #fff;
 }
 
-.wb-flow-step__pulse {
+.wb-flow-step__dot--done .el-icon {
+  color: #fff;
+  width: 14px;
+  height: 14px;
+}
+
+/* active: 白底 + 蓝色 2px 描边 + halo 脉冲 */
+.wb-flow-step__dot--active {
+  background: var(--surface-card);
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.wb-flow-step__halo {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  inset: -5px;
   border-radius: 50%;
   border: 2px solid var(--color-primary);
-  opacity: 0.4;
-  animation: wb-flow-pulse 2s ease-in-out infinite;
+  opacity: 0.3;
+  animation: wb-flow-halo 2s ease-in-out infinite;
 }
 
-.wb-flow-step__active-icon {
-  color: var(--color-primary);
-  position: relative;
-  z-index: 1;
+.wb-flow-step__dot--active .el-icon {
+  width: 14px;
+  height: 14px;
 }
 
+/* pending: 浅灰底 + 灰色数字 */
+.wb-flow-step__dot--pending {
+  background: var(--surface-soft, #f1f5f9);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-light);
+}
+
+/* label */
 .wb-flow-step__label {
-  font-size: var(--font-size-xs, 12px);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .wb-flow-step--done .wb-flow-step__label {
@@ -918,24 +995,15 @@ function handleWorkbenchSuggestion(s) {
   color: var(--text-tertiary);
 }
 
-.wb-flow-step--active::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  background: var(--color-primary);
-  border-radius: 1px;
-}
-
+/* 连接线 — 明显但紧凑，确保 7 节点完整展示 */
 .wb-flow-step__line {
-  flex: 1;
-  min-width: 8px;
-  max-width: 24px;
+  flex: 1 1 18px;
+  min-width: 10px;
+  max-width: 36px;
   height: 2px;
   background: var(--border-color-divider);
   border-radius: 1px;
+  flex-shrink: 0;
 }
 
 .wb-flow-step__line--done {
@@ -946,12 +1014,12 @@ function handleWorkbenchSuggestion(s) {
   background: linear-gradient(to right, var(--color-primary), var(--border-light));
 }
 
-@keyframes wb-flow-pulse {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  100% { transform: scale(1.6); opacity: 0; }
+@keyframes wb-flow-halo {
+  0% { transform: scale(0.9); opacity: 0.4; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wb-flow-step__pulse { animation: none; opacity: 0.2; }
+  .wb-flow-step__halo { animation: none; opacity: 0.15; }
 }
 
 @media (max-width: 900px) {

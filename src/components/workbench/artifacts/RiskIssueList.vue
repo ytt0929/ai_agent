@@ -13,58 +13,92 @@
 
     <!-- 风险事项 tab -->
     <div v-if="activeTab === 'risk'" class="risk-issue-list__tab-body">
-      <!-- 风险等级过滤 -->
+      <!-- 风险等级过滤 — 轻量 text 按钮 -->
       <div class="risk-issue-list__filter">
         <el-button
           v-for="lv in riskLevels"
           :key="lv.key"
-          :type="activeRiskLevel === lv.key ? 'primary' : ''"
+          :type="activeRiskLevel === lv.key ? 'primary' : 'info'"
+          :text="true"
           :plain="activeRiskLevel !== lv.key"
           size="small"
-          text
           @click="activeRiskLevel = lv.key"
         >
           {{ lv.label }}
         </el-button>
       </div>
 
-      <!-- 风险事项列表 -->
-      <div v-if="filteredIssues.length" class="risk-issue-list__items">
-        <div v-for="(item, idx) in filteredIssues" :key="idx" class="risk-issue-item">
-          <div class="risk-issue-item__main">
-            <div class="risk-issue-item__name">{{ item.name }}</div>
-            <div class="risk-issue-item__category">{{ item.category }}</div>
-          </div>
-          <div class="risk-issue-item__desc">{{ item.description }}</div>
-          <div class="risk-issue-item__actions">
-            <el-tag size="small" :type="riskTag(item.level)">{{ item.level }}风险</el-tag>
-            <el-button size="small" link type="primary" @click="showEvidence(item)">查看证据链</el-button>
-          </div>
-        </div>
-      </div>
-      <div v-else class="risk-issue-list__empty">暂无匹配的风险事项</div>
+      <!-- 风险事项表格 -->
+      <el-table
+        :data="filteredIssues"
+        size="small"
+        empty-text="暂无匹配的风险事项"
+        class="risk-issue-table"
+      >
+        <el-table-column label="风险事项" min-width="180">
+          <template #default="{ row }">
+            <div class="risk-cell-name">{{ row.name }}</div>
+            <div class="risk-cell-category">{{ row.category }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="风险说明" min-width="280">
+          <template #default="{ row }">
+            <span class="risk-cell-desc">{{ row.description }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="等级" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="riskTag(row.level)">{{ row.level }}风险</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="110" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="showEvidence(row)">查看证据链</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <!-- 企业亮点 tab -->
     <div v-if="activeTab === 'highlights'" class="risk-issue-list__tab-body">
-      <div v-if="highlights?.length" class="risk-issue-list__highlights">
-        <div v-for="(h, idx) in highlights" :key="idx" class="risk-issue-list__highlight-item">
-          <span class="risk-issue-list__highlight-name">{{ h.name }}</span>
-          <span class="risk-issue-list__highlight-desc">{{ h.description }}</span>
-        </div>
-      </div>
-      <div v-else class="risk-issue-list__empty">暂无企业亮点数据</div>
+      <el-table
+        :data="highlights || []"
+        size="small"
+        empty-text="暂无企业亮点数据"
+        class="risk-issue-table"
+      >
+        <el-table-column label="亮点" min-width="140">
+          <template #default="{ row }">
+            <span class="risk-cell-name">{{ row.name }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="说明" min-width="280">
+          <template #default="{ row }">
+            <span class="risk-cell-desc">{{ row.description }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <!-- 全量指标 tab -->
     <div v-if="activeTab === 'indicators'" class="risk-issue-list__tab-body">
-      <div v-if="indicators?.length" class="risk-issue-list__indicators">
-        <div v-for="(ind, idx) in indicators" :key="idx" class="risk-issue-list__indicator-item">
-          <span class="risk-issue-list__indicator-label">{{ ind.label }}</span>
-          <span class="risk-issue-list__indicator-value">{{ ind.value }}</span>
-        </div>
-      </div>
-      <div v-else class="risk-issue-list__empty">暂无全量指标数据</div>
+      <el-table
+        :data="indicators || []"
+        size="small"
+        empty-text="暂无全量指标数据"
+        class="risk-issue-table"
+      >
+        <el-table-column label="指标" min-width="160">
+          <template #default="{ row }">
+            <span class="risk-cell-label">{{ row.label }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="指标值" min-width="160">
+          <template #default="{ row }">
+            <span class="risk-cell-value">{{ row.value }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <!-- 证据链弹窗 -->
@@ -137,147 +171,82 @@ function showEvidence(issue) {
   max-width: 100%;
   box-sizing: border-box;
 }
+
 .risk-issue-list__header {
   padding: 2px 0;
 }
+
 .risk-issue-list__title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
 }
+
 .risk-issue-list__tabs :deep(.el-tabs__header) {
   margin-bottom: var(--space-sm, 8px);
 }
+
 .risk-issue-list__tabs :deep(.el-tabs__nav-wrap::after) {
   height: 1px;
 }
+
 .risk-issue-list__tab-body {
   min-height: 0;
 }
 
-/* 风险等级过滤 */
+/* 风险等级过滤 — 轻量 text 按钮 */
 .risk-issue-list__filter {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs, 4px);
   margin-bottom: var(--space-sm, 8px);
 }
+
 .risk-issue-list__filter .el-button {
   padding: 2px 8px;
   font-size: var(--font-size-xs, 11px);
 }
 
-/* 风险事项列表 */
-.risk-issue-list__items {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs, 4px);
-  max-height: 280px;
-  overflow-y: auto;
-}
-.risk-issue-item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm, 8px);
-  padding: var(--space-sm, 8px) var(--space-md, 10px);
-  background: transparent;
-  border-bottom: 1px solid var(--border-color-divider, #e5eaf2);
+/* 统一表格样式 — 无内嵌滚动条 */
+.risk-issue-table {
+  width: 100%;
   min-width: 0;
-  font-size: var(--font-size-xs, 12px);
-  line-height: 1.4;
 }
-.risk-issue-item:last-child {
-  border-bottom: none;
+
+.risk-issue-table :deep(.el-table__body-wrapper) {
+  /* 不设 max-height / overflow，由外层容器滚动 */
 }
-.risk-issue-item__main {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-.risk-issue-item__name {
+
+/* 表格单元格样式 */
+.risk-cell-name {
   font-weight: 600;
   color: var(--text-primary);
   font-size: var(--font-size-sm, 13px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
 }
-.risk-issue-item__category {
+
+.risk-cell-category {
   font-size: var(--font-size-xs, 11px);
   color: var(--text-tertiary);
+  margin-top: 2px;
 }
-.risk-issue-item__desc {
+
+.risk-cell-desc {
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
+  font-size: var(--font-size-xs, 12px);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.risk-cell-label {
+  color: var(--text-tertiary);
   font-size: var(--font-size-xs, 12px);
 }
-.risk-issue-item__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs, 4px);
-  flex-shrink: 0;
-}
 
-/* 企业亮点 */
-.risk-issue-list__highlights {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.risk-issue-list__highlight-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  background: var(--color-success-bg);
-  border-radius: var(--radius-6, 6px);
-  font-size: 12px;
-}
-.risk-issue-list__highlight-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 13px;
-}
-.risk-issue-list__highlight-desc {
-  color: var(--text-secondary);
-}
-
-/* 全量指标 */
-.risk-issue-list__indicators {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.risk-issue-list__indicator-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
-  background: var(--bg-page);
-  border-radius: var(--radius-6, 6px);
-  font-size: 12px;
-}
-.risk-issue-list__indicator-label {
-  color: var(--text-tertiary);
-}
-.risk-issue-list__indicator-value {
+.risk-cell-value {
   color: var(--text-primary);
   font-weight: 500;
-}
-
-/* 空状态 */
-.risk-issue-list__empty {
-  text-align: center;
-  padding: 24px 0;
-  font-size: 12px;
-  color: var(--text-tertiary);
+  font-size: var(--font-size-xs, 12px);
 }
 
 /* 证据链弹窗 */

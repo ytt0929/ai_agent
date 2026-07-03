@@ -28,19 +28,21 @@
       <div class="doc-rec-task-list">
         <div class="doc-rec-filter">
           <div class="filter-label">筛选</div>
-          <div class="filter-chips">
-            <div
+          <el-radio-group v-model="store.statusFilter" size="small" class="filter-radio-group">
+            <el-radio-button
               v-for="chip in filterChips"
               :key="chip.key"
-              class="filter-chip"
-              :class="{ active: store.statusFilter === chip.key }"
-              @click="store.statusFilter = chip.key"
-            >{{ chip.label }}</div>
-          </div>
-          <div class="filter-search">
-            <el-icon><Search /></el-icon>
-            <input v-model="store.searchQuery" placeholder="搜索企业/文件" />
-          </div>
+              :value="chip.key"
+            >{{ chip.label }}</el-radio-button>
+          </el-radio-group>
+          <el-input
+            v-model="store.searchQuery"
+            placeholder="搜索企业/文件"
+            :prefix-icon="Search"
+            size="small"
+            clearable
+            class="filter-search-input"
+          />
         </div>
 
         <div class="doc-rec-task-items">
@@ -91,7 +93,9 @@
             :class="{ active: store.currentFileId === file.id }"
             @click="store.selectFile(file.id)"
           >
-            <div class="drfi-icon">{{ fileIcon(file.type) }}</div>
+            <div class="drfi-icon">
+              <el-icon :size="20" class="drfi-icon-img"><component :is="fileIconComponent(file.type)" /></el-icon>
+            </div>
             <div class="drfi-info">
               <div class="drfi-name">{{ file.name }}</div>
               <div class="drfi-meta">
@@ -123,13 +127,13 @@
             class="doc-rec-tab"
             :class="{ active: store.activePanel === 'file' }"
             @click="store.activePanel = 'file'"
-          >📄 字段识别</div>
+          >字段识别</div>
           <div
             class="doc-rec-tab"
             :class="{ active: store.activePanel === 'compare' }"
             @click="store.activePanel = 'compare'"
           >
-            📊 交叉比对
+            <el-icon :size="14"><TrendCharts /></el-icon> 交叉比对
             <span v-if="store.conflictCount" class="tab-badge tab-badge--danger">{{ store.conflictCount }}</span>
             <span v-if="store.warningCount && !store.conflictCount" class="tab-badge tab-badge--warning">{{ store.warningCount }}</span>
           </div>
@@ -150,12 +154,73 @@
             </div>
 
             <div v-else class="doc-rec-fields">
+              <!-- 识别摘要卡 -->
+              <div v-if="summaryCard" class="doc-rec-summary-card">
+                <div class="summary-card-header">
+                  <h4 class="summary-card-filename">{{ summaryCard.fileName }}</h4>
+                  <el-tag size="small" :type="summaryTagType(summaryCard.status)" effect="plain">{{ summaryCard.status }}</el-tag>
+                </div>
+                <el-descriptions :column="2" size="small" border class="summary-card-desc">
+                  <el-descriptions-item label="文件类型">{{ summaryCard.fileType }}</el-descriptions-item>
+                  <el-descriptions-item label="识别字段">{{ summaryCard.fieldCount }} 项</el-descriptions-item>
+                  <el-descriptions-item label="平均置信度">{{ summaryCard.avgConfidence }}%</el-descriptions-item>
+                  <el-descriptions-item label="状态">{{ summaryCard.status }}</el-descriptions-item>
+                </el-descriptions>
+                <div class="summary-card-tags">
+                  <span class="summary-card-label">用于核验：</span>
+                  <el-tag v-for="p in summaryCard.verifyPurposes" :key="p" size="small" effect="plain" type="info">{{ p }}</el-tag>
+                </div>
+                <div class="summary-card-tags">
+                  <span class="summary-card-label">可同步章节：</span>
+                  <el-tag v-for="c in summaryCard.syncChapters" :key="c" size="small" effect="plain" type="primary">{{ c }}</el-tag>
+                </div>
+              </div>
+
               <div v-if="store.lowConfidenceFields.length" class="doc-rec-warning-card">
                 <el-icon><WarningFilled /></el-icon>
                 <span class="drwc-text">{{ store.lowConfidenceFields.length }} 个字段置信度低于 70%，建议人工核对</span>
               </div>
 
-              <div class="drf-list">
+              <!-- 分组字段 -->
+              <div v-if="groupedFieldList.length" class="drf-groups">
+                <div v-for="group in groupedFieldList" :key="group.name" class="drf-group">
+                  <div class="drf-group-header">{{ group.name }}</div>
+                  <div class="drf-group-fields">
+                    <div
+                      v-for="field in group.fields"
+                      :key="field.label"
+                      class="drf-item"
+                      :class="{ lowConf: field.confidence < 70, confirmed: field.confidence === 100 }"
+                    >
+                      <div class="drf-label">{{ field.label }}</div>
+                      <div class="drf-value-wrap">
+                        <input
+                          v-if="editingField === field.label"
+                          v-model="editingValue"
+                          class="drf-edit-input"
+                          @keyup.enter="saveEdit(field.label)"
+                          @blur="saveEdit(field.label)"
+                          ref="editInput"
+                        />
+                        <el-tooltip v-else-if="store.getMetricExplanation(field.label)" :content="store.getMetricExplanation(field.label)" placement="top">
+                          <span class="drf-value drf-value--explainable" @dblclick="startEdit(field.label, field.value)">{{ field.value }} <span class="drf-help-icon">?</span></span>
+                        </el-tooltip>
+                        <span v-else class="drf-value" @dblclick="startEdit(field.label, field.value)">{{ field.value }}</span>
+                        <div v-if="store.getMetricExplanation(field.label) && editingField !== field.label" class="drf-explanation">{{ store.getMetricExplanation(field.label) }}</div>
+                      </div>
+                      <div class="drf-confidence">
+                        <el-progress :percentage="field.confidence" :stroke-width="4" :show-text="true" :format="() => field.confidence + '%'" :color="confidenceColor(field.confidence)" class="drf-progress" />
+                      </div>
+                      <div v-if="field.confidence < 70 && !editingField" class="drf-actions">
+                        <el-button size="small" text type="warning" @click="startEdit(field.label, field.value)">修正</el-button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 非银行流水：保持原有平铺 -->
+              <div v-else class="drf-list">
                 <div
                   v-for="field in store.currentFileFields"
                   :key="field.label"
@@ -164,30 +229,24 @@
                 >
                   <div class="drf-label">{{ field.label }}</div>
                   <div class="drf-value-wrap">
-                    <input
-                      v-if="editingField === field.label"
-                      v-model="editingValue"
-                      class="drf-edit-input"
-                      @keyup.enter="saveEdit(field.label)"
-                      @blur="saveEdit(field.label)"
-                      ref="editInput"
-                    />
-                    <span v-else class="drf-value" @dblclick="startEdit(field.label, field.value)">{{ field.value }}</span>
+                    <span class="drf-value" @dblclick="startEdit(field.label, field.value)">{{ field.value }}</span>
                   </div>
                   <div class="drf-confidence">
-                    <div class="drf-confidence-bar">
-                      <div
-                        class="drf-confidence-fill"
-                        :class="confidenceClass(field.confidence)"
-                        :style="{ width: field.confidence + '%' }"
-                      ></div>
-                    </div>
-                    <span class="drf-confidence-num" :class="confidenceClass(field.confidence)">{{ field.confidence }}%</span>
+                    <el-progress :percentage="field.confidence" :stroke-width="4" :show-text="true" :format="() => field.confidence + '%'" :color="confidenceColor(field.confidence)" class="drf-progress" />
                   </div>
                   <div v-if="field.confidence < 70 && !editingField" class="drf-actions">
-                    <el-button size="small" text type="warning" @click="startEdit(field.label, field.value)">✏️ 修正</el-button>
+                    <el-button size="small" text type="warning" @click="startEdit(field.label, field.value)">修正</el-button>
                   </div>
                 </div>
+              </div>
+
+              <!-- 同步提示 -->
+              <div class="doc-rec-sync-hint">
+                <el-icon><DocumentChecked /></el-icon>
+                <span>识别和比对结果可同步至：</span>
+                <template v-for="ch in syncChapters" :key="ch">
+                  <el-tag size="small" type="primary" effect="plain">{{ ch }}</el-tag>
+                </template>
               </div>
 
               <div class="doc-rec-actions">
@@ -211,43 +270,74 @@
         <!-- ===== 交叉比对面板 ===== -->
         <div v-if="store.activePanel === 'compare'" class="doc-rec-panel">
           <div v-if="store.crossCompare" class="doc-rec-panel-content">
-            <!-- 数据一致性验证 -->
+            <!-- AI 分析与复核建议 -->
             <div class="cc-section">
               <div class="cc-section-title">
-                <el-icon><Link /></el-icon>
-                数据一致性验证
+                <el-icon><ChatDotRound /></el-icon>
+                AI 分析与复核建议
               </div>
-              <div class="cc-list">
+              <el-alert type="warning" :closable="false" class="cc-ai-summary" show-icon>
+                <template #title>
+                  <div class="cc-ai-summary-title">结论摘要</div>
+                </template>
+                <template #default>
+                  <div class="cc-ai-summary-text">{{ store.crossCompare.aiJudgment.summary }}</div>
+                </template>
+              </el-alert>
+              <div class="cc-ai-judgments">
                 <div
-                  v-for="(check, idx) in store.crossCompare.consistencyChecks"
+                  v-for="(point, idx) in store.crossCompare.aiJudgment.points"
                   :key="idx"
-                  class="cc-item"
-                  :class="'cc-' + check.status"
+                  class="cc-ai-point"
+                  :class="'cc-ai-point--' + point.level"
                 >
-                  <div class="cc-item-icon">
-                    <span v-if="check.status === 'match'" class="cc-icon cc-icon-success">✓</span>
-                    <span v-else-if="check.status === 'conflict'" class="cc-icon cc-icon-danger">✗</span>
-                    <span v-else-if="check.status === 'warning'" class="cc-icon cc-icon-warning">!</span>
-                    <span v-else class="cc-icon cc-icon-pending">○</span>
-                  </div>
-                  <div class="cc-item-info">
-                    <div class="cc-item-label">{{ check.label }}</div>
-                    <div class="cc-item-detail">{{ check.detail }}</div>
-                    <div class="cc-item-sources">数据来源：{{ check.sources }}</div>
-                  </div>
+                  <el-tag size="small" :type="aiPointTagType(point.level)" effect="plain" class="cc-ai-tag">{{ aiPointLabel(point.level) }}</el-tag>
+                  <span class="cc-ai-point-text">{{ point.text }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- 经营指标分析 -->
+            <!-- 收入真实性核实 -->
             <div class="cc-section">
               <div class="cc-section-title">
                 <el-icon><TrendCharts /></el-icon>
-                经营指标分析
+                收入真实性核实
+              </div>
+              <div class="cc-income-verify">
+                <div class="cc-income-threshold">
+                  <el-alert type="info" :closable="false" show-icon class="cc-threshold-alert">
+                    <template #title>
+                      <span class="cc-threshold-text">长期差异 &gt; 30% → 人工复核原因</span>
+                    </template>
+                  </el-alert>
+                </div>
+                <el-table :data="incomeVerifyRows" size="small" border class="cc-table">
+                  <el-table-column prop="a" label="来源 A" width="120" />
+                  <el-table-column prop="b" label="来源 B" width="120" />
+                  <el-table-column prop="delta" label="差异率" width="100">
+                    <template #default="{ row }">
+                      <span :class="row.exceed ? 'cc-delta-danger' : 'cc-delta-ok'">{{ row.delta }}</span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="conclusion" label="结论" />
+                </el-table>
+                <div class="cc-income-conclusion">
+                  <el-alert type="success" :closable="false" show-icon>
+                    <template #title>未超过 30% 阈值，收入数据整体可交叉验证；但异常交易仍需复核。</template>
+                  </el-alert>
+                </div>
+              </div>
+            </div>
+
+            <!-- 银行流水经营分析 -->
+            <div class="cc-section">
+              <div class="cc-section-title">
+                <el-icon><TrendCharts /></el-icon>
+                银行流水经营分析
               </div>
               <div class="cc-metrics">
                 <div
-                  v-for="(metric, idx) in store.crossCompare.businessMetrics"
+                  v-for="(metric, idx) in bankFlowMetrics"
                   :key="idx"
                   class="cc-metric-card"
                   :class="'cc-metric-' + metric.status"
@@ -265,23 +355,45 @@
               </div>
             </div>
 
-            <!-- AI 初步判断 -->
+            <!-- 数据一致性验证 -->
             <div class="cc-section">
               <div class="cc-section-title">
-                <el-icon><ChatDotRound /></el-icon>
-                AI 初步判断
+                <el-icon><Link /></el-icon>
+                数据一致性验证
               </div>
-              <div class="cc-judgment">
-                <div class="ccj-summary">{{ store.crossCompare.aiJudgment.summary }}</div>
-                <div
-                  v-for="(point, idx) in store.crossCompare.aiJudgment.points"
-                  :key="idx"
-                  class="ccj-item"
-                  :class="'ccj-' + point.level"
-                >
-                  <div class="ccj-dot" :class="'ccj-dot-' + point.level"></div>
-                  <div class="ccj-text">{{ point.text }}</div>
-                </div>
+              <el-table :data="store.crossCompare.consistencyChecks" size="small" border class="cc-table">
+                <el-table-column prop="label" label="项目" width="140" />
+                <el-table-column label="结果" width="80">
+                  <template #default="{ row }">
+                    <el-tag size="small" :type="ccStatusTag(row.status)" effect="plain">{{ ccStatusText(row.status) }}</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="detail" label="详情" />
+                <el-table-column prop="sources" label="来源" width="140" />
+              </el-table>
+            </div>
+
+            <!-- 交叉比对总览 -->
+            <div v-if="ccOverview" class="cc-overview cc-overview--bottom">
+              <div class="cc-overview-card">
+                <div class="cc-overview-label">主体一致</div>
+                <div class="cc-overview-value" :class="ccOverview.entityConsistent === '通过' ? 'cc-ov-ok' : 'cc-ov-fail'">{{ ccOverview.entityConsistent }}</div>
+              </div>
+              <div class="cc-overview-card">
+                <div class="cc-overview-label">收入匹配度</div>
+                <div class="cc-overview-value">{{ ccOverview.incomeMatch }}</div>
+              </div>
+              <div class="cc-overview-card">
+                <div class="cc-overview-label">资料完整度</div>
+                <div class="cc-overview-value">{{ ccOverview.materialCompleteness }}</div>
+              </div>
+              <div class="cc-overview-card">
+                <div class="cc-overview-label">现金流偿债</div>
+                <div class="cc-overview-value cc-ov-warn">DSCR {{ ccOverview.dscr }}</div>
+              </div>
+              <div class="cc-overview-card">
+                <div class="cc-overview-label">人工复核</div>
+                <div class="cc-overview-value cc-ov-fail">{{ ccOverview.manualReview }} 项</div>
               </div>
             </div>
           </div>
@@ -299,8 +411,8 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
-import { Search, UploadFilled, WarningFilled, Loading, Link, TrendCharts, ChatDotRound } from '@element-plus/icons-vue'
+import { ref, nextTick, computed } from 'vue'
+import { Search, UploadFilled, WarningFilled, Loading, Link, TrendCharts, ChatDotRound, DocumentChecked, Document, CreditCard, DataAnalysis, Notebook, Files } from '@element-plus/icons-vue'
 import { useDocRecognitionStore } from '../stores/docRecognition.js'
 import { ElMessage } from 'element-plus'
 
@@ -309,6 +421,41 @@ const fileInput = ref(null)
 const editingField = ref(null)
 const editingValue = ref('')
 const editInput = ref(null)
+
+// P1 增强 computed
+const summaryCard = computed(() => store.fileSummary)
+const groupedFieldList = computed(() => store.groupedFields)
+const ccOverview = computed(() => store.crossCompareOverview)
+const syncChapters = computed(() => store.fileSummary?.syncChapters || [])
+
+// 收入真实性核实行
+const incomeVerifyRows = computed(() => {
+  const cc = store.crossCompare
+  if (!cc) return []
+  const checks = cc.consistencyChecks
+  const find = (label) => checks.find(c => c.label.includes(label))
+  const extractDelta = (detail) => {
+    const m = detail?.match(/差异\s*(\d+\.?\d*)%/)
+    return m ? m[1] + '%' : '—'
+  }
+  const invoiceTax = find('发票收入 vs 纳税申报')
+  const flowInvoice = find('银行流水 vs 发票收入')
+  const flowTax = find('银行流水 vs 纳税申报收入')
+  const threshold = 30
+  return [
+    { a: '发票收入', b: '纳税申报', delta: invoiceTax ? extractDelta(invoiceTax.detail) : '4.4%', exceed: false, conclusion: '差异 4.4%，未超阈值，数据可验证' },
+    { a: '银行流水', b: '发票收入', delta: flowInvoice ? extractDelta(flowInvoice.detail) : '8.3%', exceed: false, conclusion: '差异 8.3%，未超阈值，需关注未回款部分' },
+    { a: '银行流水', b: '纳税申报', delta: flowTax ? extractDelta(flowTax.detail) : '4.1%', exceed: false, conclusion: '差异 4.1%，未超阈值，基本匹配' },
+  ]
+})
+
+// 银行流水经营分析（从 businessMetrics 中筛选）
+const bankFlowMetrics = computed(() => {
+  const cc = store.crossCompare
+  if (!cc) return []
+  const flowLabels = ['月均入账', '月均出账', '经营净现金流', '收入波动率', 'DSCR', '短期冲量交易', '整数规律交易', '关联互转交易', '临近授信异常转入']
+  return cc.businessMetrics.filter(m => flowLabels.some(l => m.label.includes(l) || l.includes(m.label)))
+})
 
 const filterChips = [
   { key: 'all', label: '全部' },
@@ -322,6 +469,11 @@ function fileIcon(type) {
   return map[type] || '📎'
 }
 
+function fileIconComponent(type) {
+  const map = { 营业执照: Document, 身份证: CreditCard, 纳税申报: DataAnalysis, 销售合同: Notebook, 审计报告: Files }
+  return map[type] || Document
+}
+
 function confidenceClass(conf) {
   if (conf >= 85) return 'conf-high'
   if (conf >= 70) return 'conf-medium'
@@ -330,6 +482,32 @@ function confidenceClass(conf) {
 
 function statusText(status) {
   return { match: '一致', conflict: '冲突', warning: '偏差', danger: '异常', pending: '待验证', info: '参考' }[status] || status
+}
+
+function ccStatusTag(status) {
+  return { match: 'success', conflict: 'danger', warning: 'warning', pending: 'info' }[status] || 'info'
+}
+
+function ccStatusText(status) {
+  return { match: '通过', conflict: '未通过', warning: '偏差', pending: '待验证' }[status] || status
+}
+
+function summaryTagType(status) {
+  return { 已完成: 'success', 待确认: 'warning', 识别中: 'primary' }[status] || 'info'
+}
+
+function confidenceColor(conf) {
+  if (conf >= 85) return 'var(--color-success, #67c23a)'
+  if (conf >= 70) return 'var(--color-warning, #e6a23c)'
+  return 'var(--color-danger, #f56c6c)'
+}
+
+function aiPointTagType(level) {
+  return { danger: 'danger', warning: 'warning', info: 'info' }[level] || 'info'
+}
+
+function aiPointLabel(level) {
+  return { danger: '风险', warning: '关注', info: '提示' }[level] || level
 }
 
 function triggerUpload() { fileInput.value?.click() }
@@ -423,32 +601,28 @@ function handleSync() {
 }
 .doc-rec-filter { padding:var(--space-lg); border-bottom: 1px solid var(--border-color-light); flex-shrink: 0; }
 .filter-label { font-size:var(--font-size-caption); color: var(--color-text-tertiary); font-weight: 500; margin-bottom:var(--space-sm); }
-.filter-chips { display: flex; gap:var(--space-xs); flex-wrap: wrap; margin-bottom:var(--space-sm); }
-.filter-chip {
-  padding: 3px 10px; border-radius: var(--radius-full); font-size:var(--font-size-caption);
-  background: var(--bg-page); color: var(--color-text-secondary);
-  cursor: pointer; transition: all .15s; border: 1px solid transparent;
+.filter-radio-group { display: flex; flex-wrap: wrap; margin-bottom:var(--space-sm); }
+.filter-radio-group :deep(.el-radio-button__inner) {
+  border-radius: var(--radius-full) !important;
+  padding: 3px 10px !important;
+  font-size: var(--font-size-caption) !important;
 }
-.filter-chip:hover { background: var(--color-primary-bg); color: var(--color-primary); }
-.filter-chip.active { background: var(--color-primary); color: var(--surface-card); }
-.filter-search {
-  display: flex; align-items: center; gap:var(--space-xs);
-  background: var(--bg-page); border: 1px solid var(--border-color);
-  border-radius: var(--radius-md); padding:var(--space-xs) 10px;
+.filter-search-input { margin-bottom: 0; }
+.filter-search-input :deep(.el-input__wrapper) {
+  border-radius: var(--radius-md);
 }
-.filter-search .el-icon { font-size:var(--font-size-lg); color: var(--color-text-tertiary); }
-.filter-search input {
-  flex: 1; border: none; background: transparent;
-  font-size:var(--font-size-sm); color: var(--color-text-primary); outline: none;
-}
-.filter-search input::placeholder { color: var(--color-text-disabled); }
 .doc-rec-task-items { flex: 1; overflow-y: auto; padding:var(--space-sm); }
 .doc-rec-task-card {
   padding:var(--space-lg) 16px; border-radius: var(--radius-md); cursor: pointer;
   transition: all .15s; margin-bottom:var(--space-xs); border: 1px solid transparent;
 }
 .doc-rec-task-card:hover { background: var(--bg-page); }
-.doc-rec-task-card.active { background: var(--color-primary-bg); border-color: var(--color-primary-border); }
+.doc-rec-task-card.active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
+  border-left: 3px solid var(--color-primary);
+  padding-left: 13px;
+}
 .dtc-name {
   font-size:var(--font-size-body); font-weight: 600; color: var(--color-text-primary);
   margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -491,8 +665,14 @@ function handleSync() {
   border: 1px solid transparent; margin-bottom:var(--space-xs);
 }
 .doc-rec-file-item:hover { background: var(--bg-page); }
-.doc-rec-file-item.active { background: var(--color-primary-bg); border-color: var(--color-primary-border); }
-.drfi-icon { font-size:var(--font-size-page-title); flex-shrink: 0; width: 32px; text-align: center; }
+.doc-rec-file-item.active {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary-border);
+  border-left: 3px solid var(--color-primary);
+  padding-left: 11px;
+}
+.drfi-icon { flex-shrink: 0; width: 32px; text-align: center; }
+.drfi-icon-img { color: var(--color-text-secondary); }
 .drfi-info { flex: 1; min-width: 0; }
 .drfi-name {
   font-size:var(--font-size-body); font-weight: 500; color: var(--color-text-primary);
@@ -547,7 +727,97 @@ function handleSync() {
 }
 .doc-rec-warning-card .el-icon { color: var(--color-warning); font-size:var(--font-size-assist); }
 .drwc-text { font-size:var(--font-size-sm); color: var(--color-warning); font-weight: 500; }
-.drf-list { display: flex; flex-direction: column; gap:var(--space-sm); }
+/* 字段识别 — 摘要卡 */
+.doc-rec-summary-card {
+  background: var(--bg-page);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg) 18px;
+  margin-bottom: var(--space-lg);
+}
+.summary-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+.summary-card-filename {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.summary-card-desc {
+  margin-bottom: var(--space-md);
+}
+.summary-card-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+}
+.summary-card-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* 同步提示 */
+.doc-rec-sync-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding: var(--space-sm) 12px;
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+}
+.doc-rec-sync-hint .el-icon { color: var(--color-primary); font-size: var(--font-size-assist); }
+
+/* 字段分组 */
+.drf-groups { display: flex; flex-direction: column; gap: var(--space-md); }
+.drf-group { display: flex; flex-direction: column; }
+.drf-group-header {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: var(--space-xs) 0;
+  margin-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-color-light);
+}
+.drf-group-fields { display: flex; flex-direction: column; gap: var(--space-xs); }
+
+/* el-progress in field items */
+.drf-progress { width: 80px; }
+.drf-progress :deep(.el-progress-bar__outer) { border-radius: 2px; }
+.drf-progress :deep(.el-progress-bar__inner) { border-radius: 2px; }
+.drf-progress :deep(.el-progress__text) { font-size: 10px; min-width: 28px; }
+
+.drf-value--explainable { text-decoration: underline dotted var(--color-text-tertiary); text-underline-offset: 2px; }
+.drf-help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--border-color-light);
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.drf-explanation {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-tertiary);
+  line-height: 1.4;
+  margin-top: 4px;
+}
 .drf-item {
   display: flex; align-items: center; gap:var(--space-md); padding:var(--space-md) 14px;
   background: var(--bg-page); border-radius: var(--radius-md);
@@ -593,7 +863,51 @@ function handleSync() {
 }
 .cc-section-title .el-icon { font-size:var(--font-size-assist); color: var(--color-text-secondary); }
 
-/* 一致性列表 */
+/* 交叉比对总览 */
+.cc-overview {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+.cc-overview-card {
+  flex: 1;
+  min-width: 100px;
+  background: var(--bg-page);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-sm);
+  text-align: center;
+}
+.cc-overview-label {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-xs);
+}
+.cc-overview-value {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.cc-ov-ok { color: var(--color-success); }
+.cc-ov-warn { color: var(--color-warning); }
+.cc-ov-fail { color: var(--color-danger); }
+
+/* 数据一致性表格 */
+.cc-table { margin-bottom: var(--space-md); }
+.cc-table :deep(.el-table__header th) { font-weight: 600; font-size: var(--font-size-sm); }
+.cc-table :deep(.el-table__body td) { font-size: var(--font-size-sm); }
+
+/* 收入真实性核实 */
+.cc-income-verify { display: flex; flex-direction: column; gap: var(--space-md); }
+.cc-income-threshold { margin-bottom: var(--space-xs); }
+.cc-threshold-alert :deep(.el-alert__title) { font-size: var(--font-size-sm); font-weight: 500; }
+.cc-threshold-text { color: var(--color-text-secondary); }
+.cc-income-conclusion { margin-top: var(--space-xs); }
+.cc-delta-ok { color: var(--color-success); font-weight: 600; }
+.cc-delta-danger { color: var(--color-danger); font-weight: 600; }
+
+/* 一致性列表（保留兼容） */
 .cc-list { display: flex; flex-direction: column; gap:var(--space-xs); }
 .cc-item {
   display: flex; align-items: flex-start; gap:var(--space-sm);
@@ -637,7 +951,46 @@ function handleSync() {
 .ccm-delta-warning { color: var(--color-warning); }
 .ccm-delta-match { color: var(--color-success); }
 
-/* AI 判断 */
+/* AI 判断 — 增强版 */
+.cc-ai-summary {
+  margin-bottom: var(--space-md);
+}
+.cc-ai-summary-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.cc-ai-summary-text {
+  font-size: var(--font-size-body);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin-top: var(--space-xs);
+}
+.cc-ai-judgments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.cc-ai-point {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-page);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.cc-ai-point--warning { border-left: 3px solid var(--color-warning); }
+.cc-ai-point--danger { border-left: 3px solid var(--color-danger); }
+.cc-ai-point--info { border-left: 3px solid var(--color-text-tertiary); }
+.cc-ai-tag { flex-shrink: 0; }
+.cc-ai-point-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+/* AI 判断 — 旧版（保留兼容） */
 .cc-judgment {
   background: var(--bg-page); border-radius: var(--radius-md); padding:var(--space-lg) 18px;
   border: 1px solid var(--border-color);
