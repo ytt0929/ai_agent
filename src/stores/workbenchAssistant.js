@@ -111,6 +111,13 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     const ent = selectedEnterprise.value
     const entName = ent?.name || '唐山物桥商贸有限公司'
+    const industry = ent?.industry || dueTaskHeader.value?.industry || '商贸流通'
+    const region = ent?.region || dueTaskHeader.value?.region || '河北省唐山市'
+    const templateName = dueTaskHeader.value?.templateName || selectedDueTemplate.value?.name || '尽职调查报告'
+    const score = dueTaskHeader.value?.score ?? ent?.score ?? 72
+    const grade = dueTaskHeader.value?.grade ?? ent?.grade ?? 'C+'
+    const riskLevel = dueTaskHeader.value?.riskLevel ?? ent?.riskLevel ?? '中风险'
+    const completeness = dueTaskHeader.value?.completeness ?? 86
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     const packageName = entName + '_尽调交付包_' + dateStr + '.zip'
 
@@ -136,6 +143,29 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         '发票明细.xlsx',
         '合同文件.pdf',
       ],
+      dueFlow: {
+        enterpriseName: entName,
+        industry,
+        region,
+        templateName,
+        score,
+        grade,
+        riskLevel,
+        completeness,
+        materialComplete: completeness,
+        statusText: '交付包已生成',
+        progress: 100,
+        steps: [
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'done' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'done' },
+          { key: 'deliverables', label: '产物确认', status: 'done' },
+          { key: 'deliveryPackage', label: '交付包下载', status: 'active' },
+        ],
+      },
     }
 
     // 同步到智能尽调任务
@@ -237,6 +267,13 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
 
     const ent = selectedEnterprise.value
     const entName = ent?.name || '唐山物桥商贸有限公司'
+    const industry = ent?.industry || dueTaskHeader.value?.industry || '商贸流通'
+    const region = ent?.region || dueTaskHeader.value?.region || '河北省唐山市'
+    const templateName = dueTaskHeader.value?.templateName || selectedDueTemplate.value?.name || '尽职调查报告'
+    const score = dueTaskHeader.value?.score ?? ent?.score ?? 72
+    const grade = dueTaskHeader.value?.grade ?? ent?.grade ?? 'C+'
+    const riskLevel = dueTaskHeader.value?.riskLevel ?? ent?.riskLevel ?? '中风险'
+    const completeness = dueTaskHeader.value?.completeness ?? 86
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
     const packageName = `${entName}_尽调交付包_${dateStr}.zip`
     const generatedAt = new Date().toLocaleString('zh-CN')
@@ -263,6 +300,29 @@ export const useWorkbenchAssistantStore = defineStore('workbenchAssistant', () =
         '发票明细.xlsx',
         '合同文件.pdf',
       ],
+      dueFlow: {
+        enterpriseName: entName,
+        industry,
+        region,
+        templateName,
+        score,
+        grade,
+        riskLevel,
+        completeness,
+        materialComplete: completeness,
+        statusText: '交付包已生成',
+        progress: 100,
+        steps: [
+          { key: 'business', label: '工商核验', status: 'done' },
+          { key: 'judicial', label: '司法查询', status: 'done' },
+          { key: 'tax', label: '税票采集', status: 'done' },
+          { key: 'materials', label: '资料补充', status: 'done' },
+          { key: 'evidence', label: '证据整合', status: 'done' },
+          { key: 'riskDiagnosis', label: '风险诊断', status: 'done' },
+          { key: 'deliverables', label: '产物确认', status: 'done' },
+          { key: 'deliveryPackage', label: '交付包下载', status: 'active' },
+        ],
+      },
     }
 
     if (linkedDueTaskId.value) {

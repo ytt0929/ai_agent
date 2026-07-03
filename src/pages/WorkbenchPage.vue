@@ -338,6 +338,7 @@ const workspaceTitle = computed(() => {
     evidence: '证据整合',
     riskDiagnosis: '风险诊断',
     deliverables: '产物确认',
+    deliveryPackage: '交付包下载',
     reportEditor: '报告编辑',
   }
   return m[assistant.activeTool] || '工作台'
