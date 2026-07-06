@@ -23,6 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# Markdown files (except README)
-*.md
-!README.md
+# OpenClaw prompt markdown files
+openclaw*.md
